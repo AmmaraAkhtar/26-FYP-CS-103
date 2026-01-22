@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'welcome.dart';
 
 class splashpage extends StatefulWidget {
   const splashpage({super.key});
@@ -9,38 +9,39 @@ class splashpage extends StatefulWidget {
 }
 
 class _splashpageState extends State<splashpage> {
+  @override
+  void initState() {
+    super.initState();
 
- 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(Duration(seconds: 6), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => welcome()),
+        );
+      });
+    });
 
-
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-    backgroundColor: Colors.white,
+      backgroundColor: Colors.white,
       body: SizedBox(
         width: double.infinity,
         height: double.infinity,
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const Spacer(),
-
-            Center(
-              child: Hero(
-                tag: 'applog',
-                child: Image.network(
-                  'assets/logo1.png',
-                  width: 200,
-                  height: 200,
-                ),
-              ),
+            Hero(
+              tag: 'applog',
+              child: Image.network('assets/logo.jpg', width: 400, height: 400),
             ),
-
-           
           ],
         ),
       ),
     );
   }
 }
-
