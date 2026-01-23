@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'signup.dart';
 import 'resetPassword1.dart';
+import 'profile.dart';
 
 class login extends StatefulWidget {
   const login({super.key});
@@ -147,7 +148,12 @@ class _loginState extends State<login> {
                   width: 285,
                   height: 47,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                       Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => profile()),
+                        );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFFEB9974),
                       shape: RoundedRectangleBorder(
@@ -185,8 +191,8 @@ class _loginState extends State<login> {
                           MaterialPageRoute(builder: (context) => Signup()),
                         );
                       },
-                      style:ButtonStyle(
-                      padding: WidgetStatePropertyAll(EdgeInsets.all(4)),
+                      style: ButtonStyle(
+                        padding: WidgetStatePropertyAll(EdgeInsets.all(4)),
                       ),
                       child: Text(
                         "Sign Up",
