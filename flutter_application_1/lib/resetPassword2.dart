@@ -122,7 +122,7 @@ class _Resetpassword2State extends State<Resetpassword2> {
                 SizedBox(height: 60),
 
                 SizedBox(
-                  width: 274,
+                  width: 285,
                   height: 47,
                   child: ElevatedButton(
                     onPressed: () {

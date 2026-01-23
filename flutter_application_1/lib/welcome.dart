@@ -59,7 +59,7 @@ class _welcomeState extends State<welcome> {
 
               // Login Button
               SizedBox(
-                width: 274,
+                width: 285,
                 height: 47,
                 child: ElevatedButton(
                   onPressed: () {
@@ -87,7 +87,7 @@ class _welcomeState extends State<welcome> {
               SizedBox(height: 40),
 
               SizedBox(
-                width: 274,
+                width: 285,
                 height: 47,
                 child: ElevatedButton(
                   onPressed: () {},

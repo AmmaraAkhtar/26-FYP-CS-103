@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'login.dart';
+import 'otpPage.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -215,14 +216,19 @@ class _SignupState extends State<Signup> {
                   ),
                 ),
 
-            
                 SizedBox(height: 40),
 
-                   SizedBox(
-                  width: 274,
+                SizedBox(
+                  width: 285,
                   height: 47,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => otp()),
+                        );
+
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       side: BorderSide(color: Color(0xFFEB9974), width: 2),
@@ -258,17 +264,19 @@ class _SignupState extends State<Signup> {
                     ),
                     TextButton(
                       onPressed: () {
-                          Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => login()),
-                      );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => login()),
+                        );
                       },
+                      style:ButtonStyle(
+                       padding: WidgetStatePropertyAll(EdgeInsets.all(4)),
+                      ),
                       child: Text(
                         "Login",
                         style: TextStyle(
                           fontSize: 16,
                           color: Color(0xFF3383D6),
-                          decorationColor: Color(0xFF3383D6),
                           decorationThickness: 1.5,
                           fontWeight: FontWeight.normal,
                         ),
@@ -277,15 +285,14 @@ class _SignupState extends State<Signup> {
                   ],
                 ),
 
-
                 // Sign up button
                 SizedBox(height: 25),
                 SizedBox(
-                  width: 274,
+                  width: 285,
                   height: 47,
                   child: ElevatedButton(
                     onPressed: () {
-                        Navigator.push(
+                      Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => login()),
                       );
@@ -307,7 +314,6 @@ class _SignupState extends State<Signup> {
                   ),
                 ),
 
-             
                 SizedBox(height: 50),
               ],
             ),
