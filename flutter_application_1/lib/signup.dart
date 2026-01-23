@@ -40,7 +40,7 @@ class _SignupState extends State<Signup> {
                 Text(
                   "Sign Up",
                   style: TextStyle(
-                    fontSize: 35,
+                    fontSize: 36,
                     color: Color(0xFF699886),
                     fontWeight: FontWeight.bold,
                   ),
@@ -89,7 +89,7 @@ class _SignupState extends State<Signup> {
                   height: 46,
                   child: TextField(
                     decoration: InputDecoration(
-                      hintText: 'Enter Your Email Address',
+                      hintText: 'Enter Your Email',
                       hintStyle: TextStyle(
                         color: Color.fromARGB(255, 189, 188, 188),
                         fontSize: 16,
@@ -221,7 +221,7 @@ class _SignupState extends State<Signup> {
                    SizedBox(
                   width: 274,
                   height: 47,
-                  child: OutlinedButton(
+                  child: ElevatedButton(
                     onPressed: () {},
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
@@ -284,7 +284,12 @@ class _SignupState extends State<Signup> {
                   width: 274,
                   height: 47,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                        Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => login()),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFFEB9974),
                       shape: RoundedRectangleBorder(

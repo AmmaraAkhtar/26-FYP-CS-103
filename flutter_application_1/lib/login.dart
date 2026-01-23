@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'signup.dart';
+import 'resetPassword1.dart';
 
 class login extends StatefulWidget {
   const login({super.key});
@@ -40,7 +41,7 @@ class _loginState extends State<login> {
                 Text(
                   "Login",
                   style: TextStyle(
-                    fontSize: 35,
+                    fontSize: 36,
                     color: Color(0xFF699886),
                     fontWeight: FontWeight.bold,
                   ),
@@ -53,7 +54,7 @@ class _loginState extends State<login> {
                   height: 46,
                   child: TextField(
                     decoration: InputDecoration(
-                      hintText: 'Enter Your Email Address',
+                      hintText: 'Enter Your Email',
                       hintStyle: TextStyle(
                         color: Color.fromARGB(
                           255,
@@ -121,7 +122,14 @@ class _loginState extends State<login> {
                 Align(
                   alignment: Alignment.topRight,
                   child: TextButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => Resetpassword1(),
+                        ),
+                      );
+                    },
                     style: ButtonStyle(
                       backgroundColor: Theme.of(
                         context,
@@ -146,9 +154,7 @@ class _loginState extends State<login> {
                   width: 274,
                   height: 47,
                   child: ElevatedButton(
-                    onPressed: () {
-                    
-                    },
+                    onPressed: () {},
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFFEB9974),
                       shape: RoundedRectangleBorder(
@@ -182,7 +188,10 @@ class _loginState extends State<login> {
                     ),
                     TextButton(
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder:(context)=>Signup()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => Signup()),
+                        );
                       },
                       child: Text(
                         "Sign Up",
@@ -204,9 +213,9 @@ class _loginState extends State<login> {
                 SizedBox(
                   width: 274,
                   height: 47,
-                  child: OutlinedButton(
+                  child: ElevatedButton(
                     onPressed: () {
-                        Navigator.push(
+                      Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => Signup()),
                       );
