@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'signup.dart';
+import 'login.dart';
 
-class login extends StatefulWidget {
-  const login({super.key});
+class Signup extends StatefulWidget {
+  const Signup({super.key});
 
   @override
-  State<login> createState() => _loginState();
+  State<Signup> createState() => _SignupState();
 }
 
-class _loginState extends State<login> {
+class _SignupState extends State<Signup> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,7 +38,7 @@ class _loginState extends State<login> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 Text(
-                  "Login",
+                  "Sign Up",
                   style: TextStyle(
                     fontSize: 35,
                     color: Color(0xFF699886),
@@ -47,13 +47,12 @@ class _loginState extends State<login> {
                 ),
                 SizedBox(height: 40),
 
-                //TextField for email
                 SizedBox(
                   width: 350,
                   height: 46,
                   child: TextField(
                     decoration: InputDecoration(
-                      hintText: 'Enter Your Email Address',
+                      hintText: 'Enter Your Name',
                       hintStyle: TextStyle(
                         color: Color.fromARGB(
                           255,
@@ -84,13 +83,13 @@ class _loginState extends State<login> {
                 ),
                 SizedBox(height: 20),
 
-                //TextField for password
+                //TextField for email
                 SizedBox(
                   width: 350,
                   height: 46,
                   child: TextField(
                     decoration: InputDecoration(
-                      hintText: 'Enter Your Password',
+                      hintText: 'Enter Your Email Address',
                       hintStyle: TextStyle(
                         color: Color.fromARGB(255, 189, 188, 188),
                         fontSize: 16,
@@ -115,102 +114,115 @@ class _loginState extends State<login> {
                   ),
                 ),
 
-                SizedBox(height: 5),
+                SizedBox(height: 20),
 
-                //Text Forgot Password
-                Align(
-                  alignment: Alignment.topRight,
-                  child: TextButton(
-                    onPressed: () {},
-                    style: ButtonStyle(
-                      backgroundColor: Theme.of(
-                        context,
-                      ).textButtonTheme.style?.backgroundColor,
-                    ),
-                    child: Text(
-                      "Forgot Passoword",
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFF3383D6),
-                        decorationColor: Color(0xFF3383D6),
-                        decorationThickness: 1.5,
-                        fontWeight: FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                ),
-
-                SizedBox(height: 40),
-
+                //TextField for password
                 SizedBox(
-                  width: 274,
-                  height: 47,
-                  child: ElevatedButton(
-                    onPressed: () {
-                    
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFEB9974),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                    ),
-                    child: Text(
-                      'Login',
-                      style: TextStyle(
-                        fontSize: 22,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 25),
-
-                // Don't have an account
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Dont’s have an account?",
-                      style: TextStyle(
+                  width: 350,
+                  height: 46,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Enter Your Password',
+                      hintStyle: TextStyle(
+                        color: Color.fromARGB(
+                          255,
+                          189,
+                          188,
+                          188,
+                        ), // <-- updated color
                         fontSize: 16,
-                        color: Color.fromARGB(255, 21, 21, 21),
-                        decorationThickness: 1.5,
-                        fontWeight: FontWeight.normal,
                       ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder:(context)=>Signup()));
-                      },
-                      child: Text(
-                        "Sign Up",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF3383D6),
-                          decorationColor: Color(0xFF3383D6),
-                          decorationThickness: 1.5,
-                          fontWeight: FontWeight.normal,
+
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(7),
+                        borderSide: BorderSide(
+                          color: Color.fromARGB(255, 189, 188, 188),
+                          width: 1.4,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: Color(0xFF147CF4),
+                          width: 2,
                         ),
                       ),
                     ),
-                  ],
+                  ),
+                ),
+                SizedBox(height: 20),
+
+                //TextField for Phone Number
+                SizedBox(
+                  width: 350,
+                  height: 46,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Enter Your Phone Number',
+                      hintStyle: TextStyle(
+                        color: Color.fromARGB(255, 189, 188, 188),
+                        fontSize: 16,
+                      ),
+
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: Color.fromARGB(255, 189, 188, 188),
+                          width: 1.4,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(7),
+                        borderSide: BorderSide(
+                          color: Color(0xFF147CF4),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                //TextField for Address
+                SizedBox(
+                  width: 350,
+                  height: 46,
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Enter Your Address',
+                      hintStyle: TextStyle(
+                        color: Color.fromARGB(255, 189, 188, 188),
+                        fontSize: 16,
+                      ),
+
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide(
+                          color: Color.fromARGB(255, 189, 188, 188),
+                          width: 1.4,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(7),
+                        borderSide: BorderSide(
+                          color: Color(0xFF147CF4),
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
 
-                // Sign up button
-                SizedBox(height: 25),
+            
+                SizedBox(height: 40),
 
-                SizedBox(
+                   SizedBox(
                   width: 274,
                   height: 47,
                   child: OutlinedButton(
-                    onPressed: () {
-                        Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => Signup()),
-                      );
-                    },
+                    onPressed: () {},
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       side: BorderSide(color: Color(0xFFEB9974), width: 2),
@@ -229,6 +241,68 @@ class _loginState extends State<login> {
                     ),
                   ),
                 ),
+                SizedBox(height: 25),
+
+                // Don't have an account
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Already have an account?",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Color.fromARGB(255, 21, 21, 21),
+                        decorationThickness: 1.5,
+                        fontWeight: FontWeight.normal,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                          Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => login()),
+                      );
+                      },
+                      child: Text(
+                        "Login",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF3383D6),
+                          decorationColor: Color(0xFF3383D6),
+                          decorationThickness: 1.5,
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+
+                // Sign up button
+                SizedBox(height: 25),
+                SizedBox(
+                  width: 274,
+                  height: 47,
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFEB9974),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(40),
+                      ),
+                    ),
+                    child: Text(
+                      'Login',
+                      style: TextStyle(
+                        fontSize: 22,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+
+             
                 SizedBox(height: 50),
               ],
             ),
