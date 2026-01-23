@@ -30,7 +30,7 @@ class _welcomeState extends State<welcome> {
               Text(
                 'Hello',
                 style: TextStyle(
-                  fontSize: 35,
+                  fontSize: 36,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF699886),
                 ),
@@ -91,7 +91,7 @@ class _welcomeState extends State<welcome> {
                 height: 47,
                 child: ElevatedButton(
                   onPressed: () {},
-                  style: OutlinedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
                     side: BorderSide(color: Color(0xFFEB9974), width:3),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(40),
