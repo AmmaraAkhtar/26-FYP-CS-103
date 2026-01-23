@@ -30,7 +30,7 @@ class _welcomeState extends State<welcome> {
               Text(
                 'Hello',
                 style: TextStyle(
-                  fontSize: 50,
+                  fontSize: 35,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF699886),
                 ),
@@ -63,7 +63,7 @@ class _welcomeState extends State<welcome> {
                 height: 47,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.push(
+                    Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (context) => login()),
                     );
@@ -89,7 +89,7 @@ class _welcomeState extends State<welcome> {
               SizedBox(
                 width: 274,
                 height: 47,
-                child: OutlinedButton(
+                child: ElevatedButton(
                   onPressed: () {},
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Color(0xFFEB9974), width:3),
