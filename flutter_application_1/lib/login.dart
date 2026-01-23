@@ -130,18 +130,11 @@ class _loginState extends State<login> {
                         ),
                       );
                     },
-                    style: ButtonStyle(
-                      backgroundColor: Theme.of(
-                        context,
-                      ).textButtonTheme.style?.backgroundColor,
-                    ),
                     child: Text(
                       "Forgot Passoword",
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         color: Color(0xFF3383D6),
-                        decorationColor: Color(0xFF3383D6),
-                        decorationThickness: 1.5,
                         fontWeight: FontWeight.normal,
                       ),
                     ),
@@ -151,7 +144,7 @@ class _loginState extends State<login> {
                 SizedBox(height: 40),
 
                 SizedBox(
-                  width: 274,
+                  width: 285,
                   height: 47,
                   child: ElevatedButton(
                     onPressed: () {},
@@ -182,7 +175,6 @@ class _loginState extends State<login> {
                       style: TextStyle(
                         fontSize: 16,
                         color: Color.fromARGB(255, 21, 21, 21),
-                        decorationThickness: 1.5,
                         fontWeight: FontWeight.normal,
                       ),
                     ),
@@ -193,6 +185,9 @@ class _loginState extends State<login> {
                           MaterialPageRoute(builder: (context) => Signup()),
                         );
                       },
+                      style:ButtonStyle(
+                      padding: WidgetStatePropertyAll(EdgeInsets.all(4)),
+                      ),
                       child: Text(
                         "Sign Up",
                         style: TextStyle(
@@ -211,7 +206,7 @@ class _loginState extends State<login> {
                 SizedBox(height: 25),
 
                 SizedBox(
-                  width: 274,
+                  width: 285,
                   height: 47,
                   child: ElevatedButton(
                     onPressed: () {
