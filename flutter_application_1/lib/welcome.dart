@@ -14,10 +14,11 @@ class _welcomeState extends State<welcome> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SizedBox(
-        width:double.infinity,
-        height:double.infinity,
+        width: double.infinity,
+        height: double.infinity,
 
-       child:Column(
+        child: Expanded(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: 30),
@@ -92,7 +93,7 @@ class _welcomeState extends State<welcome> {
                 child: ElevatedButton(
                   onPressed: () {},
                   style: ElevatedButton.styleFrom(
-                    side: BorderSide(color: Color(0xFFEB9974), width:3),
+                    side: BorderSide(color: Color(0xFFEB9974), width: 3),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(40),
                     ),
@@ -110,7 +111,7 @@ class _welcomeState extends State<welcome> {
             ],
           ),
         ),
-    
+      ),
     );
   }
 }
