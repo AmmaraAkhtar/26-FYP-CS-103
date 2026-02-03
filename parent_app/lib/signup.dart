@@ -10,6 +10,11 @@ class Signup extends StatefulWidget {
 }
 
 class _SignupState extends State<Signup> {
+
+
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -124,7 +129,7 @@ class _SignupState extends State<Signup> {
                     height: 46,
                     child: TextField(
                       decoration: InputDecoration(
-                        hintText: 'Enter Your Password',
+                        hintText: 'Enter  Password',
                         hintStyle: TextStyle(
                           color: Color.fromARGB(
                             255,
@@ -161,7 +166,7 @@ class _SignupState extends State<Signup> {
                     height: 46,
                     child: TextField(
                       decoration: InputDecoration(
-                        hintText: 'Enter Your Phone Number',
+                        hintText: 'Confirm Password',
                         hintStyle: TextStyle(
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
