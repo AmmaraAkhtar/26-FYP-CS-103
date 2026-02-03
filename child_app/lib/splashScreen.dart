@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'codePage.dart';
 
 class splashpage extends StatefulWidget {
   const splashpage({super.key});
@@ -14,14 +14,13 @@ class _splashpageState extends State<splashpage> {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.delayed(Duration(seconds: 6), () {
-        // Navigator.pushReplacement(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => welcome()),
-        // );
+      Future.delayed(Duration(seconds: 2), () {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => otp()),
+        );
       });
     });
-
   }
 
   @override
