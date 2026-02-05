@@ -130,6 +130,7 @@ class _SignupState extends State<Signup> {
                             255,
                             189,
                             188,
+                            
                             188,
                           ), // <-- updated color
                           fontSize: 16,
