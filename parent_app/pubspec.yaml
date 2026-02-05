@@ -62,6 +62,8 @@ flutter:
       - assets/logo.jpg
       - assets/person.jpg
       - assets/Search.png
+      - assets/week.png
+      - assets/daily.png
      
 
   # An image asset can refer to one or more resolution-specific "variants", see
