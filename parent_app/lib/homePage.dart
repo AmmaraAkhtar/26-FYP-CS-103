@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'LiveMonitoringDashboard.dart';
 
 class home extends StatefulWidget {
   const home({super.key});
@@ -164,7 +165,19 @@ class _homeState extends State<home> {
                         final child = children[index];
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          child: Container(
+                          child: InkWell(
+                          borderRadius: BorderRadius.circular(15),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => monitoringPage(
+                                  childData: child, 
+                                ),
+                              ),
+                            );
+                          },
+                          child:Container(
                             padding: EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: const Color.fromARGB(255, 255, 255, 255),
@@ -242,6 +255,7 @@ class _homeState extends State<home> {
                                 ],
                               ),
                             ),
+                          ),
                           );
                                       },
                                     ),

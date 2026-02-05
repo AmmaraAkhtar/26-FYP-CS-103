@@ -163,7 +163,7 @@ class _SignupState extends State<Signup> {
             padding: const EdgeInsets.only(top: 50), // top space
             child: Hero(
               tag: 'applog',
-              child: Image.asset('assets/logo.jpg', width: 189, height: 189),
+              child: Image.asset('assets/logo.png', width: 189, height: 189),
             ),
           ),
         ),
@@ -226,15 +226,20 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
-
-                        errorBorder: OutlineInputBorder(
+ errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
 
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -269,14 +274,20 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
-                        errorBorder: OutlineInputBorder(
+                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
 
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -322,11 +333,21 @@ class _SignupState extends State<Signup> {
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: Colors.red, width: 2),
+                         errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
 
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: Colors.red, width: 2),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -371,6 +392,66 @@ class _SignupState extends State<Signup> {
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: Colors.red, width: 2),
+                         errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
+                        ),
+
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 20),
+                  SizedBox(
+                    width: 350,
+                    // height: 46,
+                    child: TextField(
+                      controller: _phone,
+                      decoration: InputDecoration(
+                        hintText: 'Enter Your Phone Number',
+                        hintStyle: TextStyle(
+                          color: Color.fromARGB(255, 189, 188, 188),
+                          fontSize: 16,
+                        ),
+                        errorText: phoneError.isEmpty ? null : phoneError,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: Color.fromARGB(255, 189, 188, 188),
+                            width: 1.4,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(7),
+                          borderSide: BorderSide(
+                            color: Color(0xFF147CF4),
+                            width: 2,
+                          ),
+                        ),
+                         errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
+                        ),
+
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
