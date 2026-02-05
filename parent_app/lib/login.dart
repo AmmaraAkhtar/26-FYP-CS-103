@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/home.dart';
 import 'signup.dart';
 import 'resetPassword1.dart';
-// import 'profile.dart';
+import 'homePage.dart';
 
 class login extends StatefulWidget {
   const login({super.key});
@@ -53,6 +54,18 @@ class _loginState extends State<login> {
   void loginbutton() async {
     validate_email();
     validate_password();
+     
+    if (
+        email_error.isEmpty && password_error.isEmpty 
+   ) {
+
+    _email.clear();
+    _password.clear();
+          Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => home()),
+      );
+    }
   }
 
   @override
