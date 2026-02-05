@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'login.dart';
 import 'otpPage.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -10,12 +12,10 @@ class Signup extends StatefulWidget {
 }
 
 class _SignupState extends State<Signup> {
-
   final TextEditingController _username = TextEditingController();
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _confirmPassword = TextEditingController();
-  final TextEditingController _phone = TextEditingController();
 
   // error messages
   String usernameError = "";
@@ -23,8 +23,7 @@ class _SignupState extends State<Signup> {
   String passwordError = "";
   String confirmPasswordError = "";
   String phoneError = "";
-
-
+  String error_message = "";
 
   void validateUsername() {
     final value = _username.text.trim();
@@ -86,40 +85,69 @@ class _SignupState extends State<Signup> {
     });
   }
 
-  void validatePhone() {
-    final value = _phone.text.trim();
-    final regex = RegExp(r'^[0-9]{11}$');
+  Future<void> signupRequest(
+    String username,
+    String email,
+    String password,
+    String password2,
+  ) async {
+    String link = 'http://127.0.0.1:8000/signup/';
+    final url = Uri.parse(link);
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username,
+          'email': email,
+          'password': password,
+          
+        }),
+      );
+      print(response.body);
 
-    setState(() {
-      if (value.isEmpty) {
-        phoneError = "Phone number required";
-      } else if (!regex.hasMatch(value)) {
-        phoneError = "Must be exactly 11 digits";
+      if (response.statusCode == 200) {
+        // Handle successful signup
+        print('Sign Up successful');
       } else {
-        phoneError = "";
+        // Handle signup error
+        var data = jsonDecode(response.body);
+        setState(() {
+          if (data is Map) {
+            error_message = data.values.join("\n");
+          } else {
+            error_message = data.toString();
+          }
+        });
       }
-    });
+    } catch (e) {
+      setState(() {
+        error_message = "Network error: $e";
+      });
+    }
   }
 
-
-  void submit() {
+  void submit() async {
     validateUsername();
     validateEmail();
     validatePassword();
     validateConfirmPassword();
-    validatePhone();
+    await signupRequest(
+      _username.text.trim(),
+      _email.text.trim(),
+      _password.text.trim(),
+      _confirmPassword.text.trim(),
+    );
 
     if (usernameError.isEmpty &&
         emailError.isEmpty &&
         passwordError.isEmpty &&
         confirmPasswordError.isEmpty &&
-        phoneError.isEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => otp()),
-      );
+        error_message.isEmpty) {
+      Navigator.push(context, MaterialPageRoute(builder: (context) => otp()));
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -158,6 +186,12 @@ class _SignupState extends State<Signup> {
                     ),
                   ),
                   SizedBox(height: 40),
+
+                  Text(
+                    error_message.isEmpty ? " " : error_message,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  SizedBox(height: 20),
 
                   SizedBox(
                     width: 350,
@@ -268,7 +302,7 @@ class _SignupState extends State<Signup> {
                           ), // <-- updated color
                           fontSize: 16,
                         ),
-                       errorText:passwordError.isEmpty ? null : passwordError,
+                        errorText: passwordError.isEmpty ? null : passwordError,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(7),
@@ -285,20 +319,19 @@ class _SignupState extends State<Signup> {
                           ),
                         ),
                         errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.red, width: 2),
-                      ),
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
+                        ),
 
-                      focusedErrorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.red, width: 2),
-                      ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
+                        ),
                       ),
                     ),
                   ),
                   SizedBox(height: 20),
 
-                  //TextField for Phone Number
                   SizedBox(
                     width: 350,
                     // height: 46,
@@ -311,7 +344,9 @@ class _SignupState extends State<Signup> {
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
                         ),
-                        errorText: confirmPasswordError.isEmpty ? null : confirmPasswordError,
+                        errorText: confirmPasswordError.isEmpty
+                            ? null
+                            : confirmPasswordError,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -328,53 +363,13 @@ class _SignupState extends State<Signup> {
                           ),
                         ),
                         errorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.red, width: 2),
-                                  ),
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
+                        ),
 
-                                  focusedErrorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.red, width: 2),
-                                  ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  SizedBox(
-                    width: 350,
-                    // height: 46,
-                    child: TextField(
-                      controller: _phone,
-                      decoration: InputDecoration(
-                        hintText: 'Enter Your Phone Number',
-                        hintStyle: TextStyle(
-                          color: Color.fromARGB(255, 189, 188, 188),
-                          fontSize: 16,
-                        ),
-                        errorText: phoneError.isEmpty ? null : phoneError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 189, 188, 188),
-                            width: 1.4,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7),
-                          borderSide: BorderSide(
-                            color: Color(0xFF147CF4),
-                            width: 2,
-                          ),
-                        ),
-                         errorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.red, width: 2),
-                                  ),
-
-                                  focusedErrorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.red, width: 2),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
                         ),
                       ),
                     ),
@@ -387,8 +382,7 @@ class _SignupState extends State<Signup> {
                     height: 47,
                     child: ElevatedButton(
                       onPressed: () {
-                        
-                         submit();
+                        submit();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
