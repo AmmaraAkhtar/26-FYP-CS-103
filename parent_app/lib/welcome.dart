@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'login.dart';
-
+import 'signup.dart';
 class welcome extends StatefulWidget {
   const welcome({super.key});
 
@@ -28,16 +28,16 @@ class _welcomeState extends State<welcome> {
               SizedBox(height: 30),
 
               // Hello Text
-              Text(
-                'Hello',
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF699886),
-                ),
-              ),
+              // Text(
+              //   'Hello',
+              //   style: TextStyle(
+              //     fontSize: 36,
+              //     fontWeight: FontWeight.bold,
+              //     color: Color(0xFF699886),
+              //   ),
+              // ),
 
-              SizedBox(height: 30),
+              // SizedBox(height: 30),
 
               RichText(
                 textAlign: TextAlign.center,
@@ -91,7 +91,12 @@ class _welcomeState extends State<welcome> {
                 width: 285,
                 height: 47,
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => Signup()),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                     side: BorderSide(color: Color(0xFFEB9974), width: 3),
                     shape: RoundedRectangleBorder(
