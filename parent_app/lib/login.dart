@@ -11,6 +11,50 @@ class login extends StatefulWidget {
 }
 
 class _loginState extends State<login> {
+  String email_error = "";
+  String password_error = "";
+  TextEditingController _email = TextEditingController();
+  TextEditingController _password = TextEditingController();
+
+  void validate_email() {
+    String email = _email.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        email_error = "Must enter the email";
+      });
+    } else if (!email.contains('@')) {
+      setState(() {
+        email_error = "Please enter a valid email";
+      });
+    } else {
+      setState(() {
+        email_error = "";
+      });
+    }
+  }
+
+  void validate_password() {
+    String password = _password.text.trim();
+    if (password.isEmpty) {
+      setState(() {
+        password_error = "Must enter the Password";
+      });
+    } else if (password.length < 8) {
+      setState(() {
+        password_error = "password mut contain atleast 6 characters";
+      });
+    } else {
+      setState(() {
+        password_error = "";
+      });
+    }
+  }
+
+  void loginbutton() async {
+    validate_email();
+    validate_password();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,10 +97,12 @@ class _loginState extends State<login> {
                   //TextField for email
                   SizedBox(
                     width: 350,
-                    height: 46,
+                    // height: 46,
                     child: TextField(
+                      controller: _email,
                       decoration: InputDecoration(
                         hintText: 'Enter Your Email',
+                        errorText: email_error.isEmpty ? null : email_error,
                         hintStyle: TextStyle(
                           color: Color.fromARGB(
                             255,
@@ -82,18 +128,39 @@ class _loginState extends State<login> {
                             width: 2,
                           ),
                         ),
+
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 237, 20, 5),
+                            width: 2,
+                          ),
+                        ),
+
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 226, 20, 6),
+                            width: 2,
+                          ),
+                        ),
                       ),
                     ),
                   ),
+
                   SizedBox(height: 20),
 
                   //TextField for password
                   SizedBox(
                     width: 350,
-                    height: 46,
+                    // height: 46,
                     child: TextField(
+                      controller: _password,
                       decoration: InputDecoration(
                         hintText: 'Enter Your Password',
+                        errorText: password_error.isEmpty
+                            ? null
+                            : password_error,
                         hintStyle: TextStyle(
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
@@ -111,6 +178,21 @@ class _loginState extends State<login> {
                           borderRadius: BorderRadius.circular(7),
                           borderSide: BorderSide(
                             color: Color(0xFF147CF4),
+                            width: 2,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 237, 20, 5),
+                            width: 2,
+                          ),
+                        ),
+
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 226, 20, 6),
                             width: 2,
                           ),
                         ),
@@ -150,10 +232,7 @@ class _loginState extends State<login> {
                     height: 47,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => profile()),
-                        );
+                        loginbutton();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFEB9974),
