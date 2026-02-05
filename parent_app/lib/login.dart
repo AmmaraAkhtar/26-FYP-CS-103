@@ -3,6 +3,8 @@ import 'package:flutter_application_1/home.dart';
 import 'signup.dart';
 import 'resetPassword1.dart';
 import 'homePage.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class login extends StatefulWidget {
   const login({super.key});
@@ -14,8 +16,40 @@ class login extends StatefulWidget {
 class _loginState extends State<login> {
   String email_error = "";
   String password_error = "";
+  String error_message = "";
   TextEditingController _email = TextEditingController();
   TextEditingController _password = TextEditingController();
+
+  Future<void> loginRequest(String email, String password) async {
+    String link = 'http://127.0.0.1:8000/login/';
+    final url = Uri.parse(link);
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+
+      if (response.statusCode == 200) {
+        // Handle successful login
+        print('Login successful');
+      } else {
+        // Handle login error
+        var data = jsonDecode(response.body);
+        setState(() {
+         if (data is Map) {
+          error_message = data.values.join("\n");
+        } else {
+          error_message = data.toString();
+        }
+        });
+      }
+    } catch (e) {
+      setState(() {
+        error_message = "Network error: $e";
+      });
+    }
+  }
 
   void validate_email() {
     String email = _email.text.trim();
@@ -54,17 +88,12 @@ class _loginState extends State<login> {
   void loginbutton() async {
     validate_email();
     validate_password();
-     
-    if (
-        email_error.isEmpty && password_error.isEmpty 
-   ) {
+    await loginRequest(_email.text.trim(), _password.text.trim());
 
-    _email.clear();
-    _password.clear();
-          Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => home()),
-      );
+    if (email_error.isEmpty && password_error.isEmpty) {
+      _email.clear();
+      _password.clear();
+      Navigator.push(context, MaterialPageRoute(builder: (context) => home()));
     }
   }
 
@@ -73,13 +102,13 @@ class _loginState extends State<login> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(250), // AppBar ka height adjust
+        preferredSize: Size.fromHeight(250), 
         child: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
           flexibleSpace: Padding(
-            padding: const EdgeInsets.only(top: 50), // top space
+            padding: const EdgeInsets.only(top: 50), 
             child: Hero(
               tag: 'applog',
               child: Image.asset('assets/logo.jpg', width: 189, height: 189),
@@ -106,7 +135,9 @@ class _loginState extends State<login> {
                     ),
                   ),
                   SizedBox(height: 40),
-
+                Text(error_message.isEmpty?" ":error_message,
+                style: TextStyle(color: Colors.red),),
+                SizedBox(height: 20,),
                   //TextField for email
                   SizedBox(
                     width: 350,
@@ -122,7 +153,7 @@ class _loginState extends State<login> {
                             189,
                             188,
                             188,
-                          ), // <-- updated color
+                          ), 
                           fontSize: 16,
                         ),
 
