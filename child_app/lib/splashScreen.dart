@@ -36,7 +36,7 @@ class _splashpageState extends State<splashpage> {
           children: [
             Hero(
               tag: 'applog',
-              child: Image.network('assets/logo.jpg', width: 400, height: 400),
+              child: Image.network('assets/logo.png', width: 400, height: 400),
             ),
           ],
         ),
