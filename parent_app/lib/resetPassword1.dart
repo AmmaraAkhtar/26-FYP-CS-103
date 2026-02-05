@@ -9,6 +9,35 @@ class Resetpassword1 extends StatefulWidget {
 }
 
 class _Resetpassword1State extends State<Resetpassword1> {
+   String email_error = "";
+  TextEditingController _email = TextEditingController();
+
+
+  void validate_email() {
+    String email = _email.text.trim();
+    if (email.isEmpty) {
+      setState(() {
+        email_error = "Must enter the email";
+      });
+    } else if (!email.contains('@')) {
+      setState(() {
+        email_error = "Please enter a valid email";
+      });
+    } else {
+      setState(() {
+        email_error = "";
+      });
+    }
+  }
+
+ 
+  void loginbutton() async {
+    validate_email();
+    if (email_error.isEmpty) {
+      _email.clear();
+    }
+    
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,15 +80,16 @@ class _Resetpassword1State extends State<Resetpassword1> {
                   //TextField for email
                   SizedBox(
                     width: 350,
-                    height: 46,
+                    // height: 46,
                     child: TextField(
+                      controller: _email,
                       decoration: InputDecoration(
-                        hintText: 'Enter Your Email',
+                        hintText: 'Enter Your Register Email',
                         hintStyle: TextStyle(
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
                         ),
-
+                        errorText: email_error.isEmpty ? null : email_error,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(7),
@@ -75,6 +105,22 @@ class _Resetpassword1State extends State<Resetpassword1> {
                             width: 2,
                           ),
                         ),
+
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 237, 20, 5),
+                            width: 2,
+                          ),
+                        ),
+
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 226, 20, 6),
+                            width: 2,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -86,12 +132,7 @@ class _Resetpassword1State extends State<Resetpassword1> {
                     height: 47,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => Resetpassword2(),
-                          ),
-                        );
+                       loginbutton();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFEB9974),
