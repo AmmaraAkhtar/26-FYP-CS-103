@@ -11,6 +11,7 @@ class Signup extends StatefulWidget {
 
 class _SignupState extends State<Signup> {
 
+<<<<<<< HEAD
     // controllers
   final TextEditingController _username = TextEditingController();
   final TextEditingController _email = TextEditingController();
@@ -121,6 +122,12 @@ class _SignupState extends State<Signup> {
       );
     }
   }
+=======
+
+
+
+
+>>>>>>> origin/main
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -258,7 +265,7 @@ class _SignupState extends State<Signup> {
                       obscureText: true,
                       controller: _password,
                       decoration: InputDecoration(
-                        hintText: 'Enter Your Password',
+                        hintText: 'Enter  Password',
                         hintStyle: TextStyle(
                           color: Color.fromARGB(
                             255,
