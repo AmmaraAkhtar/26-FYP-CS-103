@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'youtubeMonitoring.dart';
 
 
 class monitoringPage extends StatefulWidget {
@@ -73,7 +73,9 @@ class _monitoringPageState extends State<monitoringPage> {
                 title: const Text("Bullying Detected"),
                 subtitle: const Text("Suspicious language detected"),
                 trailing: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => youtube()));
+                  },
                   style:ElevatedButton.styleFrom(
                     fixedSize: const Size(130,20),
                   ),

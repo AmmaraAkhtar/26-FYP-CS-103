@@ -23,7 +23,7 @@ class _welcomeState extends State<welcome> {
             children: [
               SizedBox(height: 30),
 
-              Image.asset('assets/logo.jpg', height: 320),
+              Image.asset('assets/logo.png', height: 320),
 
               SizedBox(height: 30),
 
