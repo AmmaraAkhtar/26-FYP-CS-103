@@ -134,7 +134,7 @@ class _SignupState extends State<Signup> {
             padding: const EdgeInsets.only(top: 50), // top space
             child: Hero(
               tag: 'applog',
-              child: Image.asset('assets/logo.jpg', width: 189, height: 189),
+              child: Image.asset('assets/logo.png', width: 189, height: 189),
             ),
           ),
         ),
@@ -191,15 +191,20 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
-
-                        errorBorder: OutlineInputBorder(
+ errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
 
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -234,14 +239,20 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
-                        errorBorder: OutlineInputBorder(
+                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
 
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
@@ -284,15 +295,21 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
-                        errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.red, width: 2),
-                      ),
+                         errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
+                        ),
 
-                      focusedErrorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.red, width: 2),
-                      ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -327,15 +344,21 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
-                        errorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.red, width: 2),
-                                  ),
+                         errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
+                        ),
 
-                                  focusedErrorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.red, width: 2),
-                                  ),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -368,13 +391,19 @@ class _SignupState extends State<Signup> {
                           ),
                         ),
                          errorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.red, width: 2),
-                                  ),
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
+                        ),
 
-                                  focusedErrorBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.red, width: 2),
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
                         ),
                       ),
                     ),
