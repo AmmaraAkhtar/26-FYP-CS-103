@@ -10,6 +10,117 @@ class Signup extends StatefulWidget {
 }
 
 class _SignupState extends State<Signup> {
+
+    // controllers
+  final TextEditingController _username = TextEditingController();
+  final TextEditingController _email = TextEditingController();
+  final TextEditingController _password = TextEditingController();
+  final TextEditingController _confirmPassword = TextEditingController();
+  final TextEditingController _phone = TextEditingController();
+
+  // error messages
+  String usernameError = "";
+  String emailError = "";
+  String passwordError = "";
+  String confirmPasswordError = "";
+  String phoneError = "";
+
+
+
+  void validateUsername() {
+    final value = _username.text.trim();
+    final regex = RegExp(r'^[a-zA-Z0-9_]+$');
+
+    setState(() {
+      if (value.isEmpty) {
+        usernameError = "Username required";
+      } else if (!regex.hasMatch(value)) {
+        usernameError = "Only letters, numbers & _ allowed";
+      } else {
+        usernameError = "";
+      }
+    });
+  }
+
+  void validateEmail() {
+    final value = _email.text.trim();
+
+    setState(() {
+      if (value.isEmpty) {
+        emailError = "Email required";
+      } else if (!value.contains('@')) {
+        emailError = "Invalid email";
+      } else {
+        emailError = "";
+      }
+    });
+  }
+
+  void validatePassword() {
+    final value = _password.text.trim();
+
+    setState(() {
+      if (value.isEmpty) {
+        passwordError = "Password required";
+      } else if (value.length < 8) {
+        passwordError = "Minimum 8 characters";
+      } else {
+        passwordError = "";
+      }
+    });
+  }
+
+  void validateConfirmPassword() {
+    final pass = _password.text.trim();
+    final confirm = _confirmPassword.text.trim();
+
+    setState(() {
+      if (confirm.isEmpty) {
+        confirmPasswordError = "Please confirm password";
+      } else if (pass.isEmpty) {
+        confirmPasswordError = "Password field is empty";
+      } else if (pass != confirm) {
+        confirmPasswordError = "Passwords do not match";
+      } else {
+        confirmPasswordError = "";
+      }
+    });
+  }
+
+  void validatePhone() {
+    final value = _phone.text.trim();
+    final regex = RegExp(r'^[0-9]{11}$');
+
+    setState(() {
+      if (value.isEmpty) {
+        phoneError = "Phone number required";
+      } else if (!regex.hasMatch(value)) {
+        phoneError = "Must be exactly 11 digits";
+      } else {
+        phoneError = "";
+      }
+    });
+  }
+
+
+  void submit() {
+    validateUsername();
+    validateEmail();
+    validatePassword();
+    validateConfirmPassword();
+    validatePhone();
+
+    if (usernameError.isEmpty &&
+        emailError.isEmpty &&
+        passwordError.isEmpty &&
+        confirmPasswordError.isEmpty &&
+        phoneError.isEmpty) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => otp()),
+      );
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,10 +162,11 @@ class _SignupState extends State<Signup> {
 
                   SizedBox(
                     width: 350,
-                    height: 46,
+                    // height: 46,
                     child: TextField(
+                      controller: _username,
                       decoration: InputDecoration(
-                        hintText: 'Enter Your Name',
+                        hintText: 'Enter Your Username',
                         hintStyle: TextStyle(
                           color: Color.fromARGB(
                             255,
@@ -64,7 +176,7 @@ class _SignupState extends State<Signup> {
                           ), // <-- updated color
                           fontSize: 16,
                         ),
-
+                        errorText: usernameError.isEmpty ? null : usernameError,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(7),
@@ -79,6 +191,16 @@ class _SignupState extends State<Signup> {
                             color: Color(0xFF147CF4),
                             width: 2,
                           ),
+                        ),
+
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
+                        ),
+
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
                         ),
                       ),
                     ),
@@ -88,15 +210,16 @@ class _SignupState extends State<Signup> {
                   //TextField for email
                   SizedBox(
                     width: 350,
-                    height: 46,
+                    // height: 46,
                     child: TextField(
+                      controller: _email,
                       decoration: InputDecoration(
                         hintText: 'Enter Your Email',
                         hintStyle: TextStyle(
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
                         ),
-
+                        errorText: emailError.isEmpty ? null : emailError,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -111,6 +234,15 @@ class _SignupState extends State<Signup> {
                             color: Color(0xFF147CF4),
                             width: 2,
                           ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
+                        ),
+
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
                         ),
                       ),
                     ),
@@ -121,8 +253,10 @@ class _SignupState extends State<Signup> {
                   //TextField for password
                   SizedBox(
                     width: 350,
-                    height: 46,
+                    // height: 46,
                     child: TextField(
+                      obscureText: true,
+                      controller: _password,
                       decoration: InputDecoration(
                         hintText: 'Enter Your Password',
                         hintStyle: TextStyle(
@@ -130,12 +264,12 @@ class _SignupState extends State<Signup> {
                             255,
                             189,
                             188,
-                            
+
                             188,
                           ), // <-- updated color
                           fontSize: 16,
                         ),
-
+                       errorText:passwordError.isEmpty ? null : passwordError,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(7),
@@ -151,6 +285,15 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
+                        errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.red, width: 2),
+                      ),
+
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.red, width: 2),
+                      ),
                       ),
                     ),
                   ),
@@ -159,15 +302,17 @@ class _SignupState extends State<Signup> {
                   //TextField for Phone Number
                   SizedBox(
                     width: 350,
-                    height: 46,
+                    // height: 46,
                     child: TextField(
+                      obscureText: true,
+                      controller: _confirmPassword,
                       decoration: InputDecoration(
-                        hintText: 'Enter Your Phone Number',
+                        hintText: 'Confirm Password',
                         hintStyle: TextStyle(
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
                         ),
-
+                        errorText: confirmPasswordError.isEmpty ? null : confirmPasswordError,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -183,6 +328,15 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
+                        errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.red, width: 2),
+                                  ),
+
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.red, width: 2),
+                                  ),
                       ),
                     ),
                   ),
@@ -190,15 +344,16 @@ class _SignupState extends State<Signup> {
                   //TextField for Address
                   SizedBox(
                     width: 350,
-                    height: 46,
+                    // height: 46,
                     child: TextField(
+                      controller: _phone,
                       decoration: InputDecoration(
-                        hintText: 'Enter Your Address',
+                        hintText: 'Enter Your Phone Number',
                         hintStyle: TextStyle(
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
                         ),
-
+                         errorText: phoneError,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -213,6 +368,15 @@ class _SignupState extends State<Signup> {
                             color: Color(0xFF147CF4),
                             width: 2,
                           ),
+                        ),
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
+                        ),
+
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
                         ),
                       ),
                     ),
@@ -225,10 +389,8 @@ class _SignupState extends State<Signup> {
                     height: 47,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => otp()),
-                        );
+                        
+                         submit();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
