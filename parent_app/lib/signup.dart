@@ -11,8 +11,6 @@ class Signup extends StatefulWidget {
 
 class _SignupState extends State<Signup> {
 
-<<<<<<< HEAD
-    // controllers
   final TextEditingController _username = TextEditingController();
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
@@ -122,12 +120,6 @@ class _SignupState extends State<Signup> {
       );
     }
   }
-=======
-
-
-
-
->>>>>>> origin/main
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -348,7 +340,6 @@ class _SignupState extends State<Signup> {
                     ),
                   ),
                   SizedBox(height: 20),
-                  //TextField for Address
                   SizedBox(
                     width: 350,
                     // height: 46,
@@ -360,7 +351,7 @@ class _SignupState extends State<Signup> {
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
                         ),
-                         errorText: phoneError,
+                        errorText: phoneError.isEmpty ? null : phoneError,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -376,14 +367,14 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
-                        ),
+                         errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.red, width: 2),
+                                  ),
 
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
+                                  focusedErrorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.red, width: 2),
                         ),
                       ),
                     ),
