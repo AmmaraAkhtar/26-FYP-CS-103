@@ -107,8 +107,8 @@ class _SignupState extends State<Signup> {
       print(response.body);
 
       if (response.statusCode == 200) {
-        // Handle successful signup
-        print('Sign Up successful');
+        
+        Navigator.push(context, MaterialPageRoute(builder: (context) => otp(username: username, email: email, password: password)));
       } else {
         // Handle signup error
         var data = jsonDecode(response.body);
@@ -132,19 +132,20 @@ class _SignupState extends State<Signup> {
     validateEmail();
     validatePassword();
     validateConfirmPassword();
-    await signupRequest(
+    
+
+    if (usernameError.isEmpty &&
+        emailError.isEmpty &&
+        passwordError.isEmpty &&
+        confirmPasswordError.isEmpty
+        ) {
+          await signupRequest(
       _username.text.trim(),
       _email.text.trim(),
       _password.text.trim(),
       _confirmPassword.text.trim(),
     );
-
-    if (usernameError.isEmpty &&
-        emailError.isEmpty &&
-        passwordError.isEmpty &&
-        confirmPasswordError.isEmpty &&
-        error_message.isEmpty) {
-      Navigator.push(context, MaterialPageRoute(builder: (context) => otp()));
+      
     }
   }
 

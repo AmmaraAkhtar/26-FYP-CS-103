@@ -1,13 +1,111 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class Resetpassword2 extends StatefulWidget {
-  const Resetpassword2({super.key});
+  final String email;
+  const Resetpassword2({super.key, required this.email});
 
   @override
   State<Resetpassword2> createState() => _Resetpassword2State();
 }
 
 class _Resetpassword2State extends State<Resetpassword2> {
+  final TextEditingController _password = TextEditingController();
+  final TextEditingController _confirmPassword = TextEditingController();
+  String passwordError = "";
+  String confirmPasswordError = "";
+
+  String error_message = "";
+
+  void validatePassword() {
+    final value = _password.text.trim();
+
+    setState(() {
+      if (value.isEmpty) {
+        passwordError = "Password required";
+      } else if (value.length < 8) {
+        passwordError = "Minimum 8 characters";
+      } else {
+        passwordError = "";
+      }
+    });
+  }
+
+  void validateConfirmPassword() {
+    final pass = _password.text.trim();
+    final confirm = _confirmPassword.text.trim();
+
+    setState(() {
+      if (confirm.isEmpty) {
+        confirmPasswordError = "Please confirm password";
+      } else if (pass.isEmpty) {
+        confirmPasswordError = "Password field is empty";
+      } else if (pass != confirm) {
+        confirmPasswordError = "Passwords do not match";
+      } else {
+        confirmPasswordError = "";
+      }
+    });
+  }
+
+  Future<void> signupRequest(String email, String password) async {
+    String link = 'http://127.0.0.1:8000/resetPassword/';
+    final url = Uri.parse(link);
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+      print(response.body);
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
+      } else {
+        // Handle signup error
+        var data = jsonDecode(response.body);
+        setState(() {
+          if (data is Map) {
+            error_message = data.values.join("\n");
+          } else {
+            error_message = data.toString();
+          }
+        });
+      }
+    } catch (e) {
+      setState(() {
+        error_message = "Network error: $e";
+      });
+    }
+  }
+
+  void resetButton() async {
+    print("Reset button2 pressed");
+    validatePassword();
+    validateConfirmPassword();
+    if (passwordError.isEmpty && confirmPasswordError.isEmpty) {
+      await signupRequest(widget.email, _password.text.trim());
+      if (error_message.isNotEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error_message)));
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
+      }
+      _password.clear();
+      _confirmPassword.clear();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please fill all fields correctly.")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,6 +150,7 @@ class _Resetpassword2State extends State<Resetpassword2> {
                     width: 350,
                     height: 46,
                     child: TextField(
+                      controller: _password,
                       decoration: InputDecoration(
                         hintText: 'Enter Your Password',
                         hintStyle: TextStyle(
@@ -83,6 +182,7 @@ class _Resetpassword2State extends State<Resetpassword2> {
                     width: 350,
                     height: 46,
                     child: TextField(
+                      controller: _confirmPassword,
                       decoration: InputDecoration(
                         hintText: 'Re-enter Your Password',
                         hintStyle: TextStyle(
@@ -115,7 +215,11 @@ class _Resetpassword2State extends State<Resetpassword2> {
                     width: 285,
                     height: 47,
                     child: ElevatedButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        print("Reset button pressed");
+                        resetButton();
+                      },
+
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFEB9974),
                         shape: RoundedRectangleBorder(

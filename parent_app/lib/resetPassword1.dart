@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-// import 'resetPassword2.dart';
+import 'resetPassword2.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 class Resetpassword1 extends StatefulWidget {
   const Resetpassword1({super.key});
@@ -10,6 +13,7 @@ class Resetpassword1 extends StatefulWidget {
 
 class _Resetpassword1State extends State<Resetpassword1> {
    String email_error = "";
+   String error_message = "";
   TextEditingController _email = TextEditingController();
 
 
@@ -30,11 +34,49 @@ class _Resetpassword1State extends State<Resetpassword1> {
     }
   }
 
+Future<void> emailcheckRequest(String email, String password) async {
+    String link = 'http://127.0.0.1:8000/checkEmail/';
+    final url = Uri.parse(link);
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      if (response.statusCode == 200) {
+        
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => Resetpassword2(email: email)),
+        );
+      } else {
+        
+        var data = jsonDecode(response.body);
+        setState(() {
+         if (data is Map) {
+          error_message = data.values.join("\n");
+        } else {
+          error_message = data.toString();
+        }
+        });
+      }
+    } catch (e) {
+      setState(() {
+        error_message = "Network error: $e";
+      });
+    }
+  }
  
   void loginbutton() async {
     validate_email();
     if (email_error.isEmpty) {
+      await emailcheckRequest(_email.text.trim(), '');
       _email.clear();
+    }
+    else{
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error_message)));
     }
     
   }
