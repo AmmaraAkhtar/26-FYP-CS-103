@@ -1,13 +1,64 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class profile extends StatefulWidget {
-  const profile({super.key});
+  String email;
+  profile({super.key, required this.email});
 
   @override
   State<profile> createState() => _EditprofileState();
 }
 
 class _EditprofileState extends State<profile> {
+  String error = '';
+  TextEditingController firstNameController = TextEditingController();
+  TextEditingController lastNameController = TextEditingController();
+  TextEditingController ageController = TextEditingController();
+  TextEditingController screenTimeController = TextEditingController();
+
+  Future<void> registerChild() async {
+    String link = 'http://127.0.0.1:8000/createChild/';
+    final url = Uri.parse(link);
+
+    final response = await http.post(
+      url,
+      headers: <String, String>{
+        'Content-Type': 'application/json; charset=UTF-8',
+      },
+      body: jsonEncode({
+        'firstname': firstNameController.text,
+        'lastname': lastNameController.text,
+        'age': int.tryParse(ageController.text) ?? 0,
+        'screen_time_limit': int.tryParse(screenTimeController.text) ?? 60,
+        'parent_email': widget.email,
+      }),
+    );
+
+    if (response.statusCode == 201) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Pairing CCode is sent to your email")),
+      );
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to register child")));
+    }
+  }
+
+  void register() async {
+    if (firstNameController.text.isEmpty ||
+        lastNameController.text.isEmpty ||
+        ageController.text.isEmpty ||
+        screenTimeController.text.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Please fill all the fields")));
+    } else {
+      await registerChild();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,6 +123,7 @@ class _EditprofileState extends State<profile> {
                     SizedBox(
                       width: 350,
                       child: TextField(
+                        controller: firstNameController,
                         decoration: InputDecoration(
                           hintText: "Enter First Name",
                           hintStyle: TextStyle(
@@ -113,6 +165,7 @@ class _EditprofileState extends State<profile> {
                     SizedBox(
                       width: 350,
                       child: TextField(
+                        controller: lastNameController,
                         decoration: InputDecoration(
                           hintText: "Enter Last Name",
                           hintStyle: TextStyle(
@@ -154,6 +207,7 @@ class _EditprofileState extends State<profile> {
                     SizedBox(
                       width: 350,
                       child: TextField(
+                        controller: ageController,
                         decoration: InputDecoration(
                           hintText: "Enter Age",
                           hintStyle: TextStyle(
@@ -195,6 +249,7 @@ class _EditprofileState extends State<profile> {
                     SizedBox(
                       width: 350,
                       child: TextField(
+                        controller: screenTimeController,
                         decoration: InputDecoration(
                           hintText: "Enter Screen Time",
                           hintStyle: TextStyle(
@@ -230,7 +285,9 @@ class _EditprofileState extends State<profile> {
                   width: 285,
                   height: 47,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      register();
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFFEB9974),
                       shape: RoundedRectangleBorder(
