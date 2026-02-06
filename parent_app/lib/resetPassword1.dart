@@ -65,6 +65,7 @@ Future<void> emailcheckRequest(String email, String password) async {
       setState(() {
         error_message = "Network error: $e";
       });
+      
     }
   }
  
@@ -74,10 +75,7 @@ Future<void> emailcheckRequest(String email, String password) async {
       await emailcheckRequest(_email.text.trim(), '');
       _email.clear();
     }
-    else{
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error_message)));
-    }
+    
     
   }
   @override
