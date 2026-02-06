@@ -127,7 +127,7 @@ print(widget.password);
           ),
         ),
       ),
-      body: Expanded(
+      body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 0),

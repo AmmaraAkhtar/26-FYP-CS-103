@@ -17,7 +17,7 @@ class _welcomeState extends State<welcome> {
         width: double.infinity,
         height: double.infinity,
 
-        child: Expanded(
+        child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
