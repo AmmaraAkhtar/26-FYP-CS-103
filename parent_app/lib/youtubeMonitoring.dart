@@ -17,7 +17,8 @@ class _youtubeState extends State<youtube> {
         title: const Text("YouTube Monitoring Dashboard",style:TextStyle(fontSize:20, fontWeight: FontWeight.bold)),
         
       ),
-      body: SingleChildScrollView(
+      body:SafeArea(child: 
+       SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,6 +94,7 @@ class _youtubeState extends State<youtube> {
           ],
  
         ),
+      ),
       ),
     );
   }

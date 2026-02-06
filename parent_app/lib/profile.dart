@@ -21,7 +21,7 @@ class _profileState extends State<profile> {
         backgroundColor: Colors.white,
         toolbarHeight: 120,
       ),
-      body: Expanded(
+      body: SafeArea(
         child: Builder(
           builder: (context) => SingleChildScrollView(
             child: Column(

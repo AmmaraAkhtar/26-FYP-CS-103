@@ -125,7 +125,7 @@ class _Resetpassword2State extends State<Resetpassword2> {
           ),
         ),
       ),
-      body: Expanded(
+      body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 0),
@@ -157,7 +157,7 @@ class _Resetpassword2State extends State<Resetpassword2> {
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
                         ),
-
+                        errorText: passwordError.isEmpty ? null : passwordError,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(7),
@@ -170,6 +170,23 @@ class _Resetpassword2State extends State<Resetpassword2> {
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(
                             color: Color(0xFF147CF4),
+                            width: 2,
+                          ),
+                        ),
+
+
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
+                        ),
+
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
                             width: 2,
                           ),
                         ),
@@ -189,7 +206,9 @@ class _Resetpassword2State extends State<Resetpassword2> {
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
                         ),
-
+                        errorText: confirmPasswordError.isEmpty
+                            ? null
+                            : confirmPasswordError,
                         contentPadding: EdgeInsets.symmetric(horizontal: 8),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(7),
@@ -202,6 +221,23 @@ class _Resetpassword2State extends State<Resetpassword2> {
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(
                             color: Color(0xFF147CF4),
+                            width: 2,
+                          ),
+                        ),
+
+
+                        errorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
+                            width: 2,
+                          ),
+                        ),
+
+                        focusedErrorBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 206, 39, 28),
                             width: 2,
                           ),
                         ),
