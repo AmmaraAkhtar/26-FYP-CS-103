@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'LiveMonitoringDashboard.dart';
+import 'Monitoring.dart';
+import "ChildRegister.dart";
+
+
+
 
 class home extends StatefulWidget {
   const home({super.key});
@@ -134,7 +138,11 @@ class _homeState extends State<home> {
                     height: 34,
                     child: ElevatedButton(
                       onPressed: () {
-                        
+                         Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => profile(),
+                          ));
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFEB9974),
@@ -171,7 +179,7 @@ class _homeState extends State<home> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => monitoringPage(
+                                builder: (context) => Monitoring(
                                   childData: child, 
                                 ),
                               ),

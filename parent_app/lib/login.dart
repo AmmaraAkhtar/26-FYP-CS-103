@@ -117,7 +117,7 @@ class _loginState extends State<login> {
           ),
         ),
       ),
-      body: Expanded(
+      body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 30, vertical: 0),
