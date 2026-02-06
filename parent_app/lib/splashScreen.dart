@@ -28,7 +28,7 @@ class _splashpageState extends State<splashpage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SizedBox(
+      body: SafeArea(child:      SizedBox(
         width: double.infinity,
         height: double.infinity,
         child: Column(
@@ -41,6 +41,7 @@ class _splashpageState extends State<splashpage> {
             ),
           ],
         ),
+      ),
       ),
     );
   }
