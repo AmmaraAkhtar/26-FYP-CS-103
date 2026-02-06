@@ -4,7 +4,9 @@ from datetime import timedelta
 
 # Create your models here.
 class otp(models.Model):
-    email = models.EmailField(unique=True)
+    username = models.CharField(max_length=150,default="")
+    password = models.CharField(max_length=250,default="")
+    email = models.EmailField(unique=False)
     code = models.CharField(max_length=4)
     created_at = models.DateTimeField(auto_now_add=True)
     is_verified = models.BooleanField(default=False)
