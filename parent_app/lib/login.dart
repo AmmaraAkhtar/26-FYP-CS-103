@@ -32,7 +32,7 @@ class _loginState extends State<login> {
       if (response.statusCode == 200) {
         // Handle successful login
         print('Login successful');
-        Navigator.push(context, MaterialPageRoute(builder: (context) => home()));
+        Navigator.push(context, MaterialPageRoute(builder: (context) => home(email: email,)));
       } else {
         // Handle login error
         var data = jsonDecode(response.body);
