@@ -56,7 +56,7 @@ class _Resetpassword2State extends State<Resetpassword2> {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
+        body: jsonEncode({'email': email, 'new_password': password}),
       );
       print(response.body);
 
@@ -79,31 +79,22 @@ class _Resetpassword2State extends State<Resetpassword2> {
       setState(() {
         error_message = "Network error: $e";
       });
+      
     }
   }
 
   void resetButton() async {
-    print("Reset button2 pressed");
     validatePassword();
     validateConfirmPassword();
+
     if (passwordError.isEmpty && confirmPasswordError.isEmpty) {
       await signupRequest(widget.email, _password.text.trim());
-      if (error_message.isNotEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error_message)));
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
-      }
+      
       _password.clear();
       _confirmPassword.clear();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please fill all fields correctly.")),
-      );
-    }
+    } 
+    
+    
   }
 
   @override
