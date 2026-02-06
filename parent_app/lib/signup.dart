@@ -16,8 +16,8 @@ class _SignupState extends State<Signup> {
   final TextEditingController _email = TextEditingController();
   final TextEditingController _password = TextEditingController();
   final TextEditingController _confirmPassword = TextEditingController();
+  final TextEditingController _phone = TextEditingController();
 
-  // error messages
   String usernameError = "";
   String emailError = "";
   String passwordError = "";
@@ -75,8 +75,6 @@ class _SignupState extends State<Signup> {
     setState(() {
       if (confirm.isEmpty) {
         confirmPasswordError = "Please confirm password";
-      } else if (pass.isEmpty) {
-        confirmPasswordError = "Password field is empty";
       } else if (pass != confirm) {
         confirmPasswordError = "Passwords do not match";
       } else {
@@ -86,13 +84,10 @@ class _SignupState extends State<Signup> {
   }
 
   Future<void> signupRequest(
-    String username,
-    String email,
-    String password,
-    String password2,
-  ) async {
-    String link = 'http://127.0.0.1:8000/signup/';
+      String username, String email, String password) async {
+    const String link = 'http://127.0.0.1:8000/signup/';
     final url = Uri.parse(link);
+
     try {
       final response = await http.post(
         url,
@@ -101,23 +96,21 @@ class _SignupState extends State<Signup> {
           'username': username,
           'email': email,
           'password': password,
-          
         }),
       );
-      print(response.body);
 
       if (response.statusCode == 200) {
-        
-        Navigator.push(context, MaterialPageRoute(builder: (context) => otp(username: username, email: email, password: password)));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                otp(username: username, email: email, password: password),
+          ),
+        );
       } else {
-        // Handle signup error
         var data = jsonDecode(response.body);
         setState(() {
-          if (data is Map) {
-            error_message = data.values.join("\n");
-          } else {
-            error_message = data.toString();
-          }
+          error_message = data.toString();
         });
       }
     } catch (e) {
@@ -132,20 +125,16 @@ class _SignupState extends State<Signup> {
     validateEmail();
     validatePassword();
     validateConfirmPassword();
-    
 
     if (usernameError.isEmpty &&
         emailError.isEmpty &&
         passwordError.isEmpty &&
-        confirmPasswordError.isEmpty
-        ) {
-          await signupRequest(
-      _username.text.trim(),
-      _email.text.trim(),
-      _password.text.trim(),
-      _confirmPassword.text.trim(),
-    );
-      
+        confirmPasswordError.isEmpty) {
+      await signupRequest(
+        _username.text.trim(),
+        _email.text.trim(),
+        _password.text.trim(),
+      );
     }
   }
 
@@ -154,13 +143,13 @@ class _SignupState extends State<Signup> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(250), // AppBar ka height adjust
+        preferredSize: const Size.fromHeight(250),
         child: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
           flexibleSpace: Padding(
-            padding: const EdgeInsets.only(top: 50), // top space
+            padding: const EdgeInsets.only(top: 50),
             child: Hero(
               tag: 'applog',
               child: Image.asset('assets/logo.png', width: 189, height: 189),
@@ -168,394 +157,68 @@ class _SignupState extends State<Signup> {
           ),
         ),
       ),
-      body: Expanded(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 0),
-            child: SizedBox(
-              width: double.infinity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    "Sign Up",
-                    style: TextStyle(
-                      fontSize: 36,
-                      color: Color(0xFF699886),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 40),
-
-                  Text(
-                    error_message.isEmpty ? " " : error_message,
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  SizedBox(height: 20),
-
-                  SizedBox(
-                    width: 350,
-                    // height: 46,
-                    child: TextField(
-                      controller: _username,
-                      decoration: InputDecoration(
-                        hintText: 'Enter Your Username',
-                        hintStyle: TextStyle(
-                          color: Color.fromARGB(
-                            255,
-                            189,
-                            188,
-                            188,
-                          ), // <-- updated color
-                          fontSize: 16,
-                        ),
-                        errorText: usernameError.isEmpty ? null : usernameError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 189, 188, 188),
-                            width: 1.4,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: Color(0xFF147CF4),
-                            width: 2,
-                          ),
-                        ),
- errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-
-                  //TextField for email
-                  SizedBox(
-                    width: 350,
-                    // height: 46,
-                    child: TextField(
-                      controller: _email,
-                      decoration: InputDecoration(
-                        hintText: 'Enter Your Email',
-                        hintStyle: TextStyle(
-                          color: Color.fromARGB(255, 189, 188, 188),
-                          fontSize: 16,
-                        ),
-                        errorText: emailError.isEmpty ? null : emailError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 189, 188, 188),
-                            width: 1.4,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7),
-                          borderSide: BorderSide(
-                            color: Color(0xFF147CF4),
-                            width: 2,
-                          ),
-                        ),
-                         errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 20),
-
-                  //TextField for password
-                  SizedBox(
-                    width: 350,
-                    // height: 46,
-                    child: TextField(
-                      obscureText: true,
-                      controller: _password,
-                      decoration: InputDecoration(
-                        hintText: 'Enter  Password',
-                        hintStyle: TextStyle(
-                          color: Color.fromARGB(
-                            255,
-                            189,
-                            188,
-
-                            188,
-                          ), // <-- updated color
-                          fontSize: 16,
-                        ),
-                        errorText: passwordError.isEmpty ? null : passwordError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 189, 188, 188),
-                            width: 1.4,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: Color(0xFF147CF4),
-                            width: 2,
-                          ),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
-                         errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-
-                  SizedBox(
-                    width: 350,
-                    // height: 46,
-                    child: TextField(
-                      obscureText: true,
-                      controller: _confirmPassword,
-                      decoration: InputDecoration(
-                        hintText: 'Confirm Password',
-                        hintStyle: TextStyle(
-                          color: Color.fromARGB(255, 189, 188, 188),
-                          fontSize: 16,
-                        ),
-                        errorText: confirmPasswordError.isEmpty
-                            ? null
-                            : confirmPasswordError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 189, 188, 188),
-                            width: 1.4,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7),
-                          borderSide: BorderSide(
-                            color: Color(0xFF147CF4),
-                            width: 2,
-                          ),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
-                        ),
-
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: Colors.red, width: 2),
-                         errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  SizedBox(
-                    width: 350,
-                    // height: 46,
-                    child: TextField(
-                      controller: _phone,
-                      decoration: InputDecoration(
-                        hintText: 'Enter Your Phone Number',
-                        hintStyle: TextStyle(
-                          color: Color.fromARGB(255, 189, 188, 188),
-                          fontSize: 16,
-                        ),
-                        errorText: phoneError.isEmpty ? null : phoneError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 189, 188, 188),
-                            width: 1.4,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7),
-                          borderSide: BorderSide(
-                            color: Color(0xFF147CF4),
-                            width: 2,
-                          ),
-                        ),
-                         errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 40),
-
-                  SizedBox(
-                    width: 285,
-                    height: 47,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        submit();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        side: BorderSide(color: Color(0xFFEB9974), width: 2),
-
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                      ),
-                      child: Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Color(0xFFE59885),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 25),
-
-                  // Don't have an account
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Already have an account?",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Color.fromARGB(255, 21, 21, 21),
-                          decorationThickness: 1.5,
-                          fontWeight: FontWeight.normal,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => login()),
-                          );
-                        },
-                        style: ButtonStyle(
-                          padding: WidgetStatePropertyAll(EdgeInsets.all(4)),
-                        ),
-                        child: Text(
-                          "Login",
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF3383D6),
-                            decorationThickness: 1.5,
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  // Sign up button
-                  SizedBox(height: 25),
-                  SizedBox(
-                    width: 285,
-                    height: 47,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (context) => login()),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFEB9974),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                      ),
-                      child: Text(
-                        'Login',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 50),
-                ],
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 30),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              const Text(
+                "Sign Up",
+                style: TextStyle(
+                  fontSize: 36,
+                  color: Color(0xFF699886),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
+
+              const SizedBox(height: 20),
+              Text(error_message, style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: 20),
+
+              buildField(_username, "Enter Username", usernameError),
+              buildField(_email, "Enter Email", emailError),
+              buildField(_password, "Enter Password", passwordError,
+                  obscure: true),
+              buildField(_confirmPassword, "Confirm Password",
+                  confirmPasswordError,
+                  obscure: true),
+              buildField(_phone, "Phone Number", phoneError),
+
+              const SizedBox(height: 30),
+
+              ElevatedButton(
+                onPressed: submit,
+                child: const Text("Sign Up"),
+              ),
+
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const login()));
+                },
+                child: const Text("Already have an account? Login"),
+              ),
+            ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget buildField(TextEditingController controller, String hint, String error,
+      {bool obscure = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 15),
+      child: TextField(
+        controller: controller,
+        obscureText: obscure,
+        decoration: InputDecoration(
+          hintText: hint,
+          errorText: error.isEmpty ? null : error,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
     );
