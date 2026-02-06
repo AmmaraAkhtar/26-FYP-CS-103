@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'LiveMonitoringDashboard.dart';
+import 'Monitoring.dart';
 
 class home extends StatefulWidget {
   const home({super.key});
@@ -171,7 +171,7 @@ class _homeState extends State<home> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => monitoringPage(
+                                builder: (context) => Monitoring(
                                   childData: child, 
                                 ),
                               ),

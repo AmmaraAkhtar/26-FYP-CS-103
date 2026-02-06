@@ -13,7 +13,7 @@ class _youtubeState extends State<youtube> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Color(0xFFF2F0F6),
+        backgroundColor: Colors.grey[100],
         title: const Text("YouTube Monitoring Dashboard",style:TextStyle(fontSize:20, fontWeight: FontWeight.bold)),
         
       ),
@@ -104,7 +104,7 @@ class _youtubeState extends State<youtube> {
   Widget contentCard(
       String title, String source, String category, Color color, String time) {
     return Card(
-      color: Colors.orange[200],
+      color: Color(0xFFEB9974),
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(12),
