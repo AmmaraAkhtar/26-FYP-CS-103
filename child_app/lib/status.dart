@@ -22,7 +22,7 @@ class _statusState extends State<status> {
             padding: const EdgeInsets.only(top: 50), // top space
             child: Hero(
               tag: 'applog',
-              child: Image.asset('assets/logo.jpg', width: 189, height: 189),
+              child: Image.asset('assets/logo.png', width: 189, height: 189),
             ),
           ),
         ),

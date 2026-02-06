@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/home.dart';
 import 'signup.dart';
 import 'resetPassword1.dart';
 import 'homePage.dart';
@@ -76,7 +75,7 @@ class _loginState extends State<login> {
       });
     } else if (password.length < 8) {
       setState(() {
-        password_error = "password mut contain atleast 6 characters";
+        password_error = "password mut contain atleast 8 characters";
       });
     } else {
       setState(() {
@@ -111,7 +110,7 @@ class _loginState extends State<login> {
             padding: const EdgeInsets.only(top: 50), 
             child: Hero(
               tag: 'applog',
-              child: Image.asset('assets/logo.jpg', width: 189, height: 189),
+              child: Image.asset('assets/logo.png', width: 189, height: 189),
             ),
           ),
         ),
@@ -176,7 +175,7 @@ class _loginState extends State<login> {
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 237, 20, 5),
+                            color: const Color.fromARGB(255, 206, 39, 28),
                             width: 2,
                           ),
                         ),
@@ -184,7 +183,7 @@ class _loginState extends State<login> {
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 226, 20, 6),
+                            color: const Color.fromARGB(255, 206, 39, 28),
                             width: 2,
                           ),
                         ),
@@ -218,17 +217,12 @@ class _loginState extends State<login> {
                             width: 1.4,
                           ),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7),
-                          borderSide: BorderSide(
-                            color: Color(0xFF147CF4),
-                            width: 2,
-                          ),
-                        ),
-                        errorBorder: OutlineInputBorder(
+                        
+
+                       errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 237, 20, 5),
+                            color: const Color.fromARGB(255, 206, 39, 28),
                             width: 2,
                           ),
                         ),
@@ -236,7 +230,7 @@ class _loginState extends State<login> {
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 226, 20, 6),
+                            color: const Color.fromARGB(255, 206, 39, 28),
                             width: 2,
                           ),
                         ),
