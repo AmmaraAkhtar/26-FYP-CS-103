@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-class Editprofile extends StatefulWidget {
-  const Editprofile({super.key});
+class profile extends StatefulWidget {
+  const profile({super.key});
 
   @override
-  State<Editprofile> createState() => _EditprofileState();
+  State<profile> createState() => _EditprofileState();
 }
 
-class _EditprofileState extends State<Editprofile> {
+class _EditprofileState extends State<profile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,7 +62,7 @@ class _EditprofileState extends State<Editprofile> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "User Name",
+                      "First Name",
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -73,7 +73,7 @@ class _EditprofileState extends State<Editprofile> {
                       width: 350,
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: "Enter User Name",
+                          hintText: "Enter First Name",
                           hintStyle: TextStyle(
                             color: Color.fromARGB(255, 173, 171, 171),
                             fontSize: 15,
@@ -103,7 +103,7 @@ class _EditprofileState extends State<Editprofile> {
                     SizedBox(height: 20),
 
                     Text(
-                      "Email Address",
+                      "Last Name",
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -114,9 +114,10 @@ class _EditprofileState extends State<Editprofile> {
                       width: 350,
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: "Enter Email Address",
+                          hintText: "Enter Last Name",
                           hintStyle: TextStyle(
                             color: Color.fromARGB(255, 173, 171, 171),
+                            fontSize: 15,
                           ),
                           contentPadding: EdgeInsets.symmetric(
                             horizontal: 12,
@@ -143,7 +144,7 @@ class _EditprofileState extends State<Editprofile> {
                     SizedBox(height: 20),
 
                     Text(
-                      "Phone Number",
+                      "Age",
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -154,9 +155,10 @@ class _EditprofileState extends State<Editprofile> {
                       width: 350,
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: "Enter Phone Number",
+                          hintText: "Enter Age",
                           hintStyle: TextStyle(
                             color: Color.fromARGB(255, 173, 171, 171),
+                            fontSize: 15,
                           ),
                           contentPadding: EdgeInsets.symmetric(
                             horizontal: 12,
@@ -183,7 +185,7 @@ class _EditprofileState extends State<Editprofile> {
                     SizedBox(height: 20),
 
                     Text(
-                      "Password",
+                      "Screen Time",
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -194,9 +196,10 @@ class _EditprofileState extends State<Editprofile> {
                       width: 350,
                       child: TextField(
                         decoration: InputDecoration(
-                          hintText: "Enter Password",
+                          hintText: "Enter Screen Time",
                           hintStyle: TextStyle(
                             color: Color.fromARGB(255, 173, 171, 171),
+                            fontSize: 15,
                           ),
                           contentPadding: EdgeInsets.symmetric(
                             horizontal: 12,
@@ -235,7 +238,7 @@ class _EditprofileState extends State<Editprofile> {
                       ),
                     ),
                     child: Text(
-                      'Update',
+                      'Register',
                       style: TextStyle(
                         fontSize: 22,
                         color: Colors.white,

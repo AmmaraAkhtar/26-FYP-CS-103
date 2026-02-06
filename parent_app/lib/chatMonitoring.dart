@@ -17,7 +17,8 @@ class _chatState extends State<chat> {
         title: const Text("Chat Monitoring Dashboard",style:TextStyle(fontSize:20, fontWeight: FontWeight.bold)),
         
       ),
-      body: SingleChildScrollView(
+      body: SafeArea(child: 
+      SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -79,6 +80,7 @@ class _chatState extends State<chat> {
             alertBox("Violent Video Detected"),
           ],
         ),
+      ),
       ),
     );
   }
