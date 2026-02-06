@@ -5,9 +5,8 @@ import 'login.dart';
 
 class otp extends StatefulWidget {
   final String email;
-  final String username;
-  final String password;
-  const otp({super.key, required this.email, required this.username, required this.password});
+  
+  const otp({super.key, required this.email});
 
   @override
   State<otp> createState() => _otpState();
@@ -38,22 +37,20 @@ class _otpState extends State<otp> {
 
       error = "";
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("OTP is valid!")));
+      
     });
   }
 
-  Future<void> verifyotp(String num1,String num2,String num3,String num4,String email,String username,String password) async {
+  Future<void> verifyotp(String num1,String num2,String num3,String num4,String email) async {
     String otp = num1 + num2 + num3 + num4;
     String link = 'http://127.0.0.1:8000/verifyOtp/';
     final url = Uri.parse(link);
-    print("Sending OTP verification request with OTP: $otp, Email: $email, Username: $username");
+    print("Sending OTP verification request with OTP: $otp, Email: $email");
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'otp': otp, 'email': email, 'username': username, 'password': password}),
+        body: jsonEncode({'otp': otp, 'email': email, }),
       );
 
       if (response.statusCode == 200) {
@@ -77,22 +74,47 @@ class _otpState extends State<otp> {
     }
   }
 
+Future<void> resendOtp(String email) async {
+    String link = 'http://127.0.0.1:8000/resendOtp/';
+    final url = Uri.parse(link);
+    print("Sending resend OTP request with Email: $email");
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      if (response.statusCode == 200) {
+        print('Resend OTP successful');
+      } else {
+        var data = jsonDecode(response.body);
+        setState(() {
+          if (data is Map) {
+            error_message = data.values.join("\n");
+          } else {
+            error_message = data.toString();
+          }
+        });
+      }
+    } catch (e) {
+      setState(() {
+        error_message = "Network error: $e";
+      });
+    }}
+
   void loginbutton() async {
     validateOTP();
     if (error.isEmpty) {
       print("Hello");
       print(widget.email);
-print(widget.username);
-print(widget.password);
+
       await verifyotp(
         _num1.text.trim(),
         _num2.text.trim(),
         _num3.text.trim(),
         _num4.text.trim(),
-        widget.email,
-        widget.username,
-        widget.password
-      );
+        widget.email);
     }
     if (error_message.isNotEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -107,7 +129,13 @@ print(widget.password);
     }
     
   }
-
+  
+  void resendOtpButton() async {
+    await resendOtp(widget.email);
+    ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text("OTP resent! Please check your email.")),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -276,13 +304,15 @@ print(widget.password);
                   // ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children:  [
                       Text(
                         "Didn’t receive a OTP? ",
                         style: TextStyle(fontSize: 18),
                       ),
                       TextButton(
-                        onPressed: null,
+                        onPressed: () {
+                          resendOtpButton();
+                        },
                         style: ButtonStyle(
                           padding: WidgetStatePropertyAll(EdgeInsets.all(0)),
                         ),
