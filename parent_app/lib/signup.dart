@@ -104,7 +104,7 @@ class _SignupState extends State<Signup> {
           context,
           MaterialPageRoute(
             builder: (context) =>
-                otp(username: username, email: email, password: password),
+                otp( email: email),
           ),
         );
       } else {
