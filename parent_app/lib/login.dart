@@ -32,6 +32,7 @@ class _loginState extends State<login> {
       if (response.statusCode == 200) {
         // Handle successful login
         print('Login successful');
+        Navigator.push(context, MaterialPageRoute(builder: (context) => home()));
       } else {
         // Handle login error
         var data = jsonDecode(response.body);
@@ -92,8 +93,9 @@ class _loginState extends State<login> {
     if (email_error.isEmpty && password_error.isEmpty) {
       _email.clear();
       _password.clear();
-      Navigator.push(context, MaterialPageRoute(builder: (context) => home()));
+      
     }
+    
   }
 
   @override

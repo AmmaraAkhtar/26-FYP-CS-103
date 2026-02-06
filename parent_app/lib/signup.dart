@@ -107,6 +107,13 @@ class _SignupState extends State<Signup> {
       print(response.body);
 
       if (response.statusCode == 200) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                otp( email: email),
+          ),
+        );
         
         Navigator.push(context, MaterialPageRoute(builder: (context) => otp(username: username, email: email, password: password)));
       } else {
