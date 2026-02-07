@@ -15,8 +15,26 @@ class _Resetpassword1State extends State<Resetpassword1> {
    String email_error = "";
    String error_message = "";
   TextEditingController _email = TextEditingController();
+  bool _isLoading = false;
 
-
+  // --- Professional SnackBar (Consistent with ResetPassword2) ---
+  void _showCustomSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(isError ? Icons.error_outline : Icons.check_circle_outline, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(15),
+      ),
+    );
+  }
   void validate_email() {
     String email = _email.text.trim();
     if (email.isEmpty) {
@@ -34,9 +52,61 @@ class _Resetpassword1State extends State<Resetpassword1> {
     }
   }
 
-Future<void> emailcheckRequest(String email, String password) async {
+// Future<void> emailcheckRequest(String email, String password) async {
+//     String link = 'http://127.0.0.1:8000/checkEmail/';
+//     final url = Uri.parse(link);
+//     try {
+//       final response = await http.post(
+//         url,
+//         headers: {'Content-Type': 'application/json'},
+//         body: jsonEncode({'email': email}),
+//       );
+
+//       if (response.statusCode == 200) {
+        
+//         Navigator.push(
+//           context,
+//           MaterialPageRoute(builder: (context) => Resetpassword2(email: email)),
+//         );
+//       } else {
+        
+//         var data = jsonDecode(response.body);
+//         setState(() {
+//          if (data is Map) {
+//           error_message = data.values.join("\n");
+//         } else {
+//           error_message = data.toString();
+//         }
+//         });
+//       }
+//     } catch (e) {
+//       setState(() {
+//         error_message = "Network error: $e";
+//       });
+//     }
+//   }
+ 
+//   void loginbutton() async {
+//     validate_email();
+//     if (email_error.isEmpty) {
+//       await emailcheckRequest(_email.text.trim(), '');
+//       _email.clear();
+//     }
+//     else{
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(content: Text(error_message)));
+//     }
+    
+//   }
+
+
+Future<void> emailcheckRequest(String email) async {
+    setState(() => _isLoading = true);
+    
+    // API URL
     String link = 'http://127.0.0.1:8000/checkEmail/';
     final url = Uri.parse(link);
+    
     try {
       final response = await http.post(
         url,
@@ -45,40 +115,33 @@ Future<void> emailcheckRequest(String email, String password) async {
       );
 
       if (response.statusCode == 200) {
-        
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => Resetpassword2(email: email)),
-        );
-      } else {
-        
-        var data = jsonDecode(response.body);
-        setState(() {
-         if (data is Map) {
-          error_message = data.values.join("\n");
-        } else {
-          error_message = data.toString();
+        // Success: Navigate to next step
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => Resetpassword2(email: email)),
+          );
         }
-        });
+      } else {
+        // Backend Error (e.g., Email not found)
+        var data = jsonDecode(response.body);
+        String msg = data is Map ? data.values.join("\n") : "Email not found";
+        _showCustomSnackBar(msg);
       }
     } catch (e) {
-      setState(() {
-        error_message = "Network error: $e";
-      });
+      _showCustomSnackBar("Network error: Server connection failed");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
- 
+
   void loginbutton() async {
     validate_email();
-    if (email_error.isEmpty) {
-      await emailcheckRequest(_email.text.trim(), '');
-      _email.clear();
-    }
-    else{
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error_message)));
-    }
     
+    // Sirf tab call karein jab local validation pass ho
+    if (email_error.isEmpty) {
+      await emailcheckRequest(_email.text.trim());
+    }
   }
   @override
   Widget build(BuildContext context) {
@@ -168,31 +231,52 @@ Future<void> emailcheckRequest(String email, String password) async {
                   ),
 
                   SizedBox(height: 60),
-
+                   // Reset Button with Spinner
                   SizedBox(
                     width: 285,
                     height: 47,
                     child: ElevatedButton(
-                      onPressed: () {
-                       loginbutton();
-                      },
+                      onPressed: _isLoading ? null : loginbutton,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFEB9974),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
+                        backgroundColor: const Color(0xFFEB9974),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
                       ),
-                      child: Text(
-                        'Reset',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isLoading 
+                        ? const SizedBox(
+                            height: 20, 
+                            width: 20, 
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                          )
+                        : const Text(
+                            'Reset',
+                            style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
                     ),
                   ),
-                  SizedBox(height: 25),
+                  // SizedBox(
+                  //   width: 285,
+                  //   height: 47,
+                  //   child: ElevatedButton(
+                  //     onPressed: () {
+                  //      loginbutton();
+                  //     },
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: Color(0xFFEB9974),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(40),
+                  //       ),
+                  //     ),
+                  //     child: Text(
+                  //       'Reset',
+                  //       style: TextStyle(
+                  //         fontSize: 22,
+                  //         color: Colors.white,
+                  //         fontWeight: FontWeight.bold,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
+                  // SizedBox(height: 25),
 
                   SizedBox(height: 50),
                 ],

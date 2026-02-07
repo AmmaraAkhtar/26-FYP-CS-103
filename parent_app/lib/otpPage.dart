@@ -21,9 +21,27 @@ class _otpState extends State<otp> {
 
   // Error message
   String error = "";
-  String error_message = "";
+  bool _isLoading  = false;
 
-  void validateOTP() {
+ // Consistent SnackBar logic (Jaisa baqi screens mein tha)
+  void _showCustomSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(isError ? Icons.error_outline : Icons.check_circle_outline, color: Colors.white),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(15),
+      ),
+    );
+  }
+ void validateOTP() {
     setState(() {
       error = "";
       List<TextEditingController> fields = [_num1, _num2, _num3, _num4];
@@ -34,80 +52,125 @@ class _otpState extends State<otp> {
           error = "All fields are required";
           return; // Stop checking
         }
-      }
+      }});
+ }
+//   Future<void> verifyotp(String num1,String num2,String num3,String num4,String email,String username,String password) async {
+//     String otp = num1 + num2 + num3 + num4;
+//     String link = 'http://127.0.0.1:8000/verifyOtp/';
+//     final url = Uri.parse(link);
+//     print("Sending OTP verification request with OTP: $otp, Email: $email, Username: $username");
+//     try {
+//       final response = await http.post(
+//         url,
+//         headers: {'Content-Type': 'application/json'},
+//         body: jsonEncode({'otp': otp, 'email': email, 'username': username, 'password': password}),
+//       );
 
-      error = "";
+//       if (response.statusCode == 200) {
+        
+//         print('Verification successful');
+//       } else {
+//         // Handle login error
+//         var data = jsonDecode(response.body);
+//         setState(() {
+//           if (data is Map) {
+//             error_message = data.values.join("\n");
+//           } else {
+//             error_message = data.toString();
+//           }
+//         });
+//       }
+//     } catch (e) {
+//       setState(() {
+//         error_message = "Network error: $e";
+//       });
+//     }
+//   }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("OTP is valid!")));
-    });
-  }
+//   void loginbutton() async {
+//     validateOTP();
+//     if (error.isEmpty) {
+//       print("Hello");
+//       print(widget.email);
+// print(widget.username);
+// print(widget.password);
+//       await verifyotp(
+//         _num1.text.trim(),
+//         _num2.text.trim(),
+//         _num3.text.trim(),
+//         _num4.text.trim(),
+//         widget.email,
+//         widget.username,
+//         widget.password
+//       );
+//     }
+//     if (error_message.isNotEmpty) {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         SnackBar(content: Text(error_message)),
+//       );
+//     }
+//     else {
+//       ScaffoldMessenger.of(context).showSnackBar(
+//         const SnackBar(content: Text("Sign Up successful!")),
+//       );
+//       Navigator.push(context, MaterialPageRoute(builder: (context) => login()));
+//     }
+    
+//   }
 
-  Future<void> verifyotp(String num1,String num2,String num3,String num4,String email,String username,String password) async {
-    String otp = num1 + num2 + num3 + num4;
+
+Future<void> verifyotp() async {
+    setState(() => _isLoading = true);
+    
+    String fullOtp = _num1.text + _num2.text + _num3.text + _num4.text;
     String link = 'http://127.0.0.1:8000/verifyOtp/';
     final url = Uri.parse(link);
-    print("Sending OTP verification request with OTP: $otp, Email: $email, Username: $username");
+    
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'otp': otp, 'email': email, 'username': username, 'password': password}),
+        body: jsonEncode({
+          'otp': fullOtp, 
+          'email': widget.email, 
+          'username': widget.username, 
+          'password': widget.password
+        }),
       );
 
       if (response.statusCode == 200) {
+        _showCustomSnackBar("Sign Up successful!", isError: false);
         
-        print('Verification successful');
-      } else {
-        // Handle login error
-        var data = jsonDecode(response.body);
-        setState(() {
-          if (data is Map) {
-            error_message = data.values.join("\n");
-          } else {
-            error_message = data.toString();
+        // Navigation consistent with other screens
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            Navigator.pushAndRemoveUntil(
+              context, 
+              MaterialPageRoute(builder: (context) => const login()),
+              (route) => false
+            );
           }
         });
+      } else {
+        var data = jsonDecode(response.body);
+        String msg = data is Map ? data.values.join("\n") : data.toString();
+        _showCustomSnackBar(msg);
       }
     } catch (e) {
-      setState(() {
-        error_message = "Network error: $e";
-      });
+      _showCustomSnackBar("Network error: Please check your connection");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void loginbutton() async {
     validateOTP();
     if (error.isEmpty) {
-      print("Hello");
-      print(widget.email);
-print(widget.username);
-print(widget.password);
-      await verifyotp(
-        _num1.text.trim(),
-        _num2.text.trim(),
-        _num3.text.trim(),
-        _num4.text.trim(),
-        widget.email,
-        widget.username,
-        widget.password
-      );
+      await verifyotp();
+    } else {
+      _showCustomSnackBar(error);
     }
-    if (error_message.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error_message)),
-      );
-    }
-    else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Sign Up successful!")),
-      );
-      Navigator.push(context, MaterialPageRoute(builder: (context) => login()));
-    }
-    
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -300,32 +363,60 @@ print(widget.password);
                   ),
 
                   SizedBox(height: 20),
-                  SizedBox(
-                    width: 285,
-                    height: 47,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        loginbutton();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        side: BorderSide(color: Color(0xFFEB9974), width: 2),
+                  // SizedBox(
+                  //   width: 285,
+                  //   height: 47,
+                  //   child: ElevatedButton(
+                  //     onPressed: () {
+                  //       loginbutton();
+                  //     },
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: Colors.white,
+                  //       side: BorderSide(color: Color(0xFFEB9974), width: 2),
 
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                      ),
-                      child: Text(
-                        'Verify OTP',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Color(0xFFE59885),
-                          fontWeight: FontWeight.bold,
-                        ),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(40),
+                  //       ),
+                  //     ),
+                  //     child: Text(
+                  //       'Verify OTP',
+                  //       style: TextStyle(
+                  //         fontSize: 22,
+                  //         color: Color(0xFFE59885),
+                  //         fontWeight: FontWeight.bold,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
+                   // Action Button with Spinner
+                SizedBox(
+                  width: 285,
+                  height: 47,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : loginbutton,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0xFFEB9974), width: 2),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(40),
                       ),
                     ),
+                    child: _isLoading 
+                      ? const SizedBox(
+                          height: 20, 
+                          width: 20, 
+                          child: CircularProgressIndicator(color: Color(0xFFEB9974), strokeWidth: 2)
+                        )
+                      : const Text(
+                          'Verify OTP',
+                          style: TextStyle(
+                            fontSize: 22,
+                            color: Color(0xFFE59885),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                   ),
-
+                ),
                   SizedBox(height: 50),
                 ],
               ),

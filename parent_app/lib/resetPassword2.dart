@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+import 'login.dart';
 import 'package:http/http.dart' as http;
 
 class Resetpassword2 extends StatefulWidget {
@@ -15,8 +16,29 @@ class _Resetpassword2State extends State<Resetpassword2> {
   final TextEditingController _confirmPassword = TextEditingController();
   String passwordError = "";
   String confirmPasswordError = "";
+  bool _isLoading = false; 
 
-  String error_message = "";
+  void _showCustomSnackBar(String message, {bool isError = true}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
+          ],
+        ),
+        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(15),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 
   void validatePassword() {
     final value = _password.text.trim();
@@ -49,63 +71,114 @@ class _Resetpassword2State extends State<Resetpassword2> {
     });
   }
 
-  Future<void> signupRequest(String email, String password) async {
+  // Future<void> signupRequest(String email, String password) async {
+  //   String link = 'http://127.0.0.1:8000/resetPassword/';
+  //   final url = Uri.parse(link);
+  //   try {
+  //     final response = await http.post(
+  //       url,
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: jsonEncode({'email': email, 'password': password}),
+  //     );
+  //     print(response.body);
+
+  //     if (response.statusCode == 200) {
+  //       ScaffoldMessenger.of(
+  //         context,
+  //       ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
+  //     } else {
+  //       // Handle signup error
+  //       var data = jsonDecode(response.body);
+  //       setState(() {
+  //         if (data is Map) {
+  //           error_message = data.values.join("\n");
+  //         } else {
+  //           error_message = data.toString();
+  //         }
+  //       });
+  //     }
+  //   } catch (e) {
+  //     setState(() {
+  //       error_message = "Network error: $e";
+  //     });
+  //   }
+  // }
+
+  // void resetButton() async {
+  //   print("Reset button2 pressed");
+  //   validatePassword();
+  //   validateConfirmPassword();
+  //   if (passwordError.isEmpty && confirmPasswordError.isEmpty) {
+  //     await signupRequest(widget.email, _password.text.trim());
+  //     if (error_message.isNotEmpty) {
+  //       ScaffoldMessenger.of(
+  //         context,
+  //       ).showSnackBar(SnackBar(content: Text(error_message)));
+  //     } else {
+  //       ScaffoldMessenger.of(
+  //         context,
+  //       ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
+  //     }
+  //     _password.clear();
+  //     _confirmPassword.clear();
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text("Please fill all fields correctly.")),
+  //     );
+  //   }
+  // }
+
+
+
+Future<void> resetRequest(String email, String password) async {
+    setState(() => _isLoading = true);
+    
+    // Change this to your production URL if needed
     String link = 'http://127.0.0.1:8000/resetPassword/';
     final url = Uri.parse(link);
+    
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
-      print(response.body);
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
+        // --- SUCCESS CASE ---
+        _showCustomSnackBar("Password reset successfully!", isError: false);
+        
+        // Wait for user to see the success message
+        await Future.delayed(const Duration(seconds: 2));
+        
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const login()), // Ensure 'login' class is correct
+            (route) => false,
+          );
+        }
       } else {
-        // Handle signup error
+        // --- BACKEND ERROR CASE ---
         var data = jsonDecode(response.body);
-        setState(() {
-          if (data is Map) {
-            error_message = data.values.join("\n");
-          } else {
-            error_message = data.toString();
-          }
-        });
+        String msg = data is Map ? data.values.first.toString() : "Reset failed";
+        _showCustomSnackBar(msg);
       }
     } catch (e) {
-      setState(() {
-        error_message = "Network error: $e";
-      });
+      _showCustomSnackBar("Network error: Please check your connection");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   void resetButton() async {
-    print("Reset button2 pressed");
     validatePassword();
     validateConfirmPassword();
+
     if (passwordError.isEmpty && confirmPasswordError.isEmpty) {
-      await signupRequest(widget.email, _password.text.trim());
-      if (error_message.isNotEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error_message)));
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
-      }
-      _password.clear();
-      _confirmPassword.clear();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please fill all fields correctly.")),
-      );
+      await resetRequest(widget.email, _password.text.trim());
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -246,33 +319,53 @@ class _Resetpassword2State extends State<Resetpassword2> {
                   ),
 
                   SizedBox(height: 60),
-
-                  SizedBox(
-                    width: 285,
-                    height: 47,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        print("Reset button pressed");
-                        resetButton();
-                      },
-
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFEB9974),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                      ),
-                      child: Text(
-                        'Reset',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                   SizedBox(
+                  width: 285,
+                  height: 47,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : resetButton,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEB9974),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
                     ),
+                    child: _isLoading 
+                      ? const SizedBox(
+                          height: 20, 
+                          width: 20, 
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                        )
+                      : const Text(
+                          'Update Password',
+                          style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
                   ),
-                  SizedBox(height: 25),
+                ),
+                  // SizedBox(
+                  //   width: 285,
+                  //   height: 47,
+                  //   child: ElevatedButton(
+                  //     onPressed: () {
+                  //       print("Reset button pressed");
+                  //       resetButton();
+                  //     },
+
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: Color(0xFFEB9974),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(40),
+                  //       ),
+                  //     ),
+                  //     child: Text(
+                  //       'Reset',
+                  //       style: TextStyle(
+                  //         fontSize: 22,
+                  //         color: Colors.white,
+                  //         fontWeight: FontWeight.bold,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
+                  // SizedBox(height: 25),
 
                   SizedBox(height: 50),
                 ],

@@ -14,7 +14,7 @@ class _EditprofileState extends State<profile> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(
-          "Edit Profile",
+          "Register Child",
           style: TextStyle(fontSize: 30, color: Colors.black),
         ),
         backgroundColor: Colors.white,
