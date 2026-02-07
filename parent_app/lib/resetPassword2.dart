@@ -16,8 +16,20 @@ class _Resetpassword2State extends State<Resetpassword2> {
   final TextEditingController _confirmPassword = TextEditingController();
   String passwordError = "";
   String confirmPasswordError = "";
-
   String error_message = "";
+  bool _isLoading = false; // Loading state variable
+
+  // --- Feedback SnackBar ---
+  void _showStatusSnackBar(String message, bool isSuccess) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 
   void validatePassword() {
     final value = _password.text.trim();
@@ -50,41 +62,75 @@ class _Resetpassword2State extends State<Resetpassword2> {
     });
   }
 
-  Future<void> signupRequest(String email, String password) async {
+  // Future<void> signupRequest(String email, String password) async {
+  //   String link = 'http://127.0.0.1:8000/resetPassword/';
+  //   final url = Uri.parse(link);
+  //   try {
+  //     final response = await http.post(
+  //       url,
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: jsonEncode({'email': email, 'new_password': password}),
+  //     );
+  //     print(response.body);
+
+  //     if (response.statusCode == 200) {
+  //       ScaffoldMessenger.of(
+  //         context,
+  //       ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
+  //       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => login()));
+  //     } else {
+  //       // Handle signup error
+  //       var data = jsonDecode(response.body);
+  //       setState(() {
+  //         if (data is Map) {
+  //           error_message = data.values.join("\n");
+  //         } else {
+  //           error_message = data.toString();
+  //         }
+  //       });
+  //     }
+  //   } catch (e) {
+  //     setState(() {
+  //       error_message = "Network error: $e";
+  //     });
+      
+  //   }
+  // }
+
+
+Future<void> signupRequest(String email, String password) async {
+    setState(() => _isLoading = true); // Start Loading
     String link = 'http://127.0.0.1:8000/resetPassword/';
     final url = Uri.parse(link);
+    
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'new_password': password}),
       );
-      print(response.body);
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => login()));
+        _showStatusSnackBar("Password reset successfully!", true);
+        
+        // Success ke baad login page par redirect
+        Future.delayed(const Duration(seconds: 1), () {
+          Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (context) => const login()));
+        });
       } else {
-        // Handle signup error
         var data = jsonDecode(response.body);
         setState(() {
-          if (data is Map) {
-            error_message = data.values.join("\n");
-          } else {
-            error_message = data.toString();
-          }
+          error_message = data is Map ? data.values.join("\n") : data.toString();
         });
+        _showStatusSnackBar(error_message, false);
       }
     } catch (e) {
-      setState(() {
-        error_message = "Network error: $e";
-      });
-      
+      _showStatusSnackBar("Network error: Server connection failed", false);
+    } finally {
+      if (mounted) setState(() => _isLoading = false); // Stop Loading
     }
   }
-
   void resetButton() async {
     validatePassword();
     validateConfirmPassword();
@@ -240,29 +286,60 @@ class _Resetpassword2State extends State<Resetpassword2> {
 
                   SizedBox(height: 60),
 
+                  // SizedBox(
+                  //   width: 285,
+                  //   height: 47,
+                  //   child: ElevatedButton(
+                  //     onPressed: () {
+                  //       print("Reset button pressed");
+                  //       resetButton();
+                  //     },
+
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: Color(0xFFEB9974),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(40),
+                  //       ),
+                  //     ),
+                  //     child: Text(
+                  //       'Reset',
+                  //       style: TextStyle(
+                  //         fontSize: 22,
+                  //         color: Colors.white,
+                  //         fontWeight: FontWeight.bold,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
+
                   SizedBox(
                     width: 285,
                     height: 47,
                     child: ElevatedButton(
-                      onPressed: () {
-                        print("Reset button pressed");
-                        resetButton();
-                      },
-
+                      onPressed: _isLoading ? null : resetButton,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFEB9974),
+                        backgroundColor: const Color(0xFFEB9974),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(40),
                         ),
                       ),
-                      child: Text(
-                        'Reset',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Reset',
+                              style: TextStyle(
+                                fontSize: 22,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                   SizedBox(height: 25),

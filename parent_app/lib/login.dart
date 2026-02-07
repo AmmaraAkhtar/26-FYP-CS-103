@@ -14,12 +14,28 @@ class login extends StatefulWidget {
 
 class _loginState extends State<login> {
   String email_error = "";
+  bool _isLoading = false;
   String password_error = "";
   String error_message = "";
   TextEditingController _email = TextEditingController();
   TextEditingController _password = TextEditingController();
 
+
+
+// --- Common Snackbar Function ---
+  void _showStatusSnackBar(String message, bool isSuccess) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> loginRequest(String email, String password) async {
+    setState(() => _isLoading = true); // Start loading
     String link = 'http://127.0.0.1:8000/login/';
     final url = Uri.parse(link);
     try {
@@ -30,26 +46,59 @@ class _loginState extends State<login> {
       );
 
       if (response.statusCode == 200) {
-        // Handle successful login
-        print('Login successful');
-        Navigator.push(context, MaterialPageRoute(builder: (context) => home(email: email,)));
+        if (mounted) {
+          _showStatusSnackBar("Login Successful! Welcome back.", true); // Green Logic
+          Future.delayed(const Duration(milliseconds: 500), () {
+            Navigator.pushReplacement(
+              context, 
+              MaterialPageRoute(builder: (context) => home(email: email))
+            );
+          });
+        }
       } else {
-        // Handle login error
         var data = jsonDecode(response.body);
         setState(() {
-         if (data is Map) {
-          error_message = data.values.join("\n");
-        } else {
-          error_message = data.toString();
-        }
+          error_message = data is Map ? data.values.join("\n") : data.toString();
         });
+        _showStatusSnackBar(error_message, false); // Red Logic
       }
     } catch (e) {
-      setState(() {
-        error_message = "Network error: $e";
-      });
+      _showStatusSnackBar("Network error: Please check your connection", false); // Red Logic
+    } finally {
+      if (mounted) setState(() => _isLoading = false); // Stop loading
     }
   }
+  // Future<void> loginRequest(String email, String password) async {
+  //   String link = 'http://127.0.0.1:8000/login/';
+  //   final url = Uri.parse(link);
+  //   try {
+  //     final response = await http.post(
+  //       url,
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: jsonEncode({'email': email, 'password': password}),
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       // Handle successful login
+  //       print('Login successful');
+  //       Navigator.push(context, MaterialPageRoute(builder: (context) => home(email: email,)));
+  //     } else {
+  //       // Handle login error
+  //       var data = jsonDecode(response.body);
+  //       setState(() {
+  //        if (data is Map) {
+  //         error_message = data.values.join("\n");
+  //       } else {
+  //         error_message = data.toString();
+  //       }
+  //       });
+  //     }
+  //   } catch (e) {
+  //     setState(() {
+  //       error_message = "Network error: $e";
+  //     });
+  //   }
+  // }
 
   void validate_email() {
     String email = _email.text.trim();
@@ -136,9 +185,6 @@ class _loginState extends State<login> {
                     ),
                   ),
                   SizedBox(height: 40),
-                Text(error_message.isEmpty?" ":error_message,
-                style: TextStyle(color: Colors.red),),
-                SizedBox(height: 20,),
                   //TextField for email
                   SizedBox(
                     width: 350,
@@ -220,7 +266,13 @@ class _loginState extends State<login> {
                           ),
                         ),
                         
-
+                       focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: Color(0xFF147CF4),
+                            width: 2,
+                          ),
+                        ),
                        errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
@@ -267,27 +319,42 @@ class _loginState extends State<login> {
 
                   SizedBox(height: 40),
 
+                  // SizedBox(
+                  //   width: 285,
+                  //   height: 47,
+                  //   child: ElevatedButton(
+                  //     onPressed: () {
+                  //       loginbutton();
+                  //     },
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: Color(0xFFEB9974),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(40),
+                  //       ),
+                  //     ),
+                  //     child: Text(
+                  //       'Login',
+                  //       style: TextStyle(
+                  //         fontSize: 22,
+                  //         color: Colors.white,
+                  //         fontWeight: FontWeight.bold,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
+
                   SizedBox(
                     width: 285,
                     height: 47,
                     child: ElevatedButton(
-                      onPressed: () {
-                        loginbutton();
-                      },
+                      onPressed: _isLoading ? null : loginbutton,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFEB9974),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
+                        backgroundColor: const Color(0xFFEB9974),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
                       ),
-                      child: Text(
-                        'Login',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isLoading 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Login', style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   SizedBox(height: 25),

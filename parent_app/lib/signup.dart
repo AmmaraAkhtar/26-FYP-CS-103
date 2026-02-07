@@ -85,12 +85,80 @@ class _SignupState extends State<Signup> {
     });
   }
 
+  // Future<void> signupRequest(
+  //   String username,
+  //   String email,
+  //   String password,
+  //   String password2,
+  // ) async {
+  //   String link = 'http://127.0.0.1:8000/signup/';
+  //   final url = Uri.parse(link);
+  //   try {
+  //     final response = await http.post(
+  //       url,
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: jsonEncode({
+  //         'username': username,
+  //         'email': email,
+  //         'password': password,
+          
+  //       }),
+  //     );
+  //     print(response.body);
+
+  //     if (response.statusCode == 200) {
+  //       Navigator.push(
+  //         context,
+  //         MaterialPageRoute(
+  //           builder: (context) =>
+  //               otp( email: email),
+  //         ),
+  //       );
+        
+  //       Navigator.push(context, MaterialPageRoute(builder: (context) => otp( email: email)));
+  //     } else {
+  //       // Handle signup error
+  //       var data = jsonDecode(response.body);
+  //       setState(() {
+  //         if (data is Map) {
+  //           error_message = data.values.join("\n");
+  //         } else {
+  //           error_message = data.toString();
+  //         }
+  //       });
+  //     }
+  //   } catch (e) {
+  //     setState(() {
+  //       error_message = "Network error: $e";
+  //     });
+  //   }
+  // }
+
+
+
+
+bool _isLoading = false; // Loading state logic
+
+  // --- Common Snackbar Function (Green/Red Logic) ---
+  void _showStatusSnackBar(String message, bool isSuccess) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+
   Future<void> signupRequest(
     String username,
     String email,
     String password,
     String password2,
   ) async {
+    setState(() => _isLoading = true); // Start loading
     String link = 'http://127.0.0.1:8000/signup/';
     final url = Uri.parse(link);
     try {
@@ -101,39 +169,30 @@ class _SignupState extends State<Signup> {
           'username': username,
           'email': email,
           'password': password,
-          
         }),
       );
-      print(response.body);
 
       if (response.statusCode == 200) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                otp( email: email),
-          ),
-        );
-        
-        Navigator.push(context, MaterialPageRoute(builder: (context) => otp( email: email)));
+        _showStatusSnackBar("Account created! Please verify OTP.", true); // Green Logic
+        Future.delayed(const Duration(milliseconds: 500), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => otp(email: email)),
+          );
+        });
       } else {
-        // Handle signup error
         var data = jsonDecode(response.body);
         setState(() {
-          if (data is Map) {
-            error_message = data.values.join("\n");
-          } else {
-            error_message = data.toString();
-          }
+          error_message = data is Map ? data.values.join("\n") : data.toString();
         });
+        _showStatusSnackBar(error_message, false); // Red Logic
       }
     } catch (e) {
-      setState(() {
-        error_message = "Network error: $e";
-      });
+      _showStatusSnackBar("Network error: Could not connect to server", false); // Red Logic
+    } finally {
+      if (mounted) setState(() => _isLoading = false); // Stop loading
     }
   }
-
   void submit() async {
     validateUsername();
     validateEmail();
@@ -194,12 +253,6 @@ class _SignupState extends State<Signup> {
                     ),
                   ),
                   SizedBox(height: 40),
-
-                  Text(
-                    error_message.isEmpty ? " " : error_message,
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  SizedBox(height: 20),
 
                   SizedBox(
                     width: 350,
@@ -401,32 +454,47 @@ class _SignupState extends State<Signup> {
                   
                   
                   SizedBox(height: 40),
-
+                  // Sign Up Button with Loading
                   SizedBox(
                     width: 285,
                     height: 47,
                     child: ElevatedButton(
-                      onPressed: () {
-                        submit();
-                      },
+                      onPressed: _isLoading ? null : submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
-                        side: BorderSide(color: Color(0xFFEB9974), width: 2),
-
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
+                        side: const BorderSide(color: Color(0xFFEB9974), width: 2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
                       ),
-                      child: Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Color(0xFFE59885),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isLoading 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Color(0xFFEB9974), strokeWidth: 2))
+                        : const Text('Sign Up', style: TextStyle(fontSize: 22, color: Color(0xFFE59885), fontWeight: FontWeight.bold)),
                     ),
                   ),
+                  // SizedBox(
+                  //   width: 285,
+                  //   height: 47,
+                  //   child: ElevatedButton(
+                  //     onPressed: () {
+                  //       submit();
+                  //     },
+                  //     style: ElevatedButton.styleFrom(
+                  //       backgroundColor: Colors.white,
+                  //       side: BorderSide(color: Color(0xFFEB9974), width: 2),
+
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(40),
+                  //       ),
+                  //     ),
+                  //     child: Text(
+                  //       'Sign Up',
+                  //       style: TextStyle(
+                  //         fontSize: 22,
+                  //         color: Color(0xFFE59885),
+                  //         fontWeight: FontWeight.bold,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                   SizedBox(height: 25),
 
                   // Don't have an account
