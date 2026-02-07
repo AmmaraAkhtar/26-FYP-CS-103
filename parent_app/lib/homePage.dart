@@ -1,20 +1,27 @@
 import 'package:flutter/material.dart';
 import 'Monitoring.dart';
 import "ChildRegister.dart";
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 
 
 
 class home extends StatefulWidget {
-  const home({super.key});
+  String email;
+  home({super.key, required this.email});
 
   @override
   State<home> createState() => _homeState();
 }
 
 class _homeState extends State<home> {
-    final List<Map<String, dynamic>> children = [
-    {
+  TextEditingController searchController = TextEditingController();
+  List<Map<String, dynamic>> filteredChildren = []; 
+  List<Map<String, dynamic>> children = []; // empty initially
+  bool isLoading = true;
+    //final List<Map<String, dynamic>> children = [
+   /* {
       "name": "Hamza Ali",
       "age": 9,
       "status": "Online",
@@ -42,7 +49,62 @@ class _homeState extends State<home> {
       "lastAlert": "Just Now",
       "image": "https://img.freepik.com/free-vector/portrait-boy-with-brown-hair-brown-eyes_1308-146018.jpg"
     },
-  ];
+  ];*/
+
+  @override
+  void initState() {
+    super.initState();
+    fetchChildren();
+    searchController.addListener(_filterChildren);
+  }
+
+  void _filterChildren() {
+  final query = searchController.text.toLowerCase();
+  setState(() {
+    filteredChildren = children.where((child) {
+      final name = child['name'].toString().toLowerCase();
+      return name.contains(query);
+    }).toList();
+  });
+}
+
+  Future<void> fetchChildren() async {
+    print("Fetching children for parent email: ${widget.email}");
+    final url = Uri.parse(
+        'http://127.0.0.1:8000/fetchChildren/?parent_email=${widget.email}');
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        print("Fetched data: $data");
+
+        setState(() {
+          children = data.map((child) {
+            return {
+              "name": "${child['firstname']} ${child['lastname']}",
+              "age": child['age'],
+              "status": (child['is_paired'] ?? false) ? "Online" : "Offline",
+              "lastAlert": "Just Now", 
+              "image":
+                  "https://img.favpng.com/22/11/14/3d-boy-avatar-cartoon-boy-with-glasses-in-3d-style-biFKVkT6_t.jpg" // placeholder
+            };
+          }).toList();
+          filteredChildren = List.from(children); 
+          isLoading = false;
+        });
+      } else {
+        print("Error fetching children: ${response.body}");
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Exception: $e");
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,6 +146,7 @@ class _homeState extends State<home> {
                     width: 303,
                     height: 50,
                     child: TextField(
+                      controller: searchController,
                       decoration: InputDecoration(
                         hintText: 'Search',
                         hintStyle: TextStyle(
@@ -141,7 +204,7 @@ class _homeState extends State<home> {
                          Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => profile(),
+                            builder: (context) => profile(email: widget.email,),
                           ));
                       },
                       style: ElevatedButton.styleFrom(
@@ -166,14 +229,19 @@ class _homeState extends State<home> {
             ),
 
       
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: children.length,
+                  Expanded(child: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : ListView.builder(
+                      
+                      itemCount: filteredChildren.length,
+                      
                       itemBuilder: (context, index) {
-                        final child = children[index];
+                        //final child = children[index];
+                          final child = filteredChildren[index];
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          child: InkWell(
+                          child:
+                           InkWell(
                           borderRadius: BorderRadius.circular(15),
                           onTap: () {
                             Navigator.push(

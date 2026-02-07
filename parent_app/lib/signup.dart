@@ -24,73 +24,7 @@ class _SignupState extends State<Signup> {
   String confirmPasswordError = "";
   String phoneError = "";
   String error_message = "";
-  bool _isLoading = false;
 
-
-
-  // --- NEW: Custom SnackBar (Consistent with Login & OTP) ---
-  void _showCustomSnackBar(String message, {bool isError = true}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(isError ? Icons.error_outline : Icons.check_circle_outline, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: isError ? Colors.redAccent : Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(15),
-      ),
-    );
-  }
-
-  Future<void> signupRequest() async {
-    setState(() => _isLoading = true);
-
-    const String link = 'http://127.0.0.1:8000/signup/';
-    try {
-      final response = await http.post(
-        Uri.parse(link),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'username': _username.text.trim(),
-          'email': _email.text.trim(),
-          'password': _password.text.trim(),
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        // --- SUCCESS LOGIC ---
-        _showCustomSnackBar("Signup initial successful! Verify OTP", isError: false);
-
-        // 1 second wait taake user green snackbar dekh le
-        Future.delayed(const Duration(seconds: 1), () {
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => otp(
-                username: _username.text.trim(), 
-                email: _email.text.trim(), 
-                password: _password.text.trim()
-              ))
-            );
-          }
-        });
-      } else {
-        // Backend Errors
-        var data = jsonDecode(response.body);
-        String msg = data is Map ? data.values.join("\n") : data.toString();
-        _showCustomSnackBar(msg); // Default isError true (Red)
-      }
-    } catch (e) {
-      _showCustomSnackBar("Server Error: Check your connection");
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
   void validateUsername() {
     final value = _username.text.trim();
     final regex = RegExp(r'^[a-zA-Z0-9_]+$');
@@ -173,8 +107,15 @@ class _SignupState extends State<Signup> {
   //     print(response.body);
 
   //     if (response.statusCode == 200) {
+  //       Navigator.push(
+  //         context,
+  //         MaterialPageRoute(
+  //           builder: (context) =>
+  //               otp( email: email),
+  //         ),
+  //       );
         
-  //       Navigator.push(context, MaterialPageRoute(builder: (context) => otp(username: username, email: email, password: password)));
+  //       Navigator.push(context, MaterialPageRoute(builder: (context) => otp( email: email)));
   //     } else {
   //       // Handle signup error
   //       var data = jsonDecode(response.body);
@@ -196,43 +137,84 @@ class _SignupState extends State<Signup> {
 
 
 
-  // void submit() async {
-  //   validateUsername();
-  //   validateEmail();
-  //   validatePassword();
-  //   validateConfirmPassword();
-    
+bool _isLoading = false; // Loading state logic
 
-  //   if (usernameError.isEmpty &&
-  //       emailError.isEmpty &&
-  //       passwordError.isEmpty &&
-  //       confirmPasswordError.isEmpty
-  //       ) {
-  //         await signupRequest(
-  //     _username.text.trim(),
-  //     _email.text.trim(),
-  //     _password.text.trim(),
-  //     _confirmPassword.text.trim(),
-  //   );
-      
-  //   }
-  // }
+  // --- Common Snackbar Function (Green/Red Logic) ---
+  void _showStatusSnackBar(String message, bool isSuccess) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 
 
+  Future<void> signupRequest(
+    String username,
+    String email,
+    String password,
+    String password2,
+  ) async {
+    setState(() => _isLoading = true); // Start loading
+    String link = 'http://127.0.0.1:8000/signup/';
+    final url = Uri.parse(link);
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'username': username,
+          'email': email,
+          'password': password,
+        }),
+      );
 
-void submit() {
+      if (response.statusCode == 200) {
+        _showStatusSnackBar("Account created! Please verify OTP.", true); // Green Logic
+        Future.delayed(const Duration(milliseconds: 500), () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => otp(email: email)),
+          );
+        });
+      } else {
+        var data = jsonDecode(response.body);
+        setState(() {
+          error_message = data is Map ? data.values.join("\n") : data.toString();
+        });
+        _showStatusSnackBar(error_message, false); // Red Logic
+      }
+    } catch (e) {
+      _showStatusSnackBar("Network error: Could not connect to server", false); // Red Logic
+    } finally {
+      if (mounted) setState(() => _isLoading = false); // Stop loading
+    }
+  }
+  void submit() async {
     validateUsername();
     validateEmail();
     validatePassword();
     validateConfirmPassword();
+    
 
     if (usernameError.isEmpty &&
         emailError.isEmpty &&
         passwordError.isEmpty &&
-        confirmPasswordError.isEmpty) {
-      signupRequest();
+        confirmPasswordError.isEmpty
+        ) {
+          await signupRequest(
+      _username.text.trim(),
+      _email.text.trim(),
+      _password.text.trim(),
+      _confirmPassword.text.trim(),
+    );
+      
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -472,7 +454,22 @@ void submit() {
                   
                   
                   SizedBox(height: 40),
-
+                  // Sign Up Button with Loading
+                  SizedBox(
+                    width: 285,
+                    height: 47,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        side: const BorderSide(color: Color(0xFFEB9974), width: 2),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
+                      ),
+                      child: _isLoading 
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Color(0xFFEB9974), strokeWidth: 2))
+                        : const Text('Sign Up', style: TextStyle(fontSize: 22, color: Color(0xFFE59885), fontWeight: FontWeight.bold)),
+                    ),
+                  ),
                   // SizedBox(
                   //   width: 285,
                   //   height: 47,
@@ -498,22 +495,6 @@ void submit() {
                   //     ),
                   //   ),
                   // ),
-
-                  SizedBox(
-                  width: 285,
-                  height: 47,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : submit,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xFFEB9974), width: 2),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-                    ),
-                    child: _isLoading 
-                      ? const CircularProgressIndicator(color: Color(0xFFEB9974))
-                      : const Text('Sign Up', style: TextStyle(fontSize: 22, color: Color(0xFFE59885), fontWeight: FontWeight.bold)),
-                  ),
-                ),
                   SizedBox(height: 25),
 
                   // Don't have an account

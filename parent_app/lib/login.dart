@@ -14,13 +14,60 @@ class login extends StatefulWidget {
 
 class _loginState extends State<login> {
   String email_error = "";
+  bool _isLoading = false;
   String password_error = "";
-   bool _isLoading = false;
   String error_message = "";
   TextEditingController _email = TextEditingController();
   TextEditingController _password = TextEditingController();
-  
 
+
+
+// --- Common Snackbar Function ---
+  void _showStatusSnackBar(String message, bool isSuccess) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> loginRequest(String email, String password) async {
+    setState(() => _isLoading = true); // Start loading
+    String link = 'http://127.0.0.1:8000/login/';
+    final url = Uri.parse(link);
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email, 'password': password}),
+      );
+
+      if (response.statusCode == 200) {
+        if (mounted) {
+          _showStatusSnackBar("Login Successful! Welcome back.", true); // Green Logic
+          Future.delayed(const Duration(milliseconds: 500), () {
+            Navigator.pushReplacement(
+              context, 
+              MaterialPageRoute(builder: (context) => home(email: email))
+            );
+          });
+        }
+      } else {
+        var data = jsonDecode(response.body);
+        setState(() {
+          error_message = data is Map ? data.values.join("\n") : data.toString();
+        });
+        _showStatusSnackBar(error_message, false); // Red Logic
+      }
+    } catch (e) {
+      _showStatusSnackBar("Network error: Please check your connection", false); // Red Logic
+    } finally {
+      if (mounted) setState(() => _isLoading = false); // Stop loading
+    }
+  }
   // Future<void> loginRequest(String email, String password) async {
   //   String link = 'http://127.0.0.1:8000/login/';
   //   final url = Uri.parse(link);
@@ -34,6 +81,7 @@ class _loginState extends State<login> {
   //     if (response.statusCode == 200) {
   //       // Handle successful login
   //       print('Login successful');
+  //       Navigator.push(context, MaterialPageRoute(builder: (context) => home(email: email,)));
   //     } else {
   //       // Handle login error
   //       var data = jsonDecode(response.body);
@@ -52,71 +100,6 @@ class _loginState extends State<login> {
   //   }
   // }
 
-
-
-
-void _showCustomSnackBar(String message, {bool isError = true}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            // Success ke liye check icon, Error ke liye error icon
-            Icon(isError ? Icons.error_outline : Icons.check_circle_outline, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        // Success par Green aur Error par Red color
-        backgroundColor: isError ? Colors.redAccent : Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(15),
-      ),
-    );
-  }
-
-  Future<void> loginRequest(String email, String password) async {
-    setState(() => _isLoading = true);
-    
-    String link = 'http://127.0.0.1:8000/login/';
-    final url = Uri.parse(link);
-    
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
-      );
-
-      if (response.statusCode == 200) {
-        // --- STEP 1: Success Message dikhana ---
-        _showCustomSnackBar("Login Successful!", isError: false);
-
-        // TextField clear karna
-        _email.clear();
-        _password.clear();
-
-        // --- STEP 2: Thora delay taake user SnackBar dekh sake ---
-        Future.delayed(const Duration(seconds: 1), () {
-          if (mounted) {
-            Navigator.pushReplacement(
-              context, 
-              MaterialPageRoute(builder: (context) => const home())
-            );
-          }
-        });
-      } else {
-        // Backend se aane wala error message dikhana
-        var data = jsonDecode(response.body);
-        String msg = data is Map ? data.values.join("\n") : data.toString();
-        _showCustomSnackBar(msg); // Default isError true hai
-      }
-    } catch (e) {
-      _showCustomSnackBar("Network error: Check if your server is running");
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
   void validate_email() {
     String email = _email.text.trim();
     if (email.isEmpty) {
@@ -151,29 +134,19 @@ void _showCustomSnackBar(String message, {bool isError = true}) {
     }
   }
 
-  // void loginbutton() async {
-  //   validate_email();
-  //   validate_password();
-  //   await loginRequest(_email.text.trim(), _password.text.trim());
-
-  //   if (email_error.isEmpty && password_error.isEmpty) {
-  //     _email.clear();
-  //     _password.clear();
-  //     Navigator.push(context, MaterialPageRoute(builder: (context) => home()));
-  //   }
-  // }
-
-
-
-void loginbutton() async {
+  void loginbutton() async {
     validate_email();
     validate_password();
+    await loginRequest(_email.text.trim(), _password.text.trim());
 
-    // Sirf tab call karein jab validation pass ho jaye
     if (email_error.isEmpty && password_error.isEmpty) {
-      await loginRequest(_email.text.trim(), _password.text.trim());
+      _email.clear();
+      _password.clear();
+      
     }
+    
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -293,7 +266,7 @@ void loginbutton() async {
                           ),
                         ),
                         
-                         focusedBorder: OutlineInputBorder(
+                       focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: BorderSide(
                             color: Color(0xFF147CF4),
@@ -370,8 +343,6 @@ void loginbutton() async {
                   //   ),
                   // ),
 
-
-                  // Login Button with Loading Indicator
                   SizedBox(
                     width: 285,
                     height: 47,
@@ -382,15 +353,8 @@ void loginbutton() async {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
                       ),
                       child: _isLoading 
-                        ? const SizedBox(
-                            height: 20, 
-                            width: 20, 
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                          )
-                        : const Text(
-                            'Login',
-                            style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Login', style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   SizedBox(height: 25),

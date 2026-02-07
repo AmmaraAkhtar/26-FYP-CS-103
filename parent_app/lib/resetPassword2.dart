@@ -16,25 +16,16 @@ class _Resetpassword2State extends State<Resetpassword2> {
   final TextEditingController _confirmPassword = TextEditingController();
   String passwordError = "";
   String confirmPasswordError = "";
-  bool _isLoading = false; 
+  String error_message = "";
+  bool _isLoading = false; // Loading state variable
 
-  void _showCustomSnackBar(String message, {bool isError = true}) {
+  // --- Feedback SnackBar ---
+  void _showStatusSnackBar(String message, bool isSuccess) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            Icon(
-              isError ? Icons.error_outline : Icons.check_circle_outline,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message, style: const TextStyle(color: Colors.white))),
-          ],
-        ),
-        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        content: Text(message),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(15),
         duration: const Duration(seconds: 3),
       ),
     );
@@ -78,7 +69,7 @@ class _Resetpassword2State extends State<Resetpassword2> {
   //     final response = await http.post(
   //       url,
   //       headers: {'Content-Type': 'application/json'},
-  //       body: jsonEncode({'email': email, 'password': password}),
+  //       body: jsonEncode({'email': email, 'new_password': password}),
   //     );
   //     print(response.body);
 
@@ -86,6 +77,7 @@ class _Resetpassword2State extends State<Resetpassword2> {
   //       ScaffoldMessenger.of(
   //         context,
   //       ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
+  //       Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => login()));
   //     } else {
   //       // Handle signup error
   //       var data = jsonDecode(response.body);
@@ -101,39 +93,13 @@ class _Resetpassword2State extends State<Resetpassword2> {
   //     setState(() {
   //       error_message = "Network error: $e";
   //     });
-  //   }
-  // }
-
-  // void resetButton() async {
-  //   print("Reset button2 pressed");
-  //   validatePassword();
-  //   validateConfirmPassword();
-  //   if (passwordError.isEmpty && confirmPasswordError.isEmpty) {
-  //     await signupRequest(widget.email, _password.text.trim());
-  //     if (error_message.isNotEmpty) {
-  //       ScaffoldMessenger.of(
-  //         context,
-  //       ).showSnackBar(SnackBar(content: Text(error_message)));
-  //     } else {
-  //       ScaffoldMessenger.of(
-  //         context,
-  //       ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
-  //     }
-  //     _password.clear();
-  //     _confirmPassword.clear();
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text("Please fill all fields correctly.")),
-  //     );
+      
   //   }
   // }
 
 
-
-Future<void> resetRequest(String email, String password) async {
-    setState(() => _isLoading = true);
-    
-    // Change this to your production URL if needed
+Future<void> signupRequest(String email, String password) async {
+    setState(() => _isLoading = true); // Start Loading
     String link = 'http://127.0.0.1:8000/resetPassword/';
     final url = Uri.parse(link);
     
@@ -141,44 +107,44 @@ Future<void> resetRequest(String email, String password) async {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
+        body: jsonEncode({'email': email, 'new_password': password}),
       );
 
       if (response.statusCode == 200) {
-        // --- SUCCESS CASE ---
-        _showCustomSnackBar("Password reset successfully!", isError: false);
+        _showStatusSnackBar("Password reset successfully!", true);
         
-        // Wait for user to see the success message
-        await Future.delayed(const Duration(seconds: 2));
-        
-        if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const login()), // Ensure 'login' class is correct
-            (route) => false,
-          );
-        }
+        // Success ke baad login page par redirect
+        Future.delayed(const Duration(seconds: 1), () {
+          Navigator.pushReplacement(
+              context, MaterialPageRoute(builder: (context) => const login()));
+        });
       } else {
-        // --- BACKEND ERROR CASE ---
         var data = jsonDecode(response.body);
-        String msg = data is Map ? data.values.first.toString() : "Reset failed";
-        _showCustomSnackBar(msg);
+        setState(() {
+          error_message = data is Map ? data.values.join("\n") : data.toString();
+        });
+        _showStatusSnackBar(error_message, false);
       }
     } catch (e) {
-      _showCustomSnackBar("Network error: Please check your connection");
+      _showStatusSnackBar("Network error: Server connection failed", false);
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false); // Stop Loading
     }
   }
-
   void resetButton() async {
     validatePassword();
     validateConfirmPassword();
 
     if (passwordError.isEmpty && confirmPasswordError.isEmpty) {
-      await resetRequest(widget.email, _password.text.trim());
-    }
+      await signupRequest(widget.email, _password.text.trim());
+      
+      _password.clear();
+      _confirmPassword.clear();
+    } 
+    
+    
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -319,27 +285,7 @@ Future<void> resetRequest(String email, String password) async {
                   ),
 
                   SizedBox(height: 60),
-                   SizedBox(
-                  width: 285,
-                  height: 47,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : resetButton,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEB9974),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-                    ),
-                    child: _isLoading 
-                      ? const SizedBox(
-                          height: 20, 
-                          width: 20, 
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                        )
-                      : const Text(
-                          'Update Password',
-                          style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
-                        ),
-                  ),
-                ),
+
                   // SizedBox(
                   //   width: 285,
                   //   height: 47,
@@ -365,7 +311,38 @@ Future<void> resetRequest(String email, String password) async {
                   //     ),
                   //   ),
                   // ),
-                  // SizedBox(height: 25),
+
+                  SizedBox(
+                    width: 285,
+                    height: 47,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : resetButton,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEB9974),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Reset',
+                              style: TextStyle(
+                                fontSize: 22,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                  SizedBox(height: 25),
 
                   SizedBox(height: 50),
                 ],

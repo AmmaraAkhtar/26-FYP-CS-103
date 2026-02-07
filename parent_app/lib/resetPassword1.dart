@@ -14,24 +14,17 @@ class Resetpassword1 extends StatefulWidget {
 class _Resetpassword1State extends State<Resetpassword1> {
    String email_error = "";
    String error_message = "";
+   bool _isLoading = false;
   TextEditingController _email = TextEditingController();
-  bool _isLoading = false;
 
-  // --- Professional SnackBar (Consistent with ResetPassword2) ---
-  void _showCustomSnackBar(String message, {bool isError = true}) {
+   // --- Common Snackbar Function (Green/Red Logic) ---
+  void _showStatusSnackBar(String message, bool isSuccess) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            Icon(isError ? Icons.error_outline : Icons.check_circle_outline, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        content: Text(message),
+        backgroundColor: isSuccess ? Colors.green : Colors.red,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(15),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -83,30 +76,13 @@ class _Resetpassword1State extends State<Resetpassword1> {
 //       setState(() {
 //         error_message = "Network error: $e";
 //       });
+      
 //     }
 //   }
- 
-//   void loginbutton() async {
-//     validate_email();
-//     if (email_error.isEmpty) {
-//       await emailcheckRequest(_email.text.trim(), '');
-//       _email.clear();
-//     }
-//     else{
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text(error_message)));
-//     }
-    
-//   }
-
-
-Future<void> emailcheckRequest(String email) async {
-    setState(() => _isLoading = true);
-    
-    // API URL
+ Future<void> emailcheckRequest(String email) async {
+    setState(() => _isLoading = true); // Start loading animation
     String link = 'http://127.0.0.1:8000/checkEmail/';
     final url = Uri.parse(link);
-    
     try {
       final response = await http.post(
         url,
@@ -115,32 +91,32 @@ Future<void> emailcheckRequest(String email) async {
       );
 
       if (response.statusCode == 200) {
-        // Success: Navigate to next step
-        if (mounted) {
+        _showStatusSnackBar("Email verified! Redirecting...", true); // Green Logic
+        
+        Future.delayed(const Duration(milliseconds: 500), () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => Resetpassword2(email: email)),
           );
-        }
+        });
       } else {
-        // Backend Error (e.g., Email not found)
         var data = jsonDecode(response.body);
-        String msg = data is Map ? data.values.join("\n") : "Email not found";
-        _showCustomSnackBar(msg);
+        setState(() {
+          error_message = data is Map ? data.values.join("\n") : data.toString();
+        });
+        _showStatusSnackBar(error_message, false); // Red Logic
       }
     } catch (e) {
-      _showCustomSnackBar("Network error: Server connection failed");
+      _showStatusSnackBar("Network error: Server connection failed", false); // Red Logic
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false); // Stop loading
     }
   }
-
   void loginbutton() async {
     validate_email();
-    
-    // Sirf tab call karein jab local validation pass ho
     if (email_error.isEmpty) {
       await emailcheckRequest(_email.text.trim());
+      // _email.clear(); // Request ke baad clear karna hai to theek, warna Navigator handle kar lega
     }
   }
   @override
@@ -231,28 +207,7 @@ Future<void> emailcheckRequest(String email) async {
                   ),
 
                   SizedBox(height: 60),
-                   // Reset Button with Spinner
-                  SizedBox(
-                    width: 285,
-                    height: 47,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : loginbutton,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFEB9974),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
-                      ),
-                      child: _isLoading 
-                        ? const SizedBox(
-                            height: 20, 
-                            width: 20, 
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
-                          )
-                        : const Text(
-                            'Reset',
-                            style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                    ),
-                  ),
+
                   // SizedBox(
                   //   width: 285,
                   //   height: 47,
@@ -276,7 +231,37 @@ Future<void> emailcheckRequest(String email) async {
                   //     ),
                   //   ),
                   // ),
-                  // SizedBox(height: 25),
+                  SizedBox(
+                    width: 285,
+                    height: 47,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : loginbutton,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFEB9974),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              'Reset',
+                              style: TextStyle(
+                                fontSize: 22,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
+                  SizedBox(height: 25),
 
                   SizedBox(height: 50),
                 ],

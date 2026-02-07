@@ -5,9 +5,8 @@ import 'login.dart';
 
 class otp extends StatefulWidget {
   final String email;
-  final String username;
-  final String password;
-  const otp({super.key, required this.email, required this.username, required this.password});
+  
+  const otp({super.key, required this.email});
 
   @override
   State<otp> createState() => _otpState();
@@ -21,27 +20,21 @@ class _otpState extends State<otp> {
 
   // Error message
   String error = "";
-  bool _isLoading  = false;
+  String error_message = "";
+  bool _isLoading = false; // Loader ke liye logic
 
- // Consistent SnackBar logic (Jaisa baqi screens mein tha)
-  void _showCustomSnackBar(String message, {bool isError = true}) {
+  // --- Error SnackBar Function ---
+  void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            Icon(isError ? Icons.error_outline : Icons.check_circle_outline, color: Colors.white),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: isError ? Colors.redAccent : Colors.green,
+        content: Text(message),
+        backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(15),
       ),
     );
   }
- void validateOTP() {
+
+  void validateOTP() {
     setState(() {
       error = "";
       List<TextEditingController> fields = [_num1, _num2, _num3, _num4];
@@ -52,18 +45,24 @@ class _otpState extends State<otp> {
           error = "All fields are required";
           return; // Stop checking
         }
-      }});
- }
-//   Future<void> verifyotp(String num1,String num2,String num3,String num4,String email,String username,String password) async {
+      }
+
+      error = "";
+
+      
+    });
+  }
+
+//   Future<void> verifyotp(String num1,String num2,String num3,String num4,String email) async {
 //     String otp = num1 + num2 + num3 + num4;
 //     String link = 'http://127.0.0.1:8000/verifyOtp/';
 //     final url = Uri.parse(link);
-//     print("Sending OTP verification request with OTP: $otp, Email: $email, Username: $username");
+//     print("Sending OTP verification request with OTP: $otp, Email: $email");
 //     try {
 //       final response = await http.post(
 //         url,
 //         headers: {'Content-Type': 'application/json'},
-//         body: jsonEncode({'otp': otp, 'email': email, 'username': username, 'password': password}),
+//         body: jsonEncode({'otp': otp, 'email': email, }),
 //       );
 
 //       if (response.statusCode == 200) {
@@ -87,89 +86,123 @@ class _otpState extends State<otp> {
 //     }
 //   }
 
-//   void loginbutton() async {
-//     validateOTP();
-//     if (error.isEmpty) {
-//       print("Hello");
-//       print(widget.email);
-// print(widget.username);
-// print(widget.password);
-//       await verifyotp(
-//         _num1.text.trim(),
-//         _num2.text.trim(),
-//         _num3.text.trim(),
-//         _num4.text.trim(),
-//         widget.email,
-//         widget.username,
-//         widget.password
+// Future<void> resendOtp(String email) async {
+//     String link = 'http://127.0.0.1:8000/resendOtp/';
+//     final url = Uri.parse(link);
+//     print("Sending resend OTP request with Email: $email");
+//     try {
+//       final response = await http.post(
+//         url,
+//         headers: {'Content-Type': 'application/json'},
+//         body: jsonEncode({'email': email}),
 //       );
-//     }
-//     if (error_message.isNotEmpty) {
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         SnackBar(content: Text(error_message)),
-//       );
-//     }
-//     else {
-//       ScaffoldMessenger.of(context).showSnackBar(
-//         const SnackBar(content: Text("Sign Up successful!")),
-//       );
-//       Navigator.push(context, MaterialPageRoute(builder: (context) => login()));
-//     }
-    
-//   }
+
+//       if (response.statusCode == 200) {
+//         print('Resend OTP successful');
+//       } else {
+//         var data = jsonDecode(response.body);
+//         setState(() {
+//           if (data is Map) {
+//             error_message = data.values.join("\n");
+//           } else {
+//             error_message = data.toString();
+//           }
+//         });
+//       }
+//     } catch (e) {
+//       setState(() {
+//         error_message = "Network error: $e";
+//       });
+//     }}
 
 
-Future<void> verifyotp() async {
-    setState(() => _isLoading = true);
-    
-    String fullOtp = _num1.text + _num2.text + _num3.text + _num4.text;
+Future<void> verifyotp(String num1, String num2, String num3, String num4, String email) async {
+    setState(() => _isLoading = true); // Start Loading
+    String otpValue = num1 + num2 + num3 + num4;
     String link = 'http://127.0.0.1:8000/verifyOtp/';
-    final url = Uri.parse(link);
     
     try {
       final response = await http.post(
-        url,
+        Uri.parse(link),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'otp': fullOtp, 
-          'email': widget.email, 
-          'username': widget.username, 
-          'password': widget.password
-        }),
+        body: jsonEncode({'otp': otpValue, 'email': email}),
       );
 
       if (response.statusCode == 200) {
-        _showCustomSnackBar("Sign Up successful!", isError: false);
-        
-        // Navigation consistent with other screens
-        Future.delayed(const Duration(seconds: 1), () {
-          if (mounted) {
-            Navigator.pushAndRemoveUntil(
-              context, 
-              MaterialPageRoute(builder: (context) => const login()),
-              (route) => false
-            );
-          }
-        });
+        // Success par direct navigation
+        if (mounted) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const login()),
+            (route) => false,
+          );
+        }
       } else {
         var data = jsonDecode(response.body);
         String msg = data is Map ? data.values.join("\n") : data.toString();
-        _showCustomSnackBar(msg);
+        _showErrorSnackBar(msg); // Error Snackbar
       }
     } catch (e) {
-      _showCustomSnackBar("Network error: Please check your connection");
+      _showErrorSnackBar("Network error: Connection failed");
+    } finally {
+      if (mounted) setState(() => _isLoading = false); // Stop Loading
+    }
+  }
+
+  Future<void> resendOtp(String email) async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await http.post(
+        Uri.parse('http://127.0.0.1:8000/resendOtp/'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("OTP resent to your email")),
+        );
+      } else {
+        _showErrorSnackBar("Failed to resend OTP");
+      }
+    } catch (e) {
+      _showErrorSnackBar("Connection error");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
-
   void loginbutton() async {
     validateOTP();
     if (error.isEmpty) {
-      await verifyotp();
-    } else {
-      _showCustomSnackBar(error);
+      print("Hello");
+      print(widget.email);
+
+      await verifyotp(
+        _num1.text.trim(),
+        _num2.text.trim(),
+        _num3.text.trim(),
+        _num4.text.trim(),
+        widget.email);
     }
+    if (error_message.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error_message)),
+      );
+    }
+    else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Sign Up successful!")),
+      );
+      Navigator.push(context, MaterialPageRoute(builder: (context) => login()));
+    }
+    
+  }
+  
+  void resendOtpButton() async {
+    await resendOtp(widget.email);
+    ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text("OTP resent! Please check your email.")),
+    );
   }
   @override
   Widget build(BuildContext context) {
@@ -339,13 +372,15 @@ Future<void> verifyotp() async {
                   // ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
+                    children:  [
                       Text(
                         "Didn’t receive a OTP? ",
                         style: TextStyle(fontSize: 18),
                       ),
                       TextButton(
-                        onPressed: null,
+                        onPressed: () {
+                          resendOtpButton();
+                        },
                         style: ButtonStyle(
                           padding: WidgetStatePropertyAll(EdgeInsets.all(0)),
                         ),
@@ -388,8 +423,8 @@ Future<void> verifyotp() async {
                   //     ),
                   //   ),
                   // ),
-                   // Action Button with Spinner
-                SizedBox(
+
+                  SizedBox(
                   width: 285,
                   height: 47,
                   child: ElevatedButton(
@@ -397,26 +432,14 @@ Future<void> verifyotp() async {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       side: const BorderSide(color: Color(0xFFEB9974), width: 2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(40),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(40)),
                     ),
-                    child: _isLoading 
-                      ? const SizedBox(
-                          height: 20, 
-                          width: 20, 
-                          child: CircularProgressIndicator(color: Color(0xFFEB9974), strokeWidth: 2)
-                        )
-                      : const Text(
-                          'Verify OTP',
-                          style: TextStyle(
-                            fontSize: 22,
-                            color: Color(0xFFE59885),
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    child: _isLoading
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFEB9974)))
+                        : const Text('Verify OTP', style: TextStyle(fontSize: 22, color: Color(0xFFE59885), fontWeight: FontWeight.bold)),
                   ),
                 ),
+
                   SizedBox(height: 50),
                 ],
               ),
