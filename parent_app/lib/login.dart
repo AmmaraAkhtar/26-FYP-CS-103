@@ -101,22 +101,27 @@ class _loginState extends State<login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(250.h),
-        child: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-          flexibleSpace: Padding(
-            padding: EdgeInsets.only(top: 50.h),
-            child: Hero(
-              tag: 'applog',
-              child: Image.asset('assets/logo.png', width: 189.w, height: 189.h),
+      backgroundColor: Color(0xFFFBFBFC),
+           appBar: PreferredSize(
+          preferredSize: Size.fromHeight(250.h),
+          child: AppBar(
+            backgroundColor:Color(0xFFFBFBFC) ,
+
+             // ⭐ IMPORTANT — scroll par color change band
+            scrolledUnderElevation: 0,
+            surfaceTintColor: Colors.transparent,
+
+            elevation: 0,
+            centerTitle: true,
+            flexibleSpace: Padding(
+              padding: EdgeInsets.only(top: 50.h),
+              child: Hero(
+                tag: 'applog',
+                child: Image.asset('assets/logo.png',  height: 189.h),
+              ),
             ),
           ),
         ),
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -134,12 +139,12 @@ class _loginState extends State<login> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 40.h),
+                  SizedBox(height: 10.h),
                   Text(
                     error_message.isEmpty ? " " : error_message,
                     style: TextStyle(color: Colors.red, fontSize: 14.sp),
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 10.h),
 
                   // Email TextField
                   SizedBox(
@@ -153,7 +158,7 @@ class _loginState extends State<login> {
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16.sp,
                         ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 14.h),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(7.r),
                           borderSide: BorderSide(
@@ -199,7 +204,7 @@ class _loginState extends State<login> {
                           color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16.sp,
                         ),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 14.h),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10.r),
                           borderSide: BorderSide(
