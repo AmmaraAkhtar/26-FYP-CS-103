@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'welcome.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class splashpage extends StatefulWidget {
   const splashpage({super.key});
@@ -28,16 +29,18 @@ class _splashpageState extends State<splashpage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(child:      SizedBox(
-        width: double.infinity,
-        height: double.infinity,
+      body: SafeArea(child:  
+      
+       SizedBox(
+        width: 1.sw,
+        height: 1.sh,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Hero(
               tag: 'applog',
-              child: Image.network('assets/logo.png', width: 400, height: 400),
+              child: Image.network('assets/logo.png', width: 300.w, height: 300.h),
             ),
           ],
         ),
