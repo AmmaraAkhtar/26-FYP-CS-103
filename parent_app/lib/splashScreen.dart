@@ -28,7 +28,7 @@ class _splashpageState extends State<splashpage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFFBFBFC),
       body: SafeArea(child:  
       
        SizedBox(
@@ -40,7 +40,7 @@ class _splashpageState extends State<splashpage> {
           children: [
             Hero(
               tag: 'applog',
-              child: Image.network('assets/logo.png', width: 300.w, height: 300.h),
+              child: Image.asset('assets/logo.png', width: 300.w, height: 300.h),
             ),
           ],
         ),

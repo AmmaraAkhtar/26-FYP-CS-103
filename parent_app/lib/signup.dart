@@ -147,23 +147,26 @@ class _SignupState extends State<Signup> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(250.h),
-        child: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-          flexibleSpace: Padding(
-            padding: EdgeInsets.only(top: 50.h),
-            child: Hero(
-              tag: 'applog',
-              child: Image.asset('assets/logo.png', width: 189.w, height: 189.h),
+      backgroundColor: Color(0xFFFBFBFC),
+             appBar: PreferredSize(
+          preferredSize: Size.fromHeight(250.h),
+          child: AppBar(
+             backgroundColor: Color(0xFFFBFBFC),
+            elevation: 0,
+            centerTitle: true,
+            scrolledUnderElevation: 0,
+            surfaceTintColor: Colors.transparent,
+            flexibleSpace: Padding(
+              padding: EdgeInsets.only(top: 50.h),
+              child: Hero(
+                tag: 'applog',
+                child: Image.asset('assets/logo.png', height: 189.h),
+              ),
             ),
           ),
         ),
-      ),
-      body: SafeArea(
+
+            body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 30.w),
@@ -180,12 +183,12 @@ class _SignupState extends State<Signup> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 40.h),
+                  SizedBox(height: 10.h),
                   Text(
                     error_message.isEmpty ? " " : error_message,
                     style: TextStyle(color: Colors.red, fontSize: 14.sp),
                   ),
-                  SizedBox(height: 20.h),
+                  SizedBox(height: 10.h),
 
                   // Username
                   SizedBox(
@@ -199,7 +202,7 @@ class _SignupState extends State<Signup> {
                           fontSize: 16.sp,
                         ),
                         errorText: usernameError.isEmpty ? null : usernameError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 14.h),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(7.r),
                           borderSide: BorderSide(
@@ -233,7 +236,7 @@ class _SignupState extends State<Signup> {
                         hintText: 'Enter Your Email',
                         hintStyle: TextStyle(color: Color(0xFFbdbcbc), fontSize: 16.sp),
                         errorText: emailError.isEmpty ? null : emailError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 14.h),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10.r),
                           borderSide: BorderSide(color: Color(0xFFbdbcbc), width: 1.4.w),
@@ -265,7 +268,7 @@ class _SignupState extends State<Signup> {
                         hintText: 'Enter Password',
                         hintStyle: TextStyle(color: Color(0xFFbdbcbc), fontSize: 16.sp),
                         errorText: passwordError.isEmpty ? null : passwordError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 14.h),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(7.r),
                           borderSide: BorderSide(color: Color(0xFFbdbcbc), width: 1.4.w),
@@ -297,7 +300,7 @@ class _SignupState extends State<Signup> {
                         hintText: 'Confirm Password',
                         hintStyle: TextStyle(color: Color(0xFFbdbcbc), fontSize: 16.sp),
                         errorText: confirmPasswordError.isEmpty ? null : confirmPasswordError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 14.h),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10.r),
                           borderSide: BorderSide(color: Color(0xFFbdbcbc), width: 1.4.w),

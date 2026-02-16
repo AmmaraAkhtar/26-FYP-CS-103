@@ -13,7 +13,7 @@ class _welcomeState extends State<welcome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFFBFBFC),
       body: SizedBox(
         width: 1.sw,
         height: 1.sh,

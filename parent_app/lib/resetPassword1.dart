@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'resetPassword2.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-
 
 class Resetpassword1 extends StatefulWidget {
   const Resetpassword1({super.key});
@@ -12,10 +12,9 @@ class Resetpassword1 extends StatefulWidget {
 }
 
 class _Resetpassword1State extends State<Resetpassword1> {
-   String email_error = "";
-   String error_message = "";
+  String email_error = "";
+  String error_message = "";
   TextEditingController _email = TextEditingController();
-
 
   void validate_email() {
     String email = _email.text.trim();
@@ -34,7 +33,7 @@ class _Resetpassword1State extends State<Resetpassword1> {
     }
   }
 
-Future<void> emailcheckRequest(String email, String password) async {
+  Future<void> emailcheckRequest(String email) async {
     String link = 'http://127.0.0.1:8000/checkEmail/';
     final url = Uri.parse(link);
     try {
@@ -45,160 +44,140 @@ Future<void> emailcheckRequest(String email, String password) async {
       );
 
       if (response.statusCode == 200) {
-        
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => Resetpassword2(email: email)),
         );
       } else {
-        
         var data = jsonDecode(response.body);
         setState(() {
-         if (data is Map) {
-          error_message = data.values.join("\n");
-        } else {
-          error_message = data.toString();
-        }
+          if (data is Map) {
+            error_message = data.values.join("\n");
+          } else {
+            error_message = data.toString();
+          }
         });
       }
     } catch (e) {
       setState(() {
         error_message = "Network error: $e";
       });
-      
     }
   }
- 
-  void loginbutton() async {
+
+  void resetButton() async {
     validate_email();
     if (email_error.isEmpty) {
-      await emailcheckRequest(_email.text.trim(), '');
+      await emailcheckRequest(_email.text.trim());
       _email.clear();
     }
-    
-    
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(250), // AppBar ka height adjust
-        child: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          centerTitle: true,
-          flexibleSpace: Padding(
-            padding: const EdgeInsets.only(top: 50), // top space
-            child: Hero(
-              tag: 'applog',
-              child: Image.asset('assets/logo.png', width: 189, height: 189),
-            ),
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 0),
-            child: SizedBox(
-              width: double.infinity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    "Reset Password",
-                    style: TextStyle(
-                      fontSize: 36,
-                      color: Color(0xFF699886),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 40),
-
-                  //TextField for email
-                  SizedBox(
-                    width: 350,
-                    // height: 46,
-                    child: TextField(
-                      controller: _email,
-                      decoration: InputDecoration(
-                        hintText: 'Enter Your Register Email',
-                        hintStyle: TextStyle(
-                          color: Color.fromARGB(255, 189, 188, 188),
-                          fontSize: 16,
-                        ),
-                        errorText: email_error.isEmpty ? null : email_error,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 189, 188, 188),
-                            width: 1.4,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(
-                            color: Color(0xFF147CF4),
-                            width: 2,
-                          ),
-                        ),
-
-                         errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 206, 39, 28),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 60),
-
-                  SizedBox(
-                    width: 285,
-                    height: 47,
-                    child: ElevatedButton(
-                      onPressed: () {
-                       loginbutton();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFEB9974),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                      ),
-                      child: Text(
-                        'Reset',
-                        style: TextStyle(
-                          fontSize: 22,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 25),
-
-                  SizedBox(height: 50),
-                ],
+         backgroundColor: Color(0xFFFBFBFC),
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(250.h),
+          child: AppBar(
+             backgroundColor: Color(0xFFFBFBFC),
+            elevation: 0,
+            centerTitle: true,
+            scrolledUnderElevation: 0,
+            surfaceTintColor: Colors.transparent,
+            flexibleSpace: Padding(
+              padding: EdgeInsets.only(top: 50.h),
+              child: Hero(
+                tag: 'applog',
+                child: Image.asset('assets/logo.png', width: 189.w, height: 189.h),
               ),
             ),
           ),
         ),
-      ),
-    );
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 30.w),
+              child: SizedBox(
+                width: 1.sw,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Reset Password",
+                      style: TextStyle(
+                        fontSize: 36.sp,
+                        color: Color(0xFF699886),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 10.h),
+
+                    // Error message
+                    Text(
+                      error_message.isEmpty ? " " : error_message,
+                      style: TextStyle(color: Colors.red, fontSize: 14.sp),
+                    ),
+                    SizedBox(height: 10.h),
+
+                    // Email TextField
+                    SizedBox(
+                      width: 350.w,
+                      child: TextField(
+                        controller: _email,
+                        decoration: InputDecoration(
+                          hintText: 'Enter Your Registered Email',
+                          hintStyle: TextStyle(color: Color(0xFFbdbcbc), fontSize: 16.sp),
+                          errorText: email_error.isEmpty ? null : email_error,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(7.r),
+                            borderSide: BorderSide(color: Color(0xFFbdbcbc), width: 1.4.w),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                            borderSide: BorderSide(color: Color(0xFF147CF4), width: 2.w),
+                          ),
+                          errorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                            borderSide: BorderSide(color: Colors.red, width: 2.w),
+                          ),
+                          focusedErrorBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8.r),
+                            borderSide: BorderSide(color: Colors.red, width: 2.w),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 40.h),
+
+                    // Reset Button
+                    SizedBox(
+                      width: 285.w,
+                      height: 47.h,
+                      child: ElevatedButton(
+                        onPressed: resetButton,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Color(0xFFEB9974),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(40.r),
+                          ),
+                        ),
+                        child: Text(
+                          'Reset',
+                          style: TextStyle(fontSize: 22.sp, color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: 50.h),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
   }
 }
