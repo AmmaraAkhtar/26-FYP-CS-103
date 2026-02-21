@@ -7,7 +7,6 @@ import 'webMonitoring.dart';
 
 class Monitoring extends StatefulWidget {
   final Map<String, dynamic>? childData;
-
   const Monitoring({super.key, this.childData});
 
   @override
@@ -15,58 +14,53 @@ class Monitoring extends StatefulWidget {
 }
 
 class _MonitoringState extends State<Monitoring> {
-
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFC),
-
       appBar: AppBar(
         backgroundColor: const Color(0xFFFBFBFC),
         title: Text(
           "Live Monitoring Page",
-          style:
-              TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
         ),
       ),
-
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
             padding: EdgeInsets.all(16.w),
-
             child: Column(
               children: [
-
                 SizedBox(height: 20.h),
-
-                /// PROFILE
+                // Profile Section
                 Center(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       CircleAvatar(
                         radius: 60.r,
-                        backgroundImage: const NetworkImage(
+                        backgroundImage: NetworkImage(
                           "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png",
                         ),
                       ),
                       SizedBox(height: 8.h),
-                      Text("Hamza Ali",
-                          style: TextStyle(
-                              fontSize: 30.sp,
-                              fontWeight: FontWeight.bold)),
-                      Text("11 Years Old",
-                          style: TextStyle(
-                              color: Colors.grey,
-                              fontSize: 16.sp)),
+                      Text(
+                        "Hamza Ali",
+                        style: TextStyle(
+                          fontSize: 30.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "11 Years Old",
+                        style: TextStyle(color: Colors.grey, fontSize: 16.sp),
+                      ),
                     ],
                   ),
                 ),
-
                 SizedBox(height: 25.h),
 
-                /// ROW 1
+                // First Row
                 Row(
                   children: [
                     Expanded(
@@ -81,10 +75,9 @@ class _MonitoringState extends State<Monitoring> {
                         buttonColor: const Color(0xFF8BC34A),
                         onTap: () {
                           Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      const Youtube ()));
+                            context,
+                            MaterialPageRoute(builder: (context) => const youtube()),
+                          );
                         },
                       ),
                     ),
@@ -101,19 +94,17 @@ class _MonitoringState extends State<Monitoring> {
                         buttonColor: const Color(0xFFFB8C00),
                         onTap: () {
                           Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      const Youtube ()));
+                            context,
+                            MaterialPageRoute(builder: (context) => const youtube()),
+                          );
                         },
                       ),
                     ),
                   ],
                 ),
-
                 SizedBox(height: 16.h),
 
-                /// ROW 2
+                // Second Row
                 Row(
                   children: [
                     Expanded(
@@ -123,17 +114,14 @@ class _MonitoringState extends State<Monitoring> {
                         iconPath: "assets/youtube1.png",
                         iconColor: Colors.red,
                         mainValue: "2 videos watch",
-                        subValue:
-                            "Last watched:\nCompusx ML",
+                        subValue: "Last watched:\nCompusx ML",
                         buttonText: "View All »",
-                        buttonColor:
-                            const Color(0xFFF44336),
+                        buttonColor: const Color(0xFFF44336),
                         onTap: () {
                           Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      const Youtube ()));
+                            context,
+                            MaterialPageRoute(builder: (context) => const youtube()),
+                          );
                         },
                       ),
                     ),
@@ -145,74 +133,154 @@ class _MonitoringState extends State<Monitoring> {
                         iconPath: "assets/web.png",
                         iconColor: Colors.blue,
                         mainValue: "6 blocked sites",
-                        subValue:
-                            "Most Recent:\nfreev.com",
+                        subValue: "Most Recent:\nfreev.com",
                         buttonText: "View All »",
-                        buttonColor:
-                            const Color(0xFF03A9F4),
+                        buttonColor: const Color(0xFF03A9F4),
                         onTap: () {
                           Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) =>
-                                      const Webmonitoring()));
+                            context,
+                            MaterialPageRoute(builder: (context) => const Webmonitoring()),
+                          );
                         },
                       ),
                     ),
                   ],
                 ),
+                SizedBox(height: 15.h),
 
+                // Chat Activities Card
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25.r),
+                  ),
+                  child: Container(
+                    padding: EdgeInsets.all(20.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25.r),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              "Chat Activities",
+                              style: TextStyle(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => chat()),
+                                );
+                              },
+                              child: const Text(
+                                "View All >>",
+                                style: TextStyle(color: Colors.green),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Divider(thickness: 1.h),
+                        SizedBox(height: 10.h),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.warning_rounded,
+                                color: Colors.orange, size: 30.r),
+                            SizedBox(width: 15.w),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Suspicious Chat Detected",
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16.sp),
+                                      ),
+                                      Text(
+                                        "Today At 5:30pm",
+                                        style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 12.sp),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 5.h),
+                                  Text(
+                                    "There's potentially inappropriate language in the chat with Abdullah",
+                                    style: TextStyle(
+                                        color: Colors.black87, fontSize: 14.sp),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 10.h),
+                        Divider(thickness: 2.h, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                ),
                 SizedBox(height: 20.h),
 
-                /// ALERT BUTTON
+                // Bottom Button
                 GestureDetector(
                   onTap: () {
                     Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => AlertScreen()),
-                    );
+                        context,
+                        MaterialPageRoute(builder: (context) => alert()));
                   },
                   child: Container(
-                    padding: EdgeInsets.symmetric(
-                        vertical: 15.h,
-                        horizontal: 20.w),
+                    padding:
+                        EdgeInsets.symmetric(vertical: 15.h, horizontal: 20.w),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF5CBA7),
-                      borderRadius:
-                          BorderRadius.circular(30.r),
+                      borderRadius: BorderRadius.circular(30.r),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black12,
+                            blurRadius: 4.r,
+                            offset: Offset(0, 4.h))
+                      ],
                     ),
                     child: Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error,
-                            color: Colors.red,
-                            size: 28.r),
+                        Icon(Icons.error, color: Colors.red, size: 28.r),
                         Expanded(
                           child: Center(
                             child: Text(
                               "View All Alerts",
                               style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22.sp,
-                                  fontWeight:
-                                      FontWeight.bold),
+                                color: Colors.white,
+                                fontSize: 22.sp,
+                                fontWeight: FontWeight.bold,
+                                shadows: [
+                                  Shadow(color: Colors.black26, blurRadius: 2.r)
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                        Icon(
-                          Icons
-                              .keyboard_double_arrow_right,
-                          color: Colors.white,
-                          size: 28.r,
-                        ),
+                        Icon(Icons.keyboard_double_arrow_right,
+                            color: Colors.white, size: 28.r),
                       ],
                     ),
                   ),
                 ),
-
-                SizedBox(height: 20.h),
               ],
             ),
           ),
@@ -221,7 +289,6 @@ class _MonitoringState extends State<Monitoring> {
     );
   }
 
-  /// ================= CARD =================
   Widget _buildActivityCard({
     required String title,
     required Color headerColor,
@@ -242,114 +309,95 @@ class _MonitoringState extends State<Monitoring> {
             color: Colors.black.withOpacity(0.08),
             blurRadius: 15.r,
             offset: Offset(0, 8.h),
-          )
+          ),
         ],
       ),
-
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(25.r),
-
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-
-            /// HEADER
+            // Header Section
             Container(
-              padding:
-                  EdgeInsets.symmetric(
-                      horizontal: 12.w,
-                      vertical: 12.h),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
               decoration: BoxDecoration(
                 color: headerColor,
-                borderRadius:
-                    BorderRadius.vertical(
-                        top:
-                            Radius.circular(
-                                25.r)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(25.r)),
               ),
               child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment
-                        .spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(title,
-                      style: TextStyle(
-                          fontWeight:
-                              FontWeight.bold,
-                          fontSize: 14.sp)),
-                  Icon(
-                    Icons.bar_chart_rounded,
-                    color:
-                        iconColor.withOpacity(
-                            0.7),
-                  )
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                  Icon(Icons.bar_chart_rounded,
+                      size: 22.r, color: iconColor.withOpacity(0.7)),
                 ],
               ),
             ),
-
             Padding(
-              padding:
-                  EdgeInsets.all(12.w),
+              padding: EdgeInsets.all(12.w),
               child: Row(
                 children: [
                   Image.asset(
                     iconPath,
                     width: 45.w,
                     height: 45.h,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) =>
+                        Icon(Icons.image_not_supported,
+                            size: 45.r, color: Colors.grey),
                   ),
                   SizedBox(width: 10.w),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment
-                              .start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(mainValue,
                             style: TextStyle(
-                                fontWeight:
-                                    FontWeight.bold,
-                                fontSize:
-                                    16.sp)),
+                                fontWeight: FontWeight.bold, fontSize: 16.sp)),
                         Text(subValue,
                             style: TextStyle(
-                                color:
-                                    Colors.grey,
-                                fontSize:
-                                    11.sp)),
+                                color: Colors.grey,
+                                fontSize: 11.sp,
+                                height: 1.2)),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-
-            Divider(),
-
-            SizedBox(
-              height: 32.h,
-              child: ElevatedButton(
-                onPressed: onTap,
-                style:
-                    ElevatedButton
-                        .styleFrom(
-                  backgroundColor:
-                      buttonColor,
-                  shape:
-                      RoundedRectangleBorder(
-                    borderRadius:
-                        BorderRadius.circular(
-                            20.r),
+            Divider(
+                height: 1.h,
+                thickness: 1.5.h,
+                color: const Color(0xFFEEEEEE),
+                indent: 10.w,
+                endIndent: 10.w),
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 12.h),
+              child: SizedBox(
+                height: 32.h,
+                child: ElevatedButton(
+                  onPressed: onTap,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: buttonColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20.r),
+                    ),
+                    elevation: 0,
+                    padding: EdgeInsets.symmetric(horizontal: 20.w),
+                  ),
+                  child: Text(
+                    buttonText,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold),
                   ),
                 ),
-                child: Text(buttonText,
-                    style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight:
-                            FontWeight.bold)),
               ),
             ),
-
-            SizedBox(height: 12.h),
           ],
         ),
       ),
