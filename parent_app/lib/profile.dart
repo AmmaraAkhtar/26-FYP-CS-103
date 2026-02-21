@@ -12,6 +12,7 @@ class profile extends StatefulWidget {
 class _profileState extends State<profile> {
   @override
   Widget build(BuildContext context) {
+
     return  Scaffold(
         backgroundColor: Color(0xFFFBFBFC),
         appBar: AppBar(
@@ -21,6 +22,14 @@ class _profileState extends State<profile> {
           ),
           backgroundColor: Color(0xFFFBFBFC),
           toolbarHeight: 120.h,
+
+    return Scaffold(
+      backgroundColor: Color(0xFFFAFBFB),
+      appBar: AppBar(
+        title: Text(
+          "Profile",
+          style: TextStyle(fontSize: 30, color: Colors.black),
+
         ),
         body: SafeArea(
           child: SingleChildScrollView(

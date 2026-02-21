@@ -21,7 +21,8 @@ class _loginState extends State<login> {
   TextEditingController _password = TextEditingController();
 
   Future<void> loginRequest(String email, String password) async {
-    String link = 'http://127.0.0.1:8000/login/';
+    //String link = 'http://127.0.0.1:8000/login/';
+    String link = 'http://10.27.190.96:8000/login/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(

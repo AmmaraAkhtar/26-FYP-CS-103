@@ -77,6 +77,138 @@ class _alertState extends State<alert> {
                     ),
                   ],
                 ),
+      backgroundColor: Color(0xFFFAFBFB),
+      appBar: AppBar(
+        backgroundColor: Colors.grey[100],
+        title: const Text(
+          "Alert Monitoring Dashboard",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 25),
+
+            Center(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: const [
+                  CircleAvatar(
+                    radius: 60,
+                    backgroundImage: NetworkImage(
+                      "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png",
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    "Hamza Ali",
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    "11 Years Old",
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 30),
+            // Alerts Header
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Alerts ",
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                  ),
+                  // Stack ki jagah direct Container use kiya hai circular background ke liye
+                  Container(
+                    width: 35,
+                    height: 35,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Text(
+                        "!",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Alerts List
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 25),
+                children: [
+                  _buildAlertCard(
+                    title: "Toxic Language Detected:",
+                    subtitle: "Bullying in Social Media Chat",
+                    color: Colors.red,
+                    icon: Icons.security,
+                    time: "15min ago",
+                    buttons: [_buildActionButton("Block Source", Colors.red)],
+                  ),
+                  _buildAlertCard(
+                    title: "Late Night Usage:",
+                    subtitle: "App Activity after Bedtime",
+                    color: Colors.orange,
+                    icon: Icons.person_off_rounded,
+                    time: "15min ago",
+                    buttons: [
+                      _buildActionButton("Extend Limit", Colors.orange),
+                      const SizedBox(width: 10),
+                      _buildActionButton("Lock Screen", Colors.orange),
+                    ],
+                  ),
+                  _buildAlertCard(
+                    title: "Behavior:",
+                    subtitle: "Signs of Anxiety Detected",
+                    color: const Color(0xFF8B428D), // Purple
+                    icon: Icons.psychology,
+                    time: "15min ago",
+                    buttons: [
+                      _buildActionButton(
+                        "View Sugestions",
+                        const Color(0xFF8B428D),
+                      ),
+                    ],
+                  ),
+                  _buildAlertCard(
+                    title: "Mood Analysis:",
+                    subtitle: "Signs of happiness",
+                    color: const Color(0xFFB8731D), // Brownish Orange
+                    icon: Icons.lightbulb,
+                    time: "15min ago",
+                    buttons: [
+                      _buildActionButton(
+                        "Extend Limit",
+                        const Color(0xFFB8731D),
+                      ),
+                    ],
+                  ),
+                  _buildAlertCard(
+                    title: "Toxic Language Detected:",
+                    subtitle: "Bullying in Social Media Chat",
+                    color: Colors.red,
+                    icon: Icons.security,
+                    time: "15min ago",
+                    buttons: [_buildActionButton("Block Source", Colors.red)],
+                  ),
+                ],
+
               ),
               SizedBox(height: 20.h),
               // Alerts List
@@ -171,6 +303,7 @@ class _alertState extends State<alert> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+
                     Text(title,
                         style: TextStyle(
                             color: color,
@@ -185,17 +318,47 @@ class _alertState extends State<alert> {
                     Text(time,
                         style: TextStyle(
                             color: color.withOpacity(0.8), fontSize: 16.sp)),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      time,
+                      style: TextStyle(
+                        color: color.withOpacity(0.8),
+                        fontSize: 16,
+                      ),
+                    ),
+
                   ],
                 ),
               ),
               Icon(icon, color: color, size: 35.r),
             ],
           ),
+
           SizedBox(height: 12.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: buttons,
           ),
+
+          const SizedBox(height: 12),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: buttons),
+
         ],
       ),
     );
@@ -218,9 +381,17 @@ class _alertState extends State<alert> {
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
+
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
           padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 5.h),
+
+          elevation: 0, // Shadow is handled by Container
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+
         ),
         child: Text(label,
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
