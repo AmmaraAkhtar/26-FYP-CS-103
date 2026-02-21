@@ -5,7 +5,7 @@ import 'login.dart';
 
 class otp extends StatefulWidget {
   final String email;
-  
+
   const otp({super.key, required this.email});
 
   @override
@@ -36,25 +36,31 @@ class _otpState extends State<otp> {
       }
 
       error = "";
-
-      
     });
   }
 
-  Future<void> verifyotp(String num1,String num2,String num3,String num4,String email) async {
+  Future<void> verifyotp(
+    String num1,
+    String num2,
+    String num3,
+    String num4,
+    String email,
+  ) async {
     String otp = num1 + num2 + num3 + num4;
-    String link = 'http://127.0.0.1:8000/verifyOtp/';
+    // String link = 'http://127.0.0.1:8000/verifyOtp/';
+    String link = 'http://10.27.190.96:8000/verifyOtp/';
+    
+
     final url = Uri.parse(link);
     print("Sending OTP verification request with OTP: $otp, Email: $email");
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'otp': otp, 'email': email, }),
+        body: jsonEncode({'otp': otp, 'email': email}),
       );
 
       if (response.statusCode == 200) {
-        
         print('Verification successful');
       } else {
         // Handle login error
@@ -74,8 +80,9 @@ class _otpState extends State<otp> {
     }
   }
 
-Future<void> resendOtp(String email) async {
-    String link = 'http://127.0.0.1:8000/resendOtp/';
+  Future<void> resendOtp(String email) async {
+    //String link = 'http://127.0.0.1:8000/resendOtp/';
+    String link = 'http://10.27.190.96:8000/resendOtp/';
     final url = Uri.parse(link);
     print("Sending resend OTP request with Email: $email");
     try {
@@ -101,7 +108,8 @@ Future<void> resendOtp(String email) async {
       setState(() {
         error_message = "Network error: $e";
       });
-    }}
+    }
+  }
 
   void loginbutton() async {
     validateOTP();
@@ -114,32 +122,32 @@ Future<void> resendOtp(String email) async {
         _num2.text.trim(),
         _num3.text.trim(),
         _num4.text.trim(),
-        widget.email);
+        widget.email,
+      );
     }
     if (error_message.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error_message)),
-      );
-    }
-    else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Sign Up successful!")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error_message)));
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Sign Up successful!")));
       Navigator.push(context, MaterialPageRoute(builder: (context) => login()));
     }
-    
   }
-  
+
   void resendOtpButton() async {
     await resendOtp(widget.email);
     ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text("OTP resent! Please check your email.")),
+      const SnackBar(content: Text("OTP resent! Please check your email.")),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFFAFBFB),
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(250), // AppBar ka height adjust
         child: AppBar(
@@ -304,7 +312,7 @@ Future<void> resendOtp(String email) async {
                   // ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children:  [
+                    children: [
                       Text(
                         "Didn’t receive a OTP? ",
                         style: TextStyle(fontSize: 18),

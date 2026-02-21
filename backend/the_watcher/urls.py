@@ -11,4 +11,5 @@ urlpatterns = [
     path('resendOtp/', views.resendOtp_api),
     path('createChild/', views.createChild_api),
     path('pairDevice/', views.pairingCodeVerification_api),
+    path('fetchChildren/', views.fetchChildren_api),
 ]

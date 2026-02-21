@@ -51,7 +51,8 @@ class _Resetpassword2State extends State<Resetpassword2> {
   }
 
   Future<void> signupRequest(String email, String password) async {
-    String link = 'http://127.0.0.1:8000/resetPassword/';
+    //String link = 'http://127.0.0.1:8000/resetPassword/';
+    String link = 'http://10.27.190.96:8000/resetPassword/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(
@@ -65,7 +66,10 @@ class _Resetpassword2State extends State<Resetpassword2> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text("Password reset successfully!")));
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => login()));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => login()),
+        );
       } else {
         // Handle signup error
         var data = jsonDecode(response.body);
@@ -81,7 +85,6 @@ class _Resetpassword2State extends State<Resetpassword2> {
       setState(() {
         error_message = "Network error: $e";
       });
-      
     }
   }
 
@@ -91,18 +94,16 @@ class _Resetpassword2State extends State<Resetpassword2> {
 
     if (passwordError.isEmpty && confirmPasswordError.isEmpty) {
       await signupRequest(widget.email, _password.text.trim());
-      
+
       _password.clear();
       _confirmPassword.clear();
-    } 
-    
-    
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFFAFBFB),
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(250), // AppBar ka height adjust
         child: AppBar(
@@ -167,7 +168,6 @@ class _Resetpassword2State extends State<Resetpassword2> {
                           ),
                         ),
 
-
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
@@ -217,7 +217,6 @@ class _Resetpassword2State extends State<Resetpassword2> {
                             width: 2,
                           ),
                         ),
-
 
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),

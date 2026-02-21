@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'login.dart';
 import 'signup.dart';
+
 class welcome extends StatefulWidget {
   const welcome({super.key});
 
@@ -12,7 +13,7 @@ class _welcomeState extends State<welcome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFFAFBFB),
       body: SizedBox(
         width: double.infinity,
         height: double.infinity,
@@ -38,7 +39,6 @@ class _welcomeState extends State<welcome> {
               // ),
 
               // SizedBox(height: 30),
-
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(

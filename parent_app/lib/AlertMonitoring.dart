@@ -11,11 +11,13 @@ class _alertState extends State<alert> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Color(0xFFFAFBFB),
       appBar: AppBar(
         backgroundColor: Colors.grey[100],
-        title: const Text("Alert Monitoring Dashboard",style:TextStyle(fontSize:20, fontWeight: FontWeight.bold)),
-        
+        title: const Text(
+          "Alert Monitoring Dashboard",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -28,55 +30,57 @@ class _alertState extends State<alert> {
                 children: const [
                   CircleAvatar(
                     radius: 60,
-                    backgroundImage: NetworkImage("https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png"),
+                    backgroundImage: NetworkImage(
+                      "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png",
+                    ),
                   ),
                   SizedBox(height: 8),
-                  Text("Hamza Ali",
-                      style: TextStyle(
-                          fontSize: 30, fontWeight: FontWeight.bold)),
-                  Text("11 Years Old",
-                      style: TextStyle(color: Colors.grey, fontSize: 16)),
+                  Text(
+                    "Hamza Ali",
+                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    "11 Years Old",
+                    style: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
                 ],
               ),
             ),
 
             const SizedBox(height: 30),
             // Alerts Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 25.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Text(
-                        "Alerts ",
-                        style: TextStyle(
-                          fontSize: 32, 
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      // Stack ki jagah direct Container use kiya hai circular background ke liye
-                      Container(
-                        width: 35,
-                        height: 35,
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Center(
-                          child: Text(
-                            "!", 
-                            style: TextStyle(
-                              color: Colors.white, 
-                              fontWeight: FontWeight.bold, 
-                              fontSize: 22,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Alerts ",
+                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                   ),
-                ),
+                  // Stack ki jagah direct Container use kiya hai circular background ke liye
+                  Container(
+                    width: 35,
+                    height: 35,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Text(
+                        "!",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 20),
             // Alerts List
             Expanded(
@@ -109,7 +113,12 @@ class _alertState extends State<alert> {
                     color: const Color(0xFF8B428D), // Purple
                     icon: Icons.psychology,
                     time: "15min ago",
-                    buttons: [_buildActionButton("View Sugestions", const Color(0xFF8B428D))],
+                    buttons: [
+                      _buildActionButton(
+                        "View Sugestions",
+                        const Color(0xFF8B428D),
+                      ),
+                    ],
                   ),
                   _buildAlertCard(
                     title: "Mood Analysis:",
@@ -117,7 +126,12 @@ class _alertState extends State<alert> {
                     color: const Color(0xFFB8731D), // Brownish Orange
                     icon: Icons.lightbulb,
                     time: "15min ago",
-                    buttons: [_buildActionButton("Extend Limit", const Color(0xFFB8731D))],
+                    buttons: [
+                      _buildActionButton(
+                        "Extend Limit",
+                        const Color(0xFFB8731D),
+                      ),
+                    ],
                   ),
                   _buildAlertCard(
                     title: "Toxic Language Detected:",
@@ -164,10 +178,30 @@ class _alertState extends State<alert> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text(subtitle, style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w500)),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text(time, style: TextStyle(color: color.withOpacity(0.8), fontSize: 16)),
+                    Text(
+                      time,
+                      style: TextStyle(
+                        color: color.withOpacity(0.8),
+                        fontSize: 16,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -175,10 +209,7 @@ class _alertState extends State<alert> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: buttons,
-          ),
+          Row(mainAxisAlignment: MainAxisAlignment.center, children: buttons),
         ],
       ),
     );
@@ -202,7 +233,9 @@ class _alertState extends State<alert> {
           backgroundColor: color,
           foregroundColor: Colors.white,
           elevation: 0, // Shadow is handled by Container
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
         ),
         child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),

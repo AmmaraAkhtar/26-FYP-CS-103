@@ -10,7 +10,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFFAFBFB),
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(250), // AppBar ka height adjust
         child: AppBar(
@@ -26,7 +26,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
           ),
         ),
       ),
-      body: SafeArea(
+      body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -44,8 +44,8 @@ class _WatcherScreenState extends State<WatcherScreen> {
                   children: [
                     Image.asset(
                       "assets/OneTimePassword.png",
-                      width: 50,
-                      height: 50,
+                      width: 30,
+                      height: 30,
                     ),
                     const SizedBox(width: 12),
 
@@ -88,8 +88,8 @@ class _WatcherScreenState extends State<WatcherScreen> {
                   children: [
                     Image.asset(
                       "assets/AccessibilityTools.png",
-                      width: 50,
-                      height: 50,
+                      width: 30,
+                      height: 30,
                     ),
                     const SizedBox(width: 12),
 
@@ -99,7 +99,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
                         Text(
                           "Accessibility Services",
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 18,
                             color: Color(0xFF8D7365),
                             fontWeight: FontWeight.bold,
                           ),
@@ -130,7 +130,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
                 ),
                 child: Row(
                   children: [
-                    Image.asset("assets/Alarm.png", width: 50, height: 50),
+                    Image.asset("assets/Alarm.png", width: 30, height: 30),
                     const SizedBox(width: 12),
 
                     Column(
@@ -170,7 +170,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
                 ),
                 child: Row(
                   children: [
-                    Image.asset("assets/UserShield.png", width: 50, height: 50),
+                    Image.asset("assets/UserShield.png", width: 30, height: 30),
                     const SizedBox(width: 12),
 
                     Column(
