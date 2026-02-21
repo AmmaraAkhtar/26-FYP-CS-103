@@ -110,7 +110,7 @@ class _homeState extends State<home> {
   @override
   Widget build(BuildContext context) {
       return Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFFFBFBFC),
         body: SafeArea(
           child: Column(
             children: [
