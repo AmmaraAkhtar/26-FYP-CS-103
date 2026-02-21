@@ -107,7 +107,7 @@ class _SignupState extends State<Signup> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => otp(email: email),
+            builder: (context) => OTP(email: email),
           ),
         );
       } else {
@@ -356,7 +356,7 @@ class _SignupState extends State<Signup> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => Login()),
+                            MaterialPageRoute(builder: (context) => login()),
                           );
                         },
                         child: Text(
@@ -377,7 +377,7 @@ class _SignupState extends State<Signup> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => Login()),
+                          MaterialPageRoute(builder: (context) => login()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
