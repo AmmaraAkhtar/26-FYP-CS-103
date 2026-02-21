@@ -356,7 +356,7 @@ class _SignupState extends State<Signup> {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => login()),
+                            MaterialPageRoute(builder: (context) => Login()),
                           );
                         },
                         child: Text(
@@ -377,7 +377,7 @@ class _SignupState extends State<Signup> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (context) => login()),
+                          MaterialPageRoute(builder: (context) => Login()),
                         );
                       },
                       style: ElevatedButton.styleFrom(
