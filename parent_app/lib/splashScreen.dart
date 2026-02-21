@@ -21,27 +21,27 @@ class _splashpageState extends State<splashpage> {
         );
       });
     });
-
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(child:      SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Hero(
-              tag: 'applog',
-              child: Image.network('assets/logo.png', width: 400, height: 400),
-            ),
-          ],
+      backgroundColor: Color(0xFFFAFBFB),
+      body: SafeArea(
+        child: SizedBox(
+          width: double.infinity,
+          height: double.infinity,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Hero(
+                tag: 'applog',
+                child: Image.asset('assets/logo.png', width: 300, height: 300),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

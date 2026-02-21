@@ -4,9 +4,6 @@ import "ChildRegister.dart";
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-
-
-
 class home extends StatefulWidget {
   String email;
   home({super.key, required this.email});
@@ -17,11 +14,11 @@ class home extends StatefulWidget {
 
 class _homeState extends State<home> {
   TextEditingController searchController = TextEditingController();
-  List<Map<String, dynamic>> filteredChildren = []; 
+  List<Map<String, dynamic>> filteredChildren = [];
   List<Map<String, dynamic>> children = []; // empty initially
   bool isLoading = true;
-    //final List<Map<String, dynamic>> children = [
-   /* {
+  //final List<Map<String, dynamic>> children = [
+  /* {
       "name": "Hamza Ali",
       "age": 9,
       "status": "Online",
@@ -59,19 +56,22 @@ class _homeState extends State<home> {
   }
 
   void _filterChildren() {
-  final query = searchController.text.toLowerCase();
-  setState(() {
-    filteredChildren = children.where((child) {
-      final name = child['name'].toString().toLowerCase();
-      return name.contains(query);
-    }).toList();
-  });
-}
+    final query = searchController.text.toLowerCase();
+    setState(() {
+      filteredChildren = children.where((child) {
+        final name = child['name'].toString().toLowerCase();
+        return name.contains(query);
+      }).toList();
+    });
+  }
 
   Future<void> fetchChildren() async {
     print("Fetching children for parent email: ${widget.email}");
+    //final url = Uri.parse(
+    //'http://127.0.0.1:8000/fetchChildren/?parent_email=${widget.email}');
     final url = Uri.parse(
-        'http://127.0.0.1:8000/fetchChildren/?parent_email=${widget.email}');
+      'http://10.27.190.96:8000/fetchChildren/?parent_email=${widget.email}',
+    );
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -84,12 +84,12 @@ class _homeState extends State<home> {
               "name": "${child['firstname']} ${child['lastname']}",
               "age": child['age'],
               "status": (child['is_paired'] ?? false) ? "Online" : "Offline",
-              "lastAlert": "Just Now", 
+              "lastAlert": "Just Now",
               "image":
-                  "https://img.favpng.com/22/11/14/3d-boy-avatar-cartoon-boy-with-glasses-in-3d-style-biFKVkT6_t.jpg" // placeholder
+                  "https://img.favpng.com/22/11/14/3d-boy-avatar-cartoon-boy-with-glasses-in-3d-style-biFKVkT6_t.jpg", // placeholder
             };
           }).toList();
-          filteredChildren = List.from(children); 
+          filteredChildren = List.from(children);
           isLoading = false;
         });
       } else {
@@ -108,38 +108,33 @@ class _homeState extends State<home> {
 
   @override
   Widget build(BuildContext context) {
-      return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+    return Scaffold(
+      backgroundColor: Color(0xFFFAFBFB),
       body: SafeArea(
         child: Column(
           children: [
             // Top section
             Container(
               width: double.infinity,
-              height:294,
+              height: 294,
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Color(0xFFEB9974),
-                borderRadius: BorderRadius.only(
-                 
-                ),
+                borderRadius: BorderRadius.only(),
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  
                   CircleAvatar(
                     radius: 70,
                     backgroundImage: NetworkImage(
-                        "https://thumbs.dreamstime.com/b/d-cartoon-illustration-smiling-woman-short-brown-hair-wearing-red-mom-t-shirt-keywords-mother-demeanor-showing-female-417653140.jpg"),
+                      "https://thumbs.dreamstime.com/b/d-cartoon-illustration-smiling-woman-short-brown-hair-wearing-red-mom-t-shirt-keywords-mother-demeanor-showing-female-417653140.jpg",
+                    ),
                   ),
                   SizedBox(height: 5),
                   Text(
                     "User",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                    ),
+                    style: TextStyle(color: Colors.white, fontSize: 20),
                   ),
                   SizedBox(height: 19),
                   SizedBox(
@@ -172,11 +167,9 @@ class _homeState extends State<home> {
                             width: 1,
                           ),
                         ),
-                      
                       ),
                     ),
                   ),
-              
                 ],
               ),
             ),
@@ -201,11 +194,12 @@ class _homeState extends State<home> {
                     height: 34,
                     child: ElevatedButton(
                       onPressed: () {
-                         Navigator.push(
+                        Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => profile(email: widget.email,),
-                          ));
+                            builder: (context) => profile(email: widget.email),
+                          ),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFEB9974),
@@ -215,112 +209,113 @@ class _homeState extends State<home> {
                       ),
                       child: Text(
                         'Add +',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                          
-                        ),
+                        style: TextStyle(fontSize: 16, color: Colors.white),
                       ),
                     ),
                   ),
-                
                 ],
               ),
             ),
 
-      
-                  Expanded(child: isLoading
-            ? Center(child: CircularProgressIndicator())
-            : ListView.builder(
-                      
+            Expanded(
+              child: isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : ListView.builder(
                       itemCount: filteredChildren.length,
-                      
+
                       itemBuilder: (context, index) {
                         //final child = children[index];
-                          final child = filteredChildren[index];
+                        final child = filteredChildren[index];
                         return Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          child:
-                           InkWell(
-                          borderRadius: BorderRadius.circular(15),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => Monitoring(
-                                  childData: child, 
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(15),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      Monitoring(childData: child),
                                 ),
+                              );
+                            },
+                            child: Container(
+                              padding: EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color.fromARGB(255, 255, 255, 255),
+                                borderRadius: BorderRadius.circular(15),
                               ),
-                            );
-                          },
-                          child:Container(
-                            padding: EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 255, 255, 255),
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Row(
-                              children: [
-                                // Big Circle Image
-                                Container(
-                                  width: 100,
-                                  height: 100,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    image: DecorationImage(
-                                      image: NetworkImage(child['image']),
-                                      fit: BoxFit.cover,
+                              child: Row(
+                                children: [
+                                  // Big Circle Image
+                                  Container(
+                                    width: 100,
+                                    height: 100,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      image: DecorationImage(
+                                        image: NetworkImage(child['image']),
+                                        fit: BoxFit.cover,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                SizedBox(width: 15),
+                                  SizedBox(width: 15),
 
-                                // Name, Age, Status
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        child['name'],
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      SizedBox(height: 5),
-                                      Text(
-                                        "${child['age']} Years Old",
-                                        style: TextStyle(color: Colors.grey[700]),
-                                      ),
-                                      SizedBox(height: 5),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.circle,
-                                            size: 10,
-                                            color: child['status'] == "Online"
-                                                ? Colors.green
-                                                : Colors.grey,
+                                  // Name, Age, Status
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          child['name'],
+                                          style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.bold,
                                           ),
-                                          SizedBox(width: 5),
-                                          Text(
-                                            child['status'],
-                                            style: TextStyle(
+                                        ),
+                                        SizedBox(height: 5),
+                                        Text(
+                                          "${child['age']} Years Old",
+                                          style: TextStyle(
+                                            color: Colors.grey[700],
+                                          ),
+                                        ),
+                                        SizedBox(height: 5),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.circle,
+                                              size: 10,
                                               color: child['status'] == "Online"
                                                   ? Colors.green
-                                                  : Colors.grey[700],
+                                                  : Colors.grey,
                                             ),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              child['status'],
+                                              style: TextStyle(
+                                                color:
+                                                    child['status'] == "Online"
+                                                    ? Colors.green
+                                                    : Colors.grey[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          "Last Alert: ${child['lastAlert']}",
+                                          style: TextStyle(
+                                            color: Color(0xFF7D7D7D),
+                                            fontSize: 12,
                                           ),
-                                          
-                                        ],
-                                      ),
-                                      Text(
-                                            "Last Alert: ${child['lastAlert']}",
-                                            style: TextStyle(color: Color(0xFF7D7D7D), fontSize: 12),
-                                          ),
-                                    ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
 
                                   // Notifications Icon
                                   Icon(
@@ -332,11 +327,10 @@ class _homeState extends State<home> {
                               ),
                             ),
                           ),
-                          );
-                                      },
-                                    ),
-                                  ),
-
+                        );
+                      },
+                    ),
+            ),
           ],
         ),
       ),

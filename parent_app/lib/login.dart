@@ -20,7 +20,8 @@ class _loginState extends State<login> {
   TextEditingController _password = TextEditingController();
 
   Future<void> loginRequest(String email, String password) async {
-    String link = 'http://127.0.0.1:8000/login/';
+    //String link = 'http://127.0.0.1:8000/login/';
+    String link = 'http://10.27.190.96:8000/login/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(
@@ -32,16 +33,19 @@ class _loginState extends State<login> {
       if (response.statusCode == 200) {
         // Handle successful login
         print('Login successful');
-        Navigator.push(context, MaterialPageRoute(builder: (context) => home(email: email,)));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => home(email: email)),
+        );
       } else {
         // Handle login error
         var data = jsonDecode(response.body);
         setState(() {
-         if (data is Map) {
-          error_message = data.values.join("\n");
-        } else {
-          error_message = data.toString();
-        }
+          if (data is Map) {
+            error_message = data.values.join("\n");
+          } else {
+            error_message = data.toString();
+          }
         });
       }
     } catch (e) {
@@ -93,23 +97,21 @@ class _loginState extends State<login> {
     if (email_error.isEmpty && password_error.isEmpty) {
       _email.clear();
       _password.clear();
-      
     }
-    
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFFAFBFB),
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(250), 
+        preferredSize: Size.fromHeight(250),
         child: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
           flexibleSpace: Padding(
-            padding: const EdgeInsets.only(top: 50), 
+            padding: const EdgeInsets.only(top: 50),
             child: Hero(
               tag: 'applog',
               child: Image.asset('assets/logo.png', width: 189, height: 189),
@@ -136,9 +138,11 @@ class _loginState extends State<login> {
                     ),
                   ),
                   SizedBox(height: 40),
-                Text(error_message.isEmpty?" ":error_message,
-                style: TextStyle(color: Colors.red),),
-                SizedBox(height: 20,),
+                  Text(
+                    error_message.isEmpty ? " " : error_message,
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  SizedBox(height: 20),
                   //TextField for email
                   SizedBox(
                     width: 350,
@@ -149,12 +153,7 @@ class _loginState extends State<login> {
                         hintText: 'Enter Your Email',
                         errorText: email_error.isEmpty ? null : email_error,
                         hintStyle: TextStyle(
-                          color: Color.fromARGB(
-                            255,
-                            189,
-                            188,
-                            188,
-                          ), 
+                          color: Color.fromARGB(255, 189, 188, 188),
                           fontSize: 16,
                         ),
 
@@ -219,9 +218,14 @@ class _loginState extends State<login> {
                             width: 1.4,
                           ),
                         ),
-                        
-
-                       errorBorder: OutlineInputBorder(
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                            color: Color(0xFF147CF4),
+                            width: 2,
+                          ),
+                        ),
+                        errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
                             color: const Color.fromARGB(255, 206, 39, 28),

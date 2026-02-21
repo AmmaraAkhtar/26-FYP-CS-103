@@ -91,7 +91,8 @@ class _SignupState extends State<Signup> {
     String password,
     String password2,
   ) async {
-    String link = 'http://127.0.0.1:8000/signup/';
+    //String link = 'http://127.0.0.1:8000/signup/';
+    String link = 'http://10.27.190.96:8000/signup/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(
@@ -101,7 +102,6 @@ class _SignupState extends State<Signup> {
           'username': username,
           'email': email,
           'password': password,
-          
         }),
       );
       print(response.body);
@@ -109,13 +109,13 @@ class _SignupState extends State<Signup> {
       if (response.statusCode == 200) {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) =>
-                otp( email: email),
-          ),
+          MaterialPageRoute(builder: (context) => otp(email: email)),
         );
-        
-        Navigator.push(context, MaterialPageRoute(builder: (context) => otp( email: email)));
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => otp(email: email)),
+        );
       } else {
         // Handle signup error
         var data = jsonDecode(response.body);
@@ -139,27 +139,24 @@ class _SignupState extends State<Signup> {
     validateEmail();
     validatePassword();
     validateConfirmPassword();
-    
 
     if (usernameError.isEmpty &&
         emailError.isEmpty &&
         passwordError.isEmpty &&
-        confirmPasswordError.isEmpty
-        ) {
-          await signupRequest(
-      _username.text.trim(),
-      _email.text.trim(),
-      _password.text.trim(),
-      _confirmPassword.text.trim(),
-    );
-      
+        confirmPasswordError.isEmpty) {
+      await signupRequest(
+        _username.text.trim(),
+        _email.text.trim(),
+        _password.text.trim(),
+        _confirmPassword.text.trim(),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFFAFBFB),
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(250), // AppBar ka height adjust
         child: AppBar(
@@ -233,7 +230,7 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
-                      errorBorder: OutlineInputBorder(
+                        errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
                             color: const Color.fromARGB(255, 206, 39, 28),
@@ -281,7 +278,7 @@ class _SignupState extends State<Signup> {
                             width: 2,
                           ),
                         ),
-                         errorBorder: OutlineInputBorder(
+                        errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(
                             color: const Color.fromARGB(255, 206, 39, 28),
@@ -340,13 +337,11 @@ class _SignupState extends State<Signup> {
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: Colors.red, width: 2),
-                        
                         ),
 
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: Colors.red, width: 2),
-                         
                         ),
                       ),
                     ),
@@ -392,14 +387,10 @@ class _SignupState extends State<Signup> {
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide(color: Colors.red, width: 2),
                         ),
-
-                        
-                        
                       ),
                     ),
                   ),
-                  
-                  
+
                   SizedBox(height: 40),
 
                   SizedBox(
@@ -503,4 +494,4 @@ class _SignupState extends State<Signup> {
       ),
     );
   }
-} 
+}
