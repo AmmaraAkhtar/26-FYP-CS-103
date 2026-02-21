@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from . import models
 
 # Parent Serializer
 class ParentSerializer(serializers.ModelSerializer):
@@ -73,5 +74,10 @@ class PairingCodeSerializer(serializers.Serializer):
         elif not data.isdigit():
             raise serializers.ValidationError("Pairing code must contain only digits.")
         return data
-    
+
+# ChildSerializer for paired children
+class PairedChildSerializer(serializers.ModelSerializer):
+    class Meta:
+        model =  models.child
+        fields = ['firstname', 'lastname', 'age', 'screen_time_limit']
     

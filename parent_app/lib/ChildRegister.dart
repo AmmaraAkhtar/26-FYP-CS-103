@@ -18,7 +18,9 @@ class _EditprofileState extends State<profile> {
   TextEditingController screenTimeController = TextEditingController();
 
   Future<void> registerChild() async {
-    String link = 'http://127.0.0.1:8000/createChild/';
+    //String link = 'http://127.0.0.1:8000/createChild/';
+    //String link = 'http://10.13.19.146:8000/createChild/';
+    String link = 'http://10.27.190.96:8000/createChild/';
     final url = Uri.parse(link);
 
     final response = await http.post(
@@ -62,10 +64,10 @@ class _EditprofileState extends State<profile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFFAFBFB),
       appBar: AppBar(
         title: Text(
-          "Edit Profile",
+          "Register Child",
           style: TextStyle(fontSize: 30, color: Colors.black),
         ),
         backgroundColor: Colors.white,

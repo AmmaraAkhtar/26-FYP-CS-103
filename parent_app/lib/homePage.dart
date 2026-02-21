@@ -5,9 +5,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-
-
-
 class home extends StatefulWidget {
   String email;
   home({super.key, required this.email});
@@ -18,11 +15,11 @@ class home extends StatefulWidget {
 
 class _homeState extends State<home> {
   TextEditingController searchController = TextEditingController();
-  List<Map<String, dynamic>> filteredChildren = []; 
+  List<Map<String, dynamic>> filteredChildren = [];
   List<Map<String, dynamic>> children = []; // empty initially
   bool isLoading = true;
-    //final List<Map<String, dynamic>> children = [
-   /* {
+  //final List<Map<String, dynamic>> children = [
+  /* {
       "name": "Hamza Ali",
       "age": 9,
       "status": "Online",
@@ -60,19 +57,22 @@ class _homeState extends State<home> {
   }
 
   void _filterChildren() {
-  final query = searchController.text.toLowerCase();
-  setState(() {
-    filteredChildren = children.where((child) {
-      final name = child['name'].toString().toLowerCase();
-      return name.contains(query);
-    }).toList();
-  });
-}
+    final query = searchController.text.toLowerCase();
+    setState(() {
+      filteredChildren = children.where((child) {
+        final name = child['name'].toString().toLowerCase();
+        return name.contains(query);
+      }).toList();
+    });
+  }
 
   Future<void> fetchChildren() async {
     print("Fetching children for parent email: ${widget.email}");
+    //final url = Uri.parse(
+    //'http://127.0.0.1:8000/fetchChildren/?parent_email=${widget.email}');
     final url = Uri.parse(
-        'http://127.0.0.1:8000/fetchChildren/?parent_email=${widget.email}');
+      'http://10.27.190.96:8000/fetchChildren/?parent_email=${widget.email}',
+    );
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
@@ -85,12 +85,12 @@ class _homeState extends State<home> {
               "name": "${child['firstname']} ${child['lastname']}",
               "age": child['age'],
               "status": (child['is_paired'] ?? false) ? "Online" : "Offline",
-              "lastAlert": "Just Now", 
+              "lastAlert": "Just Now",
               "image":
-                  "https://img.favpng.com/22/11/14/3d-boy-avatar-cartoon-boy-with-glasses-in-3d-style-biFKVkT6_t.jpg" // placeholder
+                  "https://img.favpng.com/22/11/14/3d-boy-avatar-cartoon-boy-with-glasses-in-3d-style-biFKVkT6_t.jpg", // placeholder
             };
           }).toList();
-          filteredChildren = List.from(children); 
+          filteredChildren = List.from(children);
           isLoading = false;
         });
       } else {
@@ -270,6 +270,23 @@ class _homeState extends State<home> {
                                               fontSize: 18.sp,
                                               fontWeight: FontWeight.bold,
                                             ),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              child['status'],
+                                              style: TextStyle(
+                                                color:
+                                                    child['status'] == "Online"
+                                                    ? Colors.green
+                                                    : Colors.grey[700],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          "Last Alert: ${child['lastAlert']}",
+                                          style: TextStyle(
+                                            color: Color(0xFF7D7D7D),
+                                            fontSize: 12,
                                           ),
                                           SizedBox(height: 5.h),
                                           Text(

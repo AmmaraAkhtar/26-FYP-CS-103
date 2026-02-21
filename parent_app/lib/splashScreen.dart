@@ -22,7 +22,6 @@ class _splashpageState extends State<splashpage> {
         );
       });
     });
-
   }
 
   @override
@@ -44,7 +43,6 @@ class _splashpageState extends State<splashpage> {
             ),
           ],
         ),
-      ),
       ),
     );
   }
