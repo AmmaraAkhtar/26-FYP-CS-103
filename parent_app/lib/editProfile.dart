@@ -12,6 +12,7 @@ class _EditprofileState extends State<Editprofile> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+
         backgroundColor: Color(0xFFFBFBFC),
         appBar: AppBar(
           title: Text(
@@ -20,6 +21,13 @@ class _EditprofileState extends State<Editprofile> {
           ),
           backgroundColor: Color(0xFFFBFBFC),
           toolbarHeight: 120.h,
+
+      backgroundColor: Color(0xFFFAFBFB),
+      appBar: AppBar(
+        title: Text(
+          "Edit Profile",
+          style: TextStyle(fontSize: 30, color: Colors.black),
+
         ),
         body: SafeArea(
           child: SingleChildScrollView(

@@ -6,7 +6,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class otp extends StatefulWidget {
   final String email;
-  
+
   const otp({super.key, required this.email});
 
   @override
@@ -39,16 +39,25 @@ class _otpState extends State<otp> {
     });
   }
 
-  Future<void> verifyotp(String num1,String num2,String num3,String num4,String email) async {
+  Future<void> verifyotp(
+    String num1,
+    String num2,
+    String num3,
+    String num4,
+    String email,
+  ) async {
     String otp = num1 + num2 + num3 + num4;
-    String link = 'http://127.0.0.1:8000/verifyOtp/';
+    // String link = 'http://127.0.0.1:8000/verifyOtp/';
+    String link = 'http://10.27.190.96:8000/verifyOtp/';
+    
+
     final url = Uri.parse(link);
     print("Sending OTP verification request with OTP: $otp, Email: $email");
     try {
       final response = await http.post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'otp': otp, 'email': email, }),
+        body: jsonEncode({'otp': otp, 'email': email}),
       );
 
       if (response.statusCode == 200) {
@@ -71,7 +80,12 @@ class _otpState extends State<otp> {
   }
 
   Future<void> resendOtp(String email) async {
+
     String link = 'http://127.0.0.1:8000/resendOtp/';
+
+    //String link = 'http://127.0.0.1:8000/resendOtp/';
+    String link = 'http://10.27.190.96:8000/resendOtp/';
+
     final url = Uri.parse(link);
     print("Sending resend OTP request with Email: $email");
     try {
@@ -120,10 +134,22 @@ class _otpState extends State<otp> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Sign Up successful!")),
       );
+
+      );
+    }
+    if (error_message.isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error_message)));
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Sign Up successful!")));
+
       Navigator.push(context, MaterialPageRoute(builder: (context) => login()));
     }
   }
-  
+
   void resendOtpButton() async {
     await resendOtp(widget.email);
     ScaffoldMessenger.of(context).showSnackBar(
@@ -133,6 +159,7 @@ class _otpState extends State<otp> {
 
   @override
   Widget build(BuildContext context) {
+
     return  Scaffold(
         backgroundColor: Color(0xFFFBFBFC),
         appBar: PreferredSize(
@@ -149,6 +176,21 @@ class _otpState extends State<otp> {
                 tag: 'applog',
                 child: Image.asset('assets/logo.png', height: 189.h),
               ),
+
+    return Scaffold(
+      backgroundColor: Color(0xFFFAFBFB),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(250), // AppBar ka height adjust
+        child: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          flexibleSpace: Padding(
+            padding: const EdgeInsets.only(top: 50), // top space
+            child: Hero(
+              tag: 'applog',
+              child: Image.asset('assets/logo.png', width: 189, height: 189),
+
             ),
           ),
         ),
@@ -251,7 +293,32 @@ class _otpState extends State<otp> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(40.r),
                           ),
-                        ),
+
+                        )
+                      : SizedBox.shrink(),
+
+                  // Text(error.isEmpty?"":error,
+
+                  // style: TextStyle(
+                  //     color: Colors.red,
+                  //     fontSize: 16,
+                  //   ),
+                  // ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Didn’t receive a OTP? ",
+                        style: TextStyle(fontSize: 18),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          resendOtpButton();
+                        },
+                        style: ButtonStyle(
+
+                          padding: WidgetStatePropertyAll(EdgeInsets.all(0)),
+                    ),
                         child: Text(
                           'Verify OTP',
                           style: TextStyle(

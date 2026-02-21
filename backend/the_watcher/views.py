@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer
+from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -125,7 +125,7 @@ def send_otp(email):
         print("Created")
         send_mail(
 
-            subject='OTP for TheWatcher App',
+            subject='OTP for The Watcher App',
             message=f'Your OTP code is {otp}',
             from_email='22ntucs1145amnaali@gmail.com',
             recipient_list=[email],
@@ -191,6 +191,7 @@ def resendOtp_api(request):
 def createChild_api(request):
     delete_unpaired_children()
     serializer = ChildSerializer(data=request.data)
+    print("request.body (raw):", request.data)
     if serializer.is_valid():
         firstname = serializer.validated_data['firstname']
         lastname = serializer.validated_data['lastname']
@@ -201,6 +202,7 @@ def createChild_api(request):
         pairing_code = generate_unique_code()
         print(pairing_code)
         if models.child.objects.filter(firstname=firstname,lastname=lastname,parent=user).exists():
+            print("Child already exists for this parent")
             return Response({"error": "Child already exists for this parent"}, status=400)
         child = models.child.objects.create(firstname=firstname, lastname=lastname, age=age, screen_time_limit=screen_time_limit,parent = user,pairingCode=pairing_code)
         models.pairingCode.objects.create(pairing_code=pairing_code,parent=user,child=child)    
@@ -209,6 +211,7 @@ def createChild_api(request):
             "message": "Child created successfully",
            
         }, status=status.HTTP_201_CREATED)
+    print("Serializer errors:", serializer.errors)
     return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 # Generate Unique code 
@@ -230,8 +233,8 @@ def send_code(email,code):
         print("Created")
         send_mail(
 
-            subject='OTP for TheWatcher App',
-            message=f'Your OTP code is {code}',
+            subject='Child Agent Pairing Code for The Watcher App',
+            message=f'Your pairing code  is {code}',
             from_email='22ntucs1145amnaali@gmail.com',
             recipient_list=[email],
             fail_silently=False
@@ -280,3 +283,15 @@ def delete_unpaired_children():
     for code in expired_codes:
         models.child.objects.filter(pairingCode=code).delete()
         code.delete()
+
+
+# Fetch all registered children API
+@api_view(['GET'])
+def fetchChildren_api(request):
+    parent_email = request.query_params.get('parent_email')
+    user = User.objects.filter(email=parent_email).first()
+    if not user:
+        return Response({"error": "User Not Found"}, status=status.HTTP_404_NOT_FOUND)
+    children = models.child.objects.filter(parent=user)
+    serializer = PairedChildSerializer(children, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
