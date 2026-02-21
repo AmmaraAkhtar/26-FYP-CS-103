@@ -64,7 +64,7 @@ class _Resetpassword2State extends State<Resetpassword2> {
         );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => login()),
+          MaterialPageRoute(builder: (context) => Login()),
         );
       } else {
         var data = jsonDecode(response.body);
