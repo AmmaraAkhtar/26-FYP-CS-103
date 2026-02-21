@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // added for responsiveness
 
 class profile extends StatefulWidget {
   String email;
@@ -61,255 +62,256 @@ class _EditprofileState extends State<profile> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          "Edit Profile",
-          style: TextStyle(fontSize: 30, color: Colors.black),
+    return  Scaffold(
+        backgroundColor: Color(0xFFFBFBFC),
+        appBar: AppBar(
+          title: Text(
+            "Edit Profile",
+            style: TextStyle(fontSize: 30.sp, color: Colors.black),
+          ),
+          backgroundColor: Color(0xFFFBFBFC),
+          toolbarHeight: 120.h,
         ),
-        backgroundColor: Colors.white,
-        toolbarHeight: 120,
-      ),
-      body: SafeArea(
-        child: Builder(
-          builder: (context) => SingleChildScrollView(
-            child: Column(
-              children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      height: 200,
-                      width: double.infinity,
-                      color: Color(0xFFEB9974),
-                    ),
-                    Positioned(
-                      bottom: -50,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: CircleAvatar(
-                          radius: 100,
-                          backgroundColor: Colors.pink.shade100,
-                          backgroundImage: AssetImage('assets/person.jpg'),
+        body: SafeArea(
+          child: Builder(
+            builder: (context) => SingleChildScrollView(
+              child: Column(
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        height: 200.h,
+                        width: 1.sw,
+                        color: Color(0xFFEB9974),
+                      ),
+                      Positioned(
+                        bottom: -50.h,
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: CircleAvatar(
+                            radius: 100.r,
+                            backgroundColor: Colors.pink.shade100,
+                            backgroundImage: AssetImage('assets/person.jpg'),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: 60),
-                Text(
-                  "Change Picture",
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Color.fromARGB(255, 0, 142, 224),
+                    ],
                   ),
-                ),
-                SizedBox(height: 30),
 
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "First Name",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  SizedBox(height: 60.h),
+                  Text(
+                    "Change Picture",
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      color: Color.fromARGB(255, 0, 142, 224),
                     ),
-                    SizedBox(height: 2),
-                    SizedBox(
-                      width: 350,
-                      child: TextField(
-                        controller: firstNameController,
-                        decoration: InputDecoration(
-                          hintText: "Enter First Name",
-                          hintStyle: TextStyle(
-                            color: Color.fromARGB(255, 173, 171, 171),
-                            fontSize: 15,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 15,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
+                  ),
+                  SizedBox(height: 30.h),
+
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "First Name",
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      SizedBox(
+                        width: 350.w,
+                        child: TextField(
+                          controller: firstNameController,
+                          decoration: InputDecoration(
+                            hintText: "Enter First Name",
+                            hintStyle: TextStyle(
                               color: Color.fromARGB(255, 173, 171, 171),
-                              width: 1.4,
+                              fontSize: 15.sp,
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Colors.blue,
-                              width: 2,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 10.w,
+                              vertical: 15.h,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                              borderSide: BorderSide(
+                                color: Color.fromARGB(255, 173, 171, 171),
+                                width: 1.4.w,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                              borderSide: BorderSide(
+                                color: Colors.blue,
+                                width: 2.w,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
 
-                    SizedBox(height: 20),
+                      SizedBox(height: 20.h),
 
-                    Text(
-                      "Last Name",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      Text(
+                        "Last Name",
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 2),
-                    SizedBox(
-                      width: 350,
-                      child: TextField(
-                        controller: lastNameController,
-                        decoration: InputDecoration(
-                          hintText: "Enter Last Name",
-                          hintStyle: TextStyle(
-                            color: Color.fromARGB(255, 173, 171, 171),
-                            fontSize: 15,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 15,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
+                      SizedBox(height: 2.h),
+                      SizedBox(
+                        width: 350.w,
+                        child: TextField(
+                          controller: lastNameController,
+                          decoration: InputDecoration(
+                            hintText: "Enter Last Name",
+                            hintStyle: TextStyle(
                               color: Color.fromARGB(255, 173, 171, 171),
-                              width: 1.4,
+                              fontSize: 15.sp,
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Colors.blue,
-                              width: 2,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12.w,
+                              vertical: 15.h,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                              borderSide: BorderSide(
+                                color: Color.fromARGB(255, 173, 171, 171),
+                                width: 1.4.w,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                              borderSide: BorderSide(
+                                color: Colors.blue,
+                                width: 2.w,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
 
-                    SizedBox(height: 20),
+                      SizedBox(height: 20.h),
 
-                    Text(
-                      "Age",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      Text(
+                        "Age",
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 2),
-                    SizedBox(
-                      width: 350,
-                      child: TextField(
-                        controller: ageController,
-                        decoration: InputDecoration(
-                          hintText: "Enter Age",
-                          hintStyle: TextStyle(
-                            color: Color.fromARGB(255, 173, 171, 171),
-                            fontSize: 15,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 15,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
+                      SizedBox(height: 2.h),
+                      SizedBox(
+                        width: 350.w,
+                        child: TextField(
+                          controller: ageController,
+                          decoration: InputDecoration(
+                            hintText: "Enter Age",
+                            hintStyle: TextStyle(
                               color: Color.fromARGB(255, 173, 171, 171),
-                              width: 1.4,
+                              fontSize: 15.sp,
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Colors.blue,
-                              width: 2,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12.w,
+                              vertical: 15.h,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                              borderSide: BorderSide(
+                                color: Color.fromARGB(255, 173, 171, 171),
+                                width: 1.4.w,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                              borderSide: BorderSide(
+                                color: Colors.blue,
+                                width: 2.w,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
 
-                    SizedBox(height: 20),
+                      SizedBox(height: 20.h),
 
-                    Text(
-                      "Screen Time",
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      Text(
+                        "Screen Time",
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 2),
-                    SizedBox(
-                      width: 350,
-                      child: TextField(
-                        controller: screenTimeController,
-                        decoration: InputDecoration(
-                          hintText: "Enter Screen Time",
-                          hintStyle: TextStyle(
-                            color: Color.fromARGB(255, 173, 171, 171),
-                            fontSize: 15,
-                          ),
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 15,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
+                      SizedBox(height: 2.h),
+                      SizedBox(
+                        width: 350.w,
+                        child: TextField(
+                          controller: screenTimeController,
+                          decoration: InputDecoration(
+                            hintText: "Enter Screen Time",
+                            hintStyle: TextStyle(
                               color: Color.fromARGB(255, 173, 171, 171),
-                              width: 1.4,
+                              fontSize: 15.sp,
                             ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(
-                              color: Colors.blue,
-                              width: 2,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12.w,
+                              vertical: 15.h,
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                              borderSide: BorderSide(
+                                color: Color.fromARGB(255, 173, 171, 171),
+                                width: 1.4.w,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                              borderSide: BorderSide(
+                                color: Colors.blue,
+                                width: 2.w,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    SizedBox(height: 40),
-                  ],
-                ),
+                      SizedBox(height: 40.h),
+                    ],
+                  ),
 
-                SizedBox(
-                  width: 285,
-                  height: 47,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      register();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFEB9974),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(40),
+                  SizedBox(
+                    width: 285.w,
+                    height: 47.h,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        register();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFFEB9974),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(40.r),
+                        ),
                       ),
-                    ),
-                    child: Text(
-                      'Register',
-                      style: TextStyle(
-                        fontSize: 22,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                      child: Text(
+                        'Register',
+                        style: TextStyle(
+                          fontSize: 22.sp,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                SizedBox(height: 50),
-              ],
+                  SizedBox(height: 50.h),
+                ],
+              ),
             ),
           ),
         ),
-      ),
+      
     );
   }
 }
