@@ -1,113 +1,128 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class youtube extends StatefulWidget {
-  const youtube({super.key});
+class Youtube extends StatefulWidget {
+  const Youtube({super.key});
 
   @override
-  State<youtube> createState() => _youtubeState();
+  State<Youtube> createState() => _YoutubeState();
 }
 
-class _youtubeState extends State<youtube> {
+class _YoutubeState extends State<Youtube> {
   @override
   Widget build(BuildContext context) {
-
-    return  Scaffold(
+    return Scaffold(
+      backgroundColor: const Color(0xFFFBFBFC),
+      appBar: AppBar(
         backgroundColor: const Color(0xFFFBFBFC),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFFFBFBFC),
-          elevation: 0,
-          title: Text(
-            "YouTube Monitoring Dashboard",
-            style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
-          ),
+        elevation: 0,
+        title: Text(
+          "YouTube Monitoring Dashboard",
+          style:
+              TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(16.w),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                /// Profile Section
-                Center(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 60.r,
-                        backgroundImage: const NetworkImage(
-                            "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png"),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              /// Profile Section
+              Center(
+                child: Column(
+                  children: [
+                    CircleAvatar(
+                      radius: 60.r,
+                      backgroundImage: const NetworkImage(
+                        "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png",
                       ),
-                      SizedBox(height: 8.h),
-                      Text("Hamza Ali",
-                          style: TextStyle(
-                              fontSize: 30.sp, fontWeight: FontWeight.bold)),
-                      Text("11 Years Old",
-                          style: TextStyle(color: Colors.grey, fontSize: 16.sp)),
-                    ],
-                  ),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      "Hamza Ali",
+                      style: TextStyle(
+                          fontSize: 30.sp,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "11 Years Old",
+                      style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16.sp),
+                    ),
+                  ],
                 ),
+              ),
 
-                SizedBox(height: 20.h),
+              SizedBox(height: 20.h),
 
-                // Usage Chart placeholder
-                Text(
-                  "Usage",
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, fontSize: 20.sp),
+              /// Usage
+              Text(
+                "Usage",
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20.sp),
+              ),
+
+              SizedBox(height: 10.h),
+
+              Center(
+                child: Image.asset(
+                  "assets/youtube.png",
+                  width: 300.w,
                 ),
-                SizedBox(height: 10.h),
-                Center(
-                  child: Image.asset(
-                    "assets/youtube.png",
-                    width: 300.w,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                SizedBox(height: 20.h),
+              ),
 
-                // Content Cards
-                contentCard(
-                    "Principle Component Analysis (PCA) | Part 2 | Problem Formulation and Step by Step Solution",
-                    "CampusX",
-                    "Educational",
-                    Colors.blue,
-                    "15min"),
-                contentCard(
-                    "Principle Component Analysis (PCA) | Part 2 | Problem Formulation and Step by Step Solution",
-                    "CampusX",
-                    "Gaming",
-                    Colors.green,
-                    "15min"),
-                contentCard(
-                    "Principle Component Analysis (PCA) | Part 2 | Problem Formulation and Step by Step Solution",
-                    "CampusX",
-                    "Violence",
-                    Colors.red,
-                    "15min"),
+              SizedBox(height: 20.h),
 
-                SizedBox(height: 20.h),
+              /// Content Cards
+              contentCard(
+                  "PCA Step by Step Solution",
+                  "CampusX",
+                  "Educational",
+                  Colors.blue,
+                  "15min"),
 
-                // Alerts
-                Text(
-                  "Alerts",
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
-                ),
-                SizedBox(height: 10.h),
-                alertCard("Violent Content Detected", "10:30 AM"),
-                alertCard("Violent Content Detected", "10:30 AM"),
-              ],
-            ),
+              contentCard(
+                  "Gaming Video",
+                  "CampusX",
+                  "Gaming",
+                  Colors.green,
+                  "15min"),
+
+              contentCard(
+                  "Violent Scene",
+                  "CampusX",
+                  "Violence",
+                  Colors.red,
+                  "15min"),
+
+              SizedBox(height: 20.h),
+
+              /// Alerts
+              Text(
+                "Alerts",
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp),
+              ),
+
+              SizedBox(height: 10.h),
+
+              alertCard("Violent Content Detected", "10:30 AM"),
+              alertCard("Violent Content Detected", "11:00 AM"),
+            ],
           ),
         ),
-      
+      ),
     );
   }
 
-  // Content card widget
-  Widget contentCard(
-      String title, String source, String category, Color color, String time) {
+  /// Content Card
+  Widget contentCard(String title, String source,
+      String category, Color color, String time) {
     return Card(
       color: const Color(0xFFEB9974),
       margin: EdgeInsets.only(bottom: 12.h),
@@ -117,177 +132,47 @@ class _youtubeState extends State<youtube> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title,
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp)),
             SizedBox(height: 4.h),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment:
+                  MainAxisAlignment.spaceBetween,
               children: [
                 Text(source,
                     style: TextStyle(
-                        decoration: TextDecoration.underline, fontSize: 12.sp)),
+                        decoration:
+                            TextDecoration.underline,
+                        fontSize: 12.sp)),
                 Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 6.w,
+                      vertical: 2.h),
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(4.r),
+                    borderRadius:
+                        BorderRadius.circular(4.r),
                   ),
                   child: Text(
                     category,
-                    style: TextStyle(color: Colors.white, fontSize: 12.sp),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.sp),
                   ),
                 ),
-                Text(time, style: TextStyle(fontSize: 12.sp)),
+                Text(time,
+                    style:
+                        TextStyle(fontSize: 12.sp)),
               ],
             ),
           ],
         ),
-
-    return Scaffold(
-      backgroundColor: Color(0xFFFAFBFB),
-      appBar: AppBar(
-        backgroundColor: Colors.grey[100],
-        title: const Text(
-          "YouTube Monitoring Dashboard",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              /// Profile Section
-              Center(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: const [
-                    CircleAvatar(
-                      radius: 60,
-                      backgroundImage: NetworkImage(
-                        "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png",
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      "Hamza Ali",
-                      style: TextStyle(
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      "11 Years Old",
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              const SizedBox(height: 20),
-
-              // Usage Chart placeholder
-              const Text(
-                "Usage",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-              ),
-              const SizedBox(height: 10),
-              Center(
-                child: Column(children: [Image.asset("assets/youtube.png")]),
-              ),
-              const SizedBox(height: 20),
-
-              // Content Cards
-              contentCard(
-                "Principle Component Analysis (PCA) | Part 2 | Problem Formulation and Step by Step Solution",
-                "CampusX",
-                "Educational",
-                Colors.blue,
-                "15min",
-              ),
-              contentCard(
-                "Principle Component Analysis (PCA) | Part 2 | Problem Formulation and Step by Step Solution",
-                "CampusX",
-                "Gaming",
-                Colors.green,
-                "15min",
-              ),
-              contentCard(
-                "Principle Component Analysis (PCA) | Part 2 | Problem Formulation and Step by Step Solution",
-                "CampusX",
-                "Violence",
-                Colors.red,
-                "15min",
-              ),
-
-              const SizedBox(height: 20),
-
-              // Alerts
-              const Text(
-                "Alerts",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 10),
-              alertCard("Violent Content Detected", "10:30 AM"),
-              alertCard("Violent Content Detected", "10:30 AM"),
-            ],
-          ),
-        ),
       ),
     );
   }
-}
 
-// Content card widget
-Widget contentCard(
-  String title,
-  String source,
-  String category,
-  Color color,
-  String time,
-) {
-  return Card(
-    color: Color(0xFFEB9974),
-    margin: const EdgeInsets.only(bottom: 12),
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                source,
-                style: const TextStyle(decoration: TextDecoration.underline),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  category,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-              Text(time),
-            ],
-          ),
-        ],
-
-      ),
-    ),
-  );
-}
-
-  // Alert card widget
+  /// Alert Card
   Widget alertCard(String message, String time) {
     return Card(
       color: Colors.red[100],
@@ -296,34 +181,22 @@ Widget contentCard(
         padding: EdgeInsets.all(12.w),
         child: Row(
           children: [
-            Icon(Icons.error, color: Colors.red, size: 30.r),
+            Icon(Icons.error,
+                color: Colors.red,
+                size: 30.r),
             SizedBox(width: 8.w),
             Expanded(
-                child: Text(message, style: TextStyle(fontSize: 14.sp))),
+              child: Text(message,
+                  style:
+                      TextStyle(fontSize: 14.sp)),
+            ),
             Text(time,
-                style: TextStyle(color: Colors.black54, fontSize: 12.sp)),
+                style: TextStyle(
+                    color: Colors.black54,
+                    fontSize: 12.sp)),
           ],
         ),
       ),
     );
   }
-
-// Alert card widget
-Widget alertCard(String message, String time) {
-  return Card(
-    color: Colors.red[100],
-    margin: const EdgeInsets.only(bottom: 8),
-    child: Padding(
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          const Icon(Icons.error, color: Colors.red),
-          const SizedBox(width: 8),
-          Expanded(child: Text(message)),
-          Text(time, style: const TextStyle(color: Colors.black54)),
-        ],
-      ),
-    ),
-  );
-
 }
