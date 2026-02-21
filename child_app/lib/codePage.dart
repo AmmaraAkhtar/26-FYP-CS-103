@@ -10,6 +10,93 @@ class otp extends StatefulWidget {
 }
 
 class _otpState extends State<otp> {
+  final TextEditingController _num1 = TextEditingController();
+  final TextEditingController _num2 = TextEditingController();
+  final TextEditingController _num3 = TextEditingController();
+  final TextEditingController _num4 = TextEditingController();
+
+  // Error message
+  String error = "";
+  String error_message = "";
+
+  void validateOTP() {
+    setState(() {
+      error = "";
+      List<TextEditingController> fields = [_num1, _num2, _num3, _num4];
+
+      for (var f in fields) {
+        String val = f.text.trim();
+        if (val.isEmpty) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("All fields must be filled")));
+          return; // Stop checking
+        }
+      }
+
+      error = "";
+    });
+  }
+
+  Future<void> verifyotp(
+    String num1,
+    String num2,
+    String num3,
+    String num4,
+  ) async {
+    String code = num1 + num2 + num3 + num4;
+    //String link = 'http://127.0.0.1:8000/pairDevice/';
+    //String link = 'http://10.13.19.146:8000/pairDevice/';
+    String link = 'http://10.27.190.96:8000/pairDevice/';
+    final url = Uri.parse(link);
+
+    // print("Sending OTP verification request with OTP: $otp, Email: $email");
+    try {
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'pairing_code': code}),
+      );
+
+      if (response.statusCode == 200) {
+        print('Verification successful');
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Pairing successful!")));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => WatcherScreen()),
+        );
+      } else {
+        // Handle login error
+        var data = jsonDecode(response.body);
+        setState(() {
+          if (data is Map) {
+            error_message = data.values.join("\n");
+          } else {
+            error_message = data.toString();
+          }
+        });
+      }
+    } catch (e) {
+      setState(() {
+        error_message = "Network error: $e";
+      });
+    }
+  }
+
+  void handleSubmit() async {
+    validateOTP();
+    if (error.isEmpty) {
+      await verifyotp(_num1.text, _num2.text, _num3.text, _num4.text);
+      if (error_message == "") {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error_message)));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -110,6 +197,7 @@ class _otpState extends State<otp> {
                         width: 55.w,
                         height: 55.h,
                         child: TextField(
+                          controller: _num3,
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.center,
                           maxLength: 1,
@@ -133,6 +221,7 @@ class _otpState extends State<otp> {
                         width: 55.w,
                         height: 55.h,
                         child: TextField(
+                          controller: _num4,
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.center,
                           maxLength: 1,
@@ -162,13 +251,7 @@ class _otpState extends State<otp> {
                     height: 47.h,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                             WatcherScreen(),
-                          ),
-                        );
+                        handleSubmit();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFEB9974),

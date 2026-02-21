@@ -39,7 +39,6 @@ class _welcomeState extends State<welcome> {
               // ),
 
               // SizedBox(height: 30),
-
               RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(

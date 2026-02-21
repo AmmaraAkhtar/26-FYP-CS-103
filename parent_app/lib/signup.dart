@@ -89,7 +89,8 @@ class _SignupState extends State<Signup> {
     String email,
     String password,
   ) async {
-    String link = 'http://127.0.0.1:8000/signup/';
+    //String link = 'http://127.0.0.1:8000/signup/';
+    String link = 'http://10.27.190.96:8000/signup/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(

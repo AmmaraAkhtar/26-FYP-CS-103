@@ -60,6 +60,11 @@ class _statusState extends State<status> {
 
 
 
+                  SizedBox(height: 20),
+                  Text(
+                    "Last Sync: Just now",
+                    style: TextStyle(fontSize: 18, color: Color(0xFF8D7365)),
+                  ),
 
                   SizedBox(height: 50.h),
                 ],
