@@ -1,103 +1,97 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class Chat extends StatefulWidget {
-  const Chat({super.key});
+class chat extends StatefulWidget {
+  const chat({super.key});
 
   @override
-  State<Chat> createState() => _ChatState();
+  State<chat> createState() => _chatState();
 }
 
-class _ChatState extends State<Chat> {
+class _chatState extends State<chat> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFC),
       appBar: AppBar(
         backgroundColor: const Color(0xFFFBFBFC),
-        elevation: 0,
         title: Text(
           "Chat Monitoring Dashboard",
-          style:
-              TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
         ),
       ),
-
       body: SafeArea(
         child: SingleChildScrollView(
-          padding:
-              EdgeInsets.symmetric(horizontal: 20.w, vertical: 30.h),
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 40.h),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-
-              /// PROFILE
-              CircleAvatar(
-                radius: 60.r,
-                backgroundImage: const NetworkImage(
-                  "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png",
+              // Header Section
+              Center(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    CircleAvatar(
+                      radius: 60.r,
+                      backgroundImage: NetworkImage(
+                          "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png"),
+                    ),
+                    SizedBox(height: 8.h),
+                    Text(
+                      "Hamza Ali",
+                      style: TextStyle(
+                          fontSize: 30.sp, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      "11 Years Old",
+                      style: TextStyle(color: Colors.grey, fontSize: 16.sp),
+                    ),
+                  ],
                 ),
               ),
-
-              SizedBox(height: 10.h),
-
-              Text(
-                "Hamza Ali",
-                style: TextStyle(
-                    fontSize: 28.sp,
-                    fontWeight: FontWeight.bold),
-              ),
-
-              Text(
-                "11 Years Old",
-                style:
-                    TextStyle(color: Colors.grey, fontSize: 16.sp),
-              ),
-
               SizedBox(height: 30.h),
 
-              /// USAGE
-              Text(
-                "Usage",
-                style: TextStyle(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.bold),
-              ),
-
+              // Usage Section Title
+              Text("Usage",
+                  style:
+                      TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold)),
               SizedBox(height: 10.h),
 
-              Image.asset(
-                "assets/chat.png",
+              // Placeholder for Graph
+              Container(
                 height: 150.h,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  image: const DecorationImage(
+                    image: AssetImage('assets/chat.png'),
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
-
               SizedBox(height: 20.h),
 
-              /// RISK CARDS
+              // Chat Risk Cards
               riskCard("High Risk", Colors.red, "Ammara"),
               riskCard("Moderate Risk", Colors.orange, "Ammara"),
               riskCard("No Risk", Colors.green, "Ammara"),
+              riskCard("Moderate Risk", Colors.orange, "Ammara"),
 
-              SizedBox(height: 20.h),
-
-              /// ALERT TITLE
+              SizedBox(height: 10.h),
               Row(
                 children: [
                   Text(
                     "Alerts",
-                    style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(width: 5.w),
-                  Icon(Icons.error,
-                      color: Colors.red, size: 20.r),
+                  Icon(Icons.error, color: Colors.red, size: 20.r),
                 ],
               ),
-
               SizedBox(height: 10.h),
 
+              // Alert Boxes
               alertBox("Violent Message Detected"),
-              alertBox("Abusive Language Detected"),
+              alertBox("Violent Video Detected"),
             ],
           ),
         ),
@@ -105,132 +99,108 @@ class _ChatState extends State<Chat> {
     );
   }
 
-  /// ================= RISK CARD =================
-  Widget riskCard(
-      String riskLevel, Color riskColor, String contactName) {
+  // Risk Card Widget
+  Widget riskCard(String riskLevel, Color riskColor, String contactName) {
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: Colors.orange.shade300,
+        color: Colors.orange.shade200,
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          )
+              color: Colors.grey.withOpacity(0.3),
+              blurRadius: 5.r,
+              offset: Offset(0, 3.h))
         ],
       ),
       child: Row(
         children: [
-
-          /// Avatar
           CircleAvatar(
             radius: 25.r,
-            backgroundImage: const NetworkImage(
-              "https://static.vecteezy.com/system/resources/previews/022/416/248/non_2x/avatar-of-girl-with-pigtails-colored-icon-vector.jpg",
-            ),
+            backgroundImage: NetworkImage(
+                'https://static.vecteezy.com/system/resources/previews/022/416/248/non_2x/avatar-of-girl-with-pigtails-colored-icon-vector.jpg'),
           ),
-
           SizedBox(width: 15.w),
-
-          /// CHAT TEXT
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Contact: $contactName",
+                  "Contact Name: $contactName",
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                       fontSize: 14.sp),
                 ),
                 Text(
-                  "Tumhe maar dunga...",
+                  "Tumha mana mar dana hy, mar dana hy",
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12.sp,
-                    decoration:
-                        TextDecoration.underline,
-                  ),
+                      color: Colors.white,
+                      decoration: TextDecoration.underline,
+                      fontSize: 12.sp),
                 ),
               ],
             ),
           ),
-
-          /// RISK SCORE
           Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 "Risk\nScore",
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10.sp),
+                style: TextStyle(color: Colors.white, fontSize: 10.sp),
               ),
               SizedBox(height: 5.h),
               Container(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 4.h),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
                 decoration: BoxDecoration(
                   color: riskColor,
-                  borderRadius:
-                      BorderRadius.circular(10.r),
+                  borderRadius: BorderRadius.circular(10.r),
                 ),
                 child: Text(
                   riskLevel,
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 10.sp,
-                      fontWeight:
-                          FontWeight.bold),
+                      fontWeight: FontWeight.bold),
                 ),
-              )
+              ),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 
-  /// ================= ALERT BOX =================
+  // Alert Box Widget
   Widget alertBox(String title) {
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
-      padding:
-          EdgeInsets.symmetric(horizontal: 15.w, vertical: 10.h),
+      padding: EdgeInsets.symmetric(horizontal: 15.w, vertical: 10.h),
       decoration: BoxDecoration(
         color: Colors.orange.shade100,
         borderRadius: BorderRadius.circular(15.r),
       ),
       child: Row(
         children: [
-          Icon(Icons.error,
-              color: Colors.red, size: 22.r),
-
+          Icon(Icons.error, color: Colors.red, size: 20.r),
           SizedBox(width: 15.w),
-
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
                     style: TextStyle(
-                        fontWeight:
-                            FontWeight.bold,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
                         fontSize: 14.sp)),
                 Text("10:30 AM",
-                    style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 12.sp)),
+                    style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
               ],
             ),
           ),
+          Icon(Icons.error, color: Colors.red, size: 20.r),
         ],
       ),
     );
