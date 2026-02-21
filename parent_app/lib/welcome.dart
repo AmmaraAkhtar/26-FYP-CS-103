@@ -66,7 +66,7 @@ class _welcomeState extends State<welcome> {
                   onPressed: () {
                     Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (context) => Login()),
+                      MaterialPageRoute(builder: (context) => login()),
                     );
                   },
                   style: ElevatedButton.styleFrom(

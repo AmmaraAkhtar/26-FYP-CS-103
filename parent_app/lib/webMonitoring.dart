@@ -1,12 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-void main() {
-  runApp(
-    const MaterialApp(debugShowCheckedModeBanner: false, home: Webmonitoring()),
-  );
-}
-
 class Webmonitoring extends StatefulWidget {
   const Webmonitoring({super.key});
 
@@ -44,18 +38,14 @@ class _WebmonitoringState extends State<Webmonitoring> {
                     CircleAvatar(
                       radius: 60.r,
                       backgroundImage: const NetworkImage(
-                        "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png",
-                      ),
+                          "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png"),
                     ),
                     SizedBox(height: 8.h),
-                    Text(
-                      "Hamza Ali",
-                      style: TextStyle(fontSize: 30.sp, fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      "11 Years Old",
-                      style: TextStyle(color: Colors.grey, fontSize: 16.sp),
-                    ),
+                    Text("Hamza Ali",
+                        style: TextStyle(
+                            fontSize: 30.sp, fontWeight: FontWeight.bold)),
+                    Text("11 Years Old",
+                        style: TextStyle(color: Colors.grey, fontSize: 16.sp)),
                   ],
                 ),
               ),
@@ -90,15 +80,15 @@ class _WebmonitoringState extends State<Webmonitoring> {
               _buildHistoryRow("youtube.com", "1h10min", "Violence", Colors.red),
               _buildHistoryRow("youtube.com", "1h10min", "Educational", Colors.blueAccent),
               _buildHistoryRow("youtube.com", "1h10min", "Gaming", Colors.green),
-              _buildHistoryRow("youtube.com", "1h10min", "Educational", Colors.blueAccent),
-              _buildHistoryRow("youtube.com", "1h10min", "Gaming", Colors.green),
+
               SizedBox(height: 30.h),
 
               // --- Alerts Section ---
               Row(
                 children: [
                   Text("Alerts",
-                      style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold)),
+                      style:
+                          TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold)),
                   SizedBox(width: 5.w),
                   Icon(Icons.error, color: Colors.red, size: 22.r),
                 ],
@@ -114,22 +104,21 @@ class _WebmonitoringState extends State<Webmonitoring> {
     );
   }
 
-  // --- Helper Widgets ---
+  // --- UI Helper Methods ---
   Widget _buildTab(String label, {bool isSelected = false}) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
       decoration: BoxDecoration(
         color: isSelected ? const Color(0xFF92B4C8) : const Color(0xFFE89B7D),
         borderRadius: BorderRadius.circular(15.r),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 4))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 4))
+        ],
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 14.sp,
-        ),
+            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14.sp),
       ),
     );
   }
@@ -144,7 +133,8 @@ class _WebmonitoringState extends State<Webmonitoring> {
       ),
       child: Text(
         text,
-        style: TextStyle(color: Colors.white, fontSize: 10.sp, fontWeight: FontWeight.bold),
+        style: TextStyle(
+            color: Colors.white, fontSize: 10.sp, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -159,15 +149,43 @@ class _WebmonitoringState extends State<Webmonitoring> {
       ),
       child: Row(
         children: [
-          Expanded(flex: 3, child: Text(title, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 11.sp))),
-          Expanded(flex: 2, child: Center(child: Text(time, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11.sp)))),
+          Expanded(
+            flex: 3,
+            child: Text(
+              title,
+              style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 11.sp),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Center(
+              child: Text(
+                time,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11.sp),
+              ),
+            ),
+          ),
           Expanded(
             flex: 2,
             child: Center(
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 4.h),
-                decoration: BoxDecoration(color: catColor, borderRadius: BorderRadius.circular(20.r)),
-                child: Text(category, style: TextStyle(color: Colors.white, fontSize: 9.sp, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                decoration: BoxDecoration(
+                    color: catColor, borderRadius: BorderRadius.circular(20.r)),
+                child: Text(
+                  category,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9.sp,
+                      fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           ),
@@ -175,8 +193,17 @@ class _WebmonitoringState extends State<Webmonitoring> {
             flex: 1,
             child: Container(
               padding: EdgeInsets.symmetric(vertical: 4.h),
-              decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(5.r)),
-              child: const Text("Yes", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10), textAlign: TextAlign.center),
+              decoration: BoxDecoration(
+                  color: Colors.red, borderRadius: BorderRadius.circular(5.r)),
+              child: const Text(
+                "Yes",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
         ],
@@ -187,7 +214,10 @@ class _WebmonitoringState extends State<Webmonitoring> {
   Widget _buildAlertTile(String msg, String time) {
     return Container(
       padding: EdgeInsets.all(15.w),
-      decoration: BoxDecoration(color: const Color(0xFFFFCCB3), borderRadius: BorderRadius.circular(20.r)),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFCCB3),
+        borderRadius: BorderRadius.circular(20.r),
+      ),
       child: Row(
         children: [
           Icon(Icons.error, color: Colors.red, size: 30.r),
@@ -196,8 +226,13 @@ class _WebmonitoringState extends State<Webmonitoring> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(msg, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp, color: const Color(0xFF635D5D))),
-                Text(time, style: TextStyle(color: Colors.grey, fontSize: 11.sp)),
+                Text(msg,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.sp,
+                        color: const Color(0xFF635D5D))),
+                Text(time,
+                    style: TextStyle(color: Colors.grey, fontSize: 11.sp)),
               ],
             ),
           ),
