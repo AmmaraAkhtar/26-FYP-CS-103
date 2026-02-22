@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'status.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:usage_stats/usage_stats.dart';
+import 'dart:async';
 
 class WatcherScreen extends StatefulWidget {
   @override
@@ -8,6 +10,56 @@ class WatcherScreen extends StatefulWidget {
 }
 
 class _WatcherScreenState extends State<WatcherScreen> {
+  Future<void> checkPermission() async {
+    bool? granted = await UsageStats.checkUsagePermission();
+    if (granted != true) {
+      await UsageStats.grantUsagePermission();
+    }
+  }
+
+  void startAppMonitoring() async {
+    Timer.periodic(Duration(hours: 1), (timer) {
+      fetchAppUsageData();
+    });
+  }
+
+  Future<void> fetchAppUsageData() async {
+    DateTime endDate = DateTime.now();
+    DateTime startDate = endDate.subtract(Duration(hours: 1));
+
+    Map<String, UsageInfo> usageStats =
+        await UsageStats.queryAndAggregateUsageStats(startDate, endDate);
+
+    processData(usageStats);
+  }
+
+  bool isSystemApp(String packageName) {
+    return packageName.startsWith("com.android") ||
+        packageName.startsWith("com.google.android");
+  }
+
+  void processData(Map<String, UsageInfo> stats) {
+    List<Map<String, dynamic>> filteredData = [];
+
+    stats.forEach((packageName, info) {
+      var usageTime = info.totalTimeInForeground;
+      int time = 0;
+      if (usageTime != null) {
+        time = int.parse(usageTime);
+      }
+
+      if (time > 0 && !isSystemApp(packageName)) {
+        filteredData.add({
+          "package_name": packageName,
+          "usage_time": time / 1000, // seconds
+        });
+      }
+    });
+
+    sendToBackend(filteredData);
+  }
+  
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
