@@ -39,7 +39,13 @@ class pairingCode(models.Model):
         if timezone.now() > self.created_at + timedelta(minutes=10):
             return True
 
-
+# App Usage Model
+class appUasge(models.Model):
+    child = models.ForeignKey(child, on_delete=models.CASCADE)
+    usage_time = models.IntegerField(default = 0) 
+    package_name = models.CharField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    date = models.DateField()
 
 
 
