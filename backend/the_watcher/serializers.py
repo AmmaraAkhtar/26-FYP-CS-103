@@ -80,4 +80,32 @@ class PairedChildSerializer(serializers.ModelSerializer):
     class Meta:
         model =  models.child
         fields = ['firstname', 'lastname', 'age', 'screen_time_limit']
+
+# App Usage Serializer 
+class AppUsageSerializer(serializers.ModelSerializer):
+    child_id = serializers.IntegerField()
+    usage_data = serializers.ListField()
+    timestamp = serializers.DateTimeField()
     
+
+    def create(self,validated_data):
+        child_id = validated_data["child_id"]
+        usage_data = validated_data["usage_data"]
+        timestamp = validated_data["timestamp"]
+        child = models.child.objects.get(id=child_id)
+        today = timestamp.date()
+
+        for app in usage_data:
+            models.appUsage.objects.update_or_create(
+                child=child,
+                package_name=app["package_name"],
+                date=today,
+                defaults={
+                    "usage_seconds": app["usage_time"] # agr record mil jaye to is field ko update krna hai (role of default)
+                }
+            )
+
+        return validated_data
+
+
+      
