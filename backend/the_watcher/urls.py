@@ -12,4 +12,5 @@ urlpatterns = [
     path('createChild/', views.createChild_api),
     path('pairDevice/', views.pairingCodeVerification_api),
     path('fetchChildren/', views.fetchChildren_api),
+    path('appdata/',views.collectAppUsageData_Api),
 ]
