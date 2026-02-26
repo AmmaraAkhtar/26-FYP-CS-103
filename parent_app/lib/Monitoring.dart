@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'youtubeMonitoring.dart';
+import 'youtube1.dart';
 import 'AlertMonitoring.dart';
-import 'chatMonitoring.dart';
-import 'webMonitoring.dart';
+import 'chat1.dart';
+import 'appUsage.dart';
+import 'screenTimeLimit.dart';
+import 'browsering1.dart';
 
 class Monitoring extends StatefulWidget {
   final Map<String, dynamic>? childData;
@@ -18,12 +20,41 @@ class _MonitoringState extends State<Monitoring> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFC),
-      appBar: AppBar(
+ appBar: AppBar(
         backgroundColor: const Color(0xFFFBFBFC),
         title: Text(
-          "Live Monitoring Page",
-          style: TextStyle(fontSize: 20.sp, fontWeight: FontWeight.bold),
+          "Browsing Monitoring",
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 18.sp,
+          ),
         ),
+        actions: [
+          // Notification Icon with Responsive Badge
+          Stack(
+            children: [
+              IconButton(
+                onPressed: null,
+                icon: Icon(Icons.notifications_none, color: Colors.black, size: 28.sp),
+              ),
+              Positioned(
+                right: 8.w,
+                top: 8.h,
+                child: Container(
+                  padding: EdgeInsets.all(4.w),
+                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                  child: Text(
+                    "3",
+                    style: TextStyle(fontSize: 10.sp, color: Colors.white),
+                  ),
+                ),
+              )
+            ],
+          ),
+          Icon(Icons.settings_outlined, color: Colors.black, size: 24.sp),
+          SizedBox(width: 15.w),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -31,33 +62,30 @@ class _MonitoringState extends State<Monitoring> {
             padding: EdgeInsets.all(16.w),
             child: Column(
               children: [
-                SizedBox(height: 20.h),
                 // Profile Section
-                Center(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      CircleAvatar(
-                        radius: 60.r,
-                        backgroundImage: NetworkImage(
-                          "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png",
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        "Hamza Ali",
-                        style: TextStyle(
-                          fontSize: 30.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        "11 Years Old",
-                        style: TextStyle(color: Colors.grey, fontSize: 16.sp),
-                      ),
-                    ],
+                   Row(
+                children: [
+                  CircleAvatar(
+                    radius: 45.r,
+                    backgroundColor: Colors.green,
+                    child: CircleAvatar(
+                      radius: 42.r,
+                      backgroundImage: const NetworkImage(
+                          'https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png'),
+                    ),
                   ),
-                ),
+                  SizedBox(width: 20.w),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Hamza Ali",
+                          style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold)),
+                      Text("11 Years Old",
+                          style: TextStyle(color: Colors.grey, fontSize: 14.sp)),
+                    ],
+                  )
+                ],
+              ),
                 SizedBox(height: 25.h),
 
                 // First Row
@@ -76,7 +104,7 @@ class _MonitoringState extends State<Monitoring> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const youtube()),
+                            MaterialPageRoute(builder: (context) => ScreenTimeLimitScreen()),
                           );
                         },
                       ),
@@ -95,7 +123,7 @@ class _MonitoringState extends State<Monitoring> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const youtube()),
+                            MaterialPageRoute(builder: (context) => AppUsageMonitoringScreen()),
                           );
                         },
                       ),
@@ -120,7 +148,7 @@ class _MonitoringState extends State<Monitoring> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const youtube()),
+                            MaterialPageRoute(builder: (context) =>YoutubeActivityScreen()),
                           );
                         },
                       ),
@@ -139,7 +167,7 @@ class _MonitoringState extends State<Monitoring> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const Webmonitoring()),
+                            MaterialPageRoute(builder: (context) => const BrowsingMonitoringScreen()),
                           );
                         },
                       ),
@@ -177,7 +205,7 @@ class _MonitoringState extends State<Monitoring> {
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => chat()),
+                                  MaterialPageRoute(builder: (context) => ChatMonitoringDashboard()),
                                 );
                               },
                               child: const Text(
@@ -207,13 +235,13 @@ class _MonitoringState extends State<Monitoring> {
                                         "Suspicious Chat Detected",
                                         style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 16.sp),
+                                            fontSize: 14.sp),
                                       ),
                                       Text(
                                         "Today At 5:30pm",
                                         style: TextStyle(
                                             color: Colors.grey[600],
-                                            fontSize: 12.sp),
+                                            fontSize: 10.sp),
                                       ),
                                     ],
                                   ),
@@ -241,7 +269,7 @@ class _MonitoringState extends State<Monitoring> {
                   onTap: () {
                     Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => alert()));
+                        MaterialPageRoute(builder: (context) => AlertMonitoringDashboard()));
                   },
                   child: Container(
                     padding:
@@ -345,9 +373,6 @@ class _MonitoringState extends State<Monitoring> {
                     width: 45.w,
                     height: 45.h,
                     fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Icon(Icons.image_not_supported,
-                            size: 45.r, color: Colors.grey),
                   ),
                   SizedBox(width: 10.w),
                   Expanded(
