@@ -3,8 +3,9 @@ import 'status.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:usage_stats/usage_stats.dart';
 import 'dart:async';
-import "package:http/http.dart" as http;
-import "dart:convert";
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+
 
 class WatcherScreen extends StatefulWidget {
   @override
@@ -60,7 +61,6 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
     sendToBackend(filteredData);
   }
-  
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
    String link = 'http://10.27.190.96:8000/appdata/';
   final response = await http.post(
@@ -78,6 +78,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
   print(response.statusCode);
 }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(

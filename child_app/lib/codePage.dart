@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'chat.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import "package:http/http.dart" as http;
-import "dart:convert";
+import 'package:flutter_screenutil/flutter_screenutil.dart  ';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class otp extends StatefulWidget {
   const otp({super.key});
