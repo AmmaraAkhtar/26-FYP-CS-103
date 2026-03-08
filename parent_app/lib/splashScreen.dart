@@ -44,6 +44,6 @@ class _splashpageState extends State<splashpage> {
           ],
         ),
       ),
-    );
+    ),);
   }
 }
