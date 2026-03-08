@@ -7,8 +7,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class WatcherScreen extends StatefulWidget {
-  int? screen_limit;
-  WatcherScreen({super.key,  this.screen_limit});
+  int screen_limit = 0;
+  WatcherScreen({super.key, required this.screen_limit});
   @override
   _WatcherScreenState createState() => _WatcherScreenState();
 }
@@ -26,6 +26,8 @@ class _WatcherScreenState extends State<WatcherScreen> {
       fetchAppUsageData();
     });
   }
+  
+  
 
   Future<void> fetchAppUsageData() async {
     DateTime endDate = DateTime.now();
@@ -41,6 +43,17 @@ class _WatcherScreenState extends State<WatcherScreen> {
     return packageName.startsWith("com.android") ||
         packageName.startsWith("com.google.android");
   }
+  
+  int calculateTotalUsage(List<Map<String, dynamic>> apps) {
+  int totalSeconds = 0;
+
+  for (var app in apps) {
+    totalSeconds += app["usage_time"] as int;
+  }
+
+  return totalSeconds ~/ 60; // convert to minutes
+  }
+
 
   void processData(Map<String, UsageInfo> stats) {
     List<Map<String, dynamic>> filteredData = [];
@@ -61,6 +74,11 @@ class _WatcherScreenState extends State<WatcherScreen> {
     });
 
     sendToBackend(filteredData);
+    int totalUsageMinutes = calculateTotalUsage(filteredData);
+
+  if (totalUsageMinutes >= widget.screen_limit) {
+      // showLockScreen();
+  }
   }
 
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
