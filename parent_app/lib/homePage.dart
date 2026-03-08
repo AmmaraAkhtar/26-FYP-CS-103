@@ -217,128 +217,122 @@ class _homeState extends State<home> {
 
               // Child List
               Expanded(
-                child: isLoading
-                    ? Center(child: CircularProgressIndicator())
-                    : ListView.builder(
-                        itemCount: filteredChildren.length,
-                        itemBuilder: (context, index) {
-                          final child = filteredChildren[index];
-                          return Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(15.r),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => Monitoring(
-                                      childData: child, 
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                padding: EdgeInsets.all(12.w),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(15.r),
-                                ),
-                                child: Row(
-                                  children: [
-                                    // Big Circle Image
-                                    Container(
-                                      width: 100.w,
-                                      height: 100.w,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        image: DecorationImage(
-                                          image: NetworkImage(child['image']),
-                                          fit: BoxFit.cover,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(width: 15.w),
+  child: isLoading
+      ? Center(child: CircularProgressIndicator())
+      : ListView.builder(
+          itemCount: filteredChildren.length,
+          itemBuilder: (context, index) {
+            final child = filteredChildren[index];
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(15.r),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Monitoring(
+                        childData: child,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15.r),
+                  ),
+                  child: Row(
+                    children: [
+                      // Image
+                      Container(
+                        width: 100.w,
+                        height: 100.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          image: DecorationImage(
+                            image: NetworkImage(child['image']),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
 
-                                    // Name, Age, Status
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            child['name'],
-                                            style: TextStyle(
-                                              fontSize: 18.sp,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            SizedBox(width: 5),
-                                            Text(
-                                              child['status'],
-                                              style: TextStyle(
-                                                color:
-                                                    child['status'] == "Online"
-                                                    ? Colors.green
-                                                    : Colors.grey[700],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        Text(
-                                          "Last Alert: ${child['lastAlert']}",
-                                          style: TextStyle(
-                                            color: Color(0xFF7D7D7D),
-                                            fontSize: 12,
-                                          ),
-                                          SizedBox(height: 5.h),
-                                          Text(
-                                            "${child['age']} Years Old",
-                                            style: TextStyle(color: Colors.grey[700]),
-                                          ),
-                                          SizedBox(height: 5.h),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.circle,
-                                                size: 10.w,
-                                                color: child['status'] == "Online"
-                                                    ? Colors.green
-                                                    : Colors.grey,
-                                              ),
-                                              SizedBox(width: 5.w),
-                                              Text(
-                                                child['status'],
-                                                style: TextStyle(
-                                                  color: child['status'] == "Online"
-                                                      ? Colors.green
-                                                      : Colors.grey[700],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          Text(
-                                            "Last Alert: ${child['lastAlert']}",
-                                            style: TextStyle(color: Color(0xFF7D7D7D), fontSize: 12.sp),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                      SizedBox(width: 15.w),
 
-                                    // Notifications Icon
-                                    Icon(
-                                      Icons.notifications,
-                                      color: Colors.red,
-                                      size: 30.w,
-                                    ),
-                                  ],
-                                ),
+                      // Child Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                            /// Name
+                            Text(
+                              child['name'],
+                              style: TextStyle(
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          );
-                        },
+
+                            SizedBox(height: 5.h),
+
+                            /// Age
+                            Text(
+                              "${child['age']} Years Old",
+                              style: TextStyle(color: Colors.grey[700]),
+                            ),
+
+                            SizedBox(height: 5.h),
+
+                            /// Status Row
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.circle,
+                                  size: 10.w,
+                                  color: child['status'] == "Online"
+                                      ? Colors.green
+                                      : Colors.grey,
+                                ),
+                                SizedBox(width: 5.w),
+                                Text(
+                                  child['status'],
+                                  style: TextStyle(
+                                    color: child['status'] == "Online"
+                                        ? Colors.green
+                                        : Colors.grey[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            SizedBox(height: 5.h),
+
+                            /// Last Alert
+                            Text(
+                              "Last Alert: ${child['lastAlert']}",
+                              style: TextStyle(
+                                color: Color(0xFF7D7D7D),
+                                fontSize: 12.sp,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
+
+                      // Notification Icon
+                      Icon(
+                        Icons.notifications,
+                        color: Colors.red,
+                        size: 30.w,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ],
-          ),
+            );
+          },
         ),
-      );   
-  }
-}
+),],),),);
+}}
