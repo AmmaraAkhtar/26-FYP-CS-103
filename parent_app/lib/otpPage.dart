@@ -2,160 +2,103 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'login.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class otp extends StatefulWidget {
+class OTP extends StatefulWidget {
   final String email;
-
-  const otp({super.key, required this.email});
+  const OTP({super.key, required this.email});
 
   @override
-  State<otp> createState() => _otpState();
+  State<OTP> createState() => _OTPState();
 }
 
-class _otpState extends State<otp> {
+class _OTPState extends State<OTP> {
   final TextEditingController _num1 = TextEditingController();
   final TextEditingController _num2 = TextEditingController();
   final TextEditingController _num3 = TextEditingController();
   final TextEditingController _num4 = TextEditingController();
 
-  // Error message
   String error = "";
-  String error_message = "";
+  String errorMessage = "";
 
   void validateOTP() {
     setState(() {
       error = "";
       List<TextEditingController> fields = [_num1, _num2, _num3, _num4];
-
       for (var f in fields) {
-        String val = f.text.trim();
-        if (val.isEmpty) {
+        if (f.text.trim().isEmpty) {
           error = "All fields are required";
-          return; // Stop checking
+          return;
         }
       }
-
-      error = "";
     });
   }
 
-  Future<void> verifyotp(
-    String num1,
-    String num2,
-    String num3,
-    String num4,
-    String email,
-  ) async {
-    String otp = num1 + num2 + num3 + num4;
-    // String link = 'http://127.0.0.1:8000/verifyOtp/';
+  Future<void> verifyOTP() async {
+    String otp = _num1.text + _num2.text + _num3.text + _num4.text;
     String link = 'http://10.27.190.96:8000/verifyOtp/';
-    
 
-    final url = Uri.parse(link);
-    print("Sending OTP verification request with OTP: $otp, Email: $email");
     try {
       final response = await http.post(
-        url,
+        Uri.parse(link),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'otp': otp, 'email': email}),
+        body: jsonEncode({'otp': otp, 'email': widget.email}),
       );
 
       if (response.statusCode == 200) {
-        print('Verification successful');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Verification successful!")),
+        );
+        Navigator.push(
+            context, MaterialPageRoute(builder: (context) => const login()));
       } else {
-        // Handle login error
         var data = jsonDecode(response.body);
         setState(() {
           if (data is Map) {
-            error_message = data.values.join("\n");
+            errorMessage = data.values.join("\n");
           } else {
-            error_message = data.toString();
+            errorMessage = data.toString();
           }
         });
       }
     } catch (e) {
       setState(() {
-        error_message = "Network error: $e";
+        errorMessage = "Network error: $e";
       });
     }
   }
 
-  Future<void> resendOtp(String email) async {
-    //String link = 'http://127.0.0.1:8000/resendOtp/';
+  Future<void> resendOTP() async {
     String link = 'http://10.27.190.96:8000/resendOtp/';
-    final url = Uri.parse(link);
-    print("Sending resend OTP request with Email: $email");
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
-      );
 
-      if (response.statusCode == 200) {
-        print('Resend OTP successful');
-      } else {
-        var data = jsonDecode(response.body);
-        setState(() {
-          if (data is Map) {
-            error_message = data.values.join("\n");
-          } else {
-            error_message = data.toString();
-          }
-        });
-      }
+    try {
+      await http.post(
+        Uri.parse(link),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': widget.email}),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("OTP resent! Please check your email.")),
+      );
     } catch (e) {
       setState(() {
-        error_message = "Network error: $e";
+        errorMessage = "Network error: $e";
       });
     }
-  }
-
-  void loginbutton() async {
-    validateOTP();
-    if (error.isEmpty) {
-      print("Hello");
-      print(widget.email);
-
-      await verifyotp(
-        _num1.text.trim(),
-        _num2.text.trim(),
-        _num3.text.trim(),
-        _num4.text.trim(),
-        widget.email,
-      );
-    }
-    if (error_message.isNotEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(error_message)));
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Sign Up successful!")));
-      Navigator.push(context, MaterialPageRoute(builder: (context) => login()));
-    }
-  }
-
-  void resendOtpButton() async {
-    await resendOtp(widget.email);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("OTP resent! Please check your email.")),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFAFBFB),
+      backgroundColor: const Color(0xFFFAFBFB),
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(250), // AppBar ka height adjust
+        preferredSize: Size.fromHeight(250.h),
         child: AppBar(
           backgroundColor: Colors.white,
           elevation: 0,
           centerTitle: true,
           flexibleSpace: Padding(
-            padding: const EdgeInsets.only(top: 50), // top space
+            padding: const EdgeInsets.only(top: 50),
             child: Hero(
               tag: 'applog',
               child: Image.asset('assets/logo.png', width: 189, height: 189),
@@ -166,207 +109,116 @@ class _otpState extends State<otp> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 0),
-            child: SizedBox(
-              width: double.infinity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    "OTP",
-                    style: TextStyle(
-                      fontSize: 36,
-                      color: Color(0xFF699886),
-                      fontWeight: FontWeight.bold,
+            padding: EdgeInsets.symmetric(horizontal: 30.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(height: 20.h),
+                Text(
+                  "OTP",
+                  style: TextStyle(
+                    fontSize: 36.sp,
+                    color: const Color(0xFF699886),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 30.h),
+                Text(
+                  "We have sent OTP to your email",
+                  style: TextStyle(fontSize: 18.sp),
+                ),
+                SizedBox(height: 30.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    for (var controller in [_num1, _num2, _num3, _num4])
+                      SizedBox(
+                        width: 55.w,
+                        height: 55.h,
+                        child: TextField(
+                          controller: controller,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          maxLength: 1,
+                          style: TextStyle(
+                            fontSize: 20.sp,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          decoration: InputDecoration(
+                            counterText: "",
+                            filled: true,
+                            fillColor: const Color(0xFFF1A37A),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10.r),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+                if (error.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.h),
+                    child: Text(
+                      error,
+                      style: TextStyle(color: Colors.red, fontSize: 16.sp),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  SizedBox(height: 40),
-
-                  const Text(
-                    "We have sent OTP on Your number",
-                    style: TextStyle(fontSize: 18),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      SizedBox(
-                        width: 55,
-                        height: 55,
-                        child: TextField(
-                          controller: _num1,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          maxLength: 1,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: "",
-                            filled: true,
-                            fillColor: Color(0xFFF1A37A),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 55,
-                        height: 55,
-                        child: TextField(
-                          controller: _num2,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          maxLength: 1,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: "",
-                            filled: true,
-                            fillColor: Color(0xFFF1A37A),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 55,
-                        height: 55,
-                        child: TextField(
-                          controller: _num3,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          maxLength: 1,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: "",
-                            filled: true,
-                            fillColor: Color(0xFFF1A37A),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 55,
-                        height: 55,
-                        child: TextField(
-                          controller: _num4,
-                          keyboardType: TextInputType.number,
-                          textAlign: TextAlign.center,
-                          maxLength: 1,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: "",
-                            filled: true,
-                            fillColor: Color(0xFFF1A37A),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 20),
-                  error.isNotEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Text(
-                            error,
-                            style: TextStyle(color: Colors.red, fontSize: 16),
-                            textAlign: TextAlign.center,
-                          ),
-                        )
-                      : SizedBox.shrink(),
-
-                  // Text(error.isEmpty?"":error,
-
-                  // style: TextStyle(
-                  //     color: Colors.red,
-                  //     fontSize: 16,
-                  //   ),
-                  // ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Didn’t receive a OTP? ",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          resendOtpButton();
-                        },
-                        style: ButtonStyle(
-                          padding: WidgetStatePropertyAll(EdgeInsets.all(0)),
-                        ),
-                        child: Text(
-                          "Resend OTP",
-                          style: TextStyle(
-                            decoration: TextDecoration.underline,
-                            color: Colors.black,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 20),
-                  SizedBox(
-                    width: 285,
-                    height: 47,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        loginbutton();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        side: BorderSide(color: Color(0xFFEB9974), width: 2),
-
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                      ),
+                SizedBox(height: 20.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Didn’t receive an OTP? ",
+                      style: TextStyle(fontSize: 18.sp),
+                    ),
+                    TextButton(
+                      onPressed: resendOTP,
+                      style: ButtonStyle(
+                          padding: MaterialStatePropertyAll<EdgeInsets>(EdgeInsets.zero)),
                       child: Text(
-                        'Verify OTP',
+                        "Resend OTP",
                         style: TextStyle(
-                          fontSize: 22,
-                          color: Color(0xFFE59885),
+                          decoration: TextDecoration.underline,
+                          color: Colors.black,
+                          fontSize: 18.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
+                  ],
+                ),
+                SizedBox(height: 20.h),
+                SizedBox(
+                  width: 285.w,
+                  height: 47.h,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      validateOTP();
+                      if (error.isEmpty) verifyOTP();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      side: BorderSide(color: const Color(0xFFEB9974), width: 2.w),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(40.r),
+                      ),
+                    ),
+                    child: Text(
+                      'Verify OTP',
+                      style: TextStyle(
+                        fontSize: 22.sp,
+                        color: const Color(0xFFE59885),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
-
-                  SizedBox(height: 50),
-                ],
-              ),
+                ),
+                SizedBox(height: 50.h),
+              ],
             ),
           ),
         ),

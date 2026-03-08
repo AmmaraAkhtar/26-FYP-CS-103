@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'splashScreen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-// import 'homePage.dart';
+import 'AlertMonitoring.dart';
+import 'appUsage.dart';
+
+
 
 void main() {
   runApp(const MyApp());
@@ -19,7 +22,16 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
           return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home:splashpage(),
-    );},);
+      home:AppUsageMonitoringScreen(),
+      // AlertMonitoringDashboard(),
+      // AppUsageMonitoringScreen(),
+      // AlertMonitoringDashboard(),
+      // YoutubeActivityScreen(),
+
+      // splashpage(),
+    );
+    }
+    
+    ,);
   }
 }

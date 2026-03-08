@@ -107,113 +107,116 @@ class _homeState extends State<home> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Top section
-              Container(
-                width: 1.sw,
-                height: 294.h,
-                padding: EdgeInsets.all(20.w),
-                decoration: BoxDecoration(
-                  color: Color(0xFFEB9974),
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: const Color(0xFFFBFBFC),
+    body: SafeArea(
+      child: Column(
+        children: [
+          // Top section
+          Container(
+            width: 1.sw,
+            height: 294.h,
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEB9974),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircleAvatar(
+                  radius: 70.r,
+                  backgroundImage: const NetworkImage(
+                      "https://thumbs.dreamstime.com/b/d-cartoon-illustration-smiling-woman-short-brown-hair-wearing-red-mom-t-shirt-keywords-mother-demeanor-showing-female-417653140.jpg"),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircleAvatar(
-                      radius: 70.r,
-                      backgroundImage: NetworkImage(
-                          "https://thumbs.dreamstime.com/b/d-cartoon-illustration-smiling-woman-short-brown-hair-wearing-red-mom-t-shirt-keywords-mother-demeanor-showing-female-417653140.jpg"),
-                    ),
-                    SizedBox(height: 5.h),
-                    Text(
-                      "User",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20.sp,
+                SizedBox(height: 5.h),
+                const Text(
+                  "User",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                  ),
+                ),
+                SizedBox(height: 19.h),
+                SizedBox(
+                  width: 303.w,
+                  height: 50.h,
+                  child: TextField(
+                    controller: searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search',
+                      hintStyle: TextStyle(
+                          color: const Color.fromARGB(255, 189, 188, 188),
+                          fontSize: 16.sp),
+                      prefixIcon: Image.asset("assets/Search.png"),
+                      filled: true,
+                      fillColor: Colors.white,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 8.w),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(40.r),
+                        borderSide: BorderSide(
+                            color: const Color.fromARGB(255, 189, 188, 188),
+                            width: 1.w),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(40.r),
+                        borderSide:
+                            BorderSide(color: const Color(0xFF147CF4), width: 1.w),
                       ),
                     ),
-                    SizedBox(height: 19.h),
-                    SizedBox(
-                      width: 303.w,
-                      height: 50.h,
-                      child: TextField(
-                        controller: searchController,
-                        decoration: InputDecoration(
-                          hintText: 'Search',
-                          hintStyle: TextStyle(
-                              color: Color.fromARGB(255, 189, 188, 188),
-                              fontSize: 16.sp),
-                          prefixIcon: Image.asset("assets/Search.png"),
-                          filled: true,
-                          fillColor: Colors.white,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 8.w),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(40.r),
-                            borderSide:
-                                BorderSide(color: Color.fromARGB(255, 189, 188, 188), width: 1.w),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(40.r),
-                            borderSide:
-                                BorderSide(color: Color(0xFF147CF4), width: 1.w),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
+            ),
+          ),
 
-              // Child List Header
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      "Child List",
-                      style: TextStyle(
-                        fontSize: 32.sp,
-                        fontWeight: FontWeight.bold,
-                        fontStyle: FontStyle.italic,
-                        color: Color(0xFF6B9888),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 106.w,
-                      height: 34.h,
-                      child: ElevatedButton(
-                        onPressed: () {
-                           Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => profile(email: widget.email,),
-                            ));
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Color(0xFFEB9974),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.r),
-                          ),
-                        ),
-                        child: Text(
-                          'Add +',
-                          style: TextStyle(
-                            fontSize: 16.sp,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+          // Child List Header
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Child List",
+                  style: TextStyle(
+                    fontSize: 32.sp,
+                    fontWeight: FontWeight.bold,
+                    fontStyle: FontStyle.italic,
+                    color: const Color(0xFF6B9888),
+                  ),
                 ),
-              ),
+                SizedBox(
+                  width: 106.w,
+                  height: 34.h,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => profile(
+                              email: widget.email,
+                            ),
+                          ));
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEB9974),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                    ),
+                    child: Text(
+                      'Add +',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
               // Child List
               Expanded(

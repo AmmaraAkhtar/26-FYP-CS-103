@@ -72,7 +72,13 @@ flutter:
       - assets/web.png
       - assets/youtube1.png
       - assets/chat.png
-     
+      - assets/roblox.png
+      - assets/charts.png
+      - assets/whatsapp.png
+      - assets/facebook.png
+      - assets/insta.png
+      - assets/dailyLimit.png
+      - assets/appLimit.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

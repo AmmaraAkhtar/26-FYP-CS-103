@@ -47,12 +47,9 @@ class _otpState extends State<otp> {
     String num4,
   ) async {
     String code = num1 + num2 + num3 + num4;
-    //String link = 'http://127.0.0.1:8000/pairDevice/';
-    //String link = 'http://10.13.19.146:8000/pairDevice/';
     String link = 'http://10.27.190.96:8000/pairDevice/';
     final url = Uri.parse(link);
 
-    // print("Sending OTP verification request with OTP: $otp, Email: $email");
     try {
       final response = await http.post(
         url,
@@ -70,7 +67,6 @@ class _otpState extends State<otp> {
           MaterialPageRoute(builder: (context) => WatcherScreen()),
         );
       } else {
-        // Handle login error
         var data = jsonDecode(response.body);
         setState(() {
           if (data is Map) {
@@ -91,7 +87,7 @@ class _otpState extends State<otp> {
     validateOTP();
     if (error.isEmpty) {
       await verifyotp(_num1.text, _num2.text, _num3.text, _num4.text);
-      if (error_message == "") {
+      if (error_message.isNotEmpty) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(error_message)));
@@ -102,17 +98,17 @@ class _otpState extends State<otp> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-       backgroundColor: Color(0xFFFBFBFC),
+      backgroundColor: Color(0xFFFBFBFC),
       appBar: PreferredSize(
-        preferredSize: Size.fromHeight(250.h), // AppBar ka height adjust
+        preferredSize: Size.fromHeight(250.h),
         child: AppBar(
-           backgroundColor: Color(0xFFFBFBFC),
+          backgroundColor: Color(0xFFFBFBFC),
           elevation: 0,
           centerTitle: true,
-           scrolledUnderElevation: 0,
+          scrolledUnderElevation: 0,
           surfaceTintColor: Colors.transparent,
           flexibleSpace: Padding(
-            padding: EdgeInsets.only(top: 50.h), // top space
+            padding: EdgeInsets.only(top: 50.h),
             child: Hero(
               tag: 'applog',
               child: Image.asset('assets/logo.png', height: 189.h),
@@ -133,7 +129,7 @@ class _otpState extends State<otp> {
                   Text(
                     "Protecting Code",
                     style: TextStyle(
-                      fontSize:36.sp,
+                      fontSize: 36.sp,
                       color: Color(0xFF699886),
                       fontWeight: FontWeight.bold,
                     ),
@@ -143,9 +139,7 @@ class _otpState extends State<otp> {
                     "Enter the 4-digit Code from the parent App",
                     style: TextStyle(fontSize: 16.sp),
                   ),
-
                   SizedBox(height: 30.h),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
@@ -153,6 +147,7 @@ class _otpState extends State<otp> {
                         width: 55.w,
                         height: 55.h,
                         child: TextField(
+                          controller: _num1,
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.center,
                           maxLength: 1,
@@ -176,6 +171,7 @@ class _otpState extends State<otp> {
                         width: 55.w,
                         height: 55.h,
                         child: TextField(
+                          controller: _num2,
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.center,
                           maxLength: 1,
@@ -203,7 +199,7 @@ class _otpState extends State<otp> {
                           keyboardType: TextInputType.number,
                           textAlign: TextAlign.center,
                           maxLength: 1,
-                          style:  TextStyle(
+                          style: TextStyle(
                             fontSize: 20.sp,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -245,9 +241,7 @@ class _otpState extends State<otp> {
                       ),
                     ],
                   ),
-
                   SizedBox(height: 45.h),
-
                   SizedBox(
                     width: 285.w,
                     height: 47.h,
@@ -271,7 +265,6 @@ class _otpState extends State<otp> {
                       ),
                     ),
                   ),
-
                   SizedBox(height: 50.h),
                 ],
               ),
