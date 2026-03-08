@@ -1,244 +1,174 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class alert extends StatefulWidget {
-  const alert({super.key});
+class AlertMonitoringDashboard extends StatelessWidget {
+  const AlertMonitoringDashboard({super.key});
 
-  @override
-  State<alert> createState() => _alertState();
-}
-
-class _alertState extends State<alert> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFFAFBFB),
+      backgroundColor: const Color(0xFFFBFBFC),
       appBar: AppBar(
-        backgroundColor: Colors.grey[100],
-        title: const Text(
+        backgroundColor: const Color(0xFFFBFBFC),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        leading: Icon(Icons.arrow_back, color: Colors.black, size: 24.sp),
+        title: Text(
           "Alert Monitoring Dashboard",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18.sp),
         ),
+        actions: [
+          IconButton(
+            onPressed: null,
+            icon: Icon(Icons.notifications_none, color: Colors.black, size: 28.sp),
+          ),
+          Icon(Icons.settings_outlined, color: Colors.black, size: 24.sp),
+          SizedBox(width: 15.w),
+        ],
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 25),
-
-            Center(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: const [
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- User Header Section ---
+              Row(
+                children: [
                   CircleAvatar(
-                    radius: 60,
-                    backgroundImage: NetworkImage(
-                      "https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png",
+                    radius: 40.r,
+                    backgroundColor: Colors.green,
+                    child: CircleAvatar(
+                      radius: 37.r,
+                      backgroundImage: const NetworkImage('https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png'),
                     ),
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    "Hamza Ali",
-                    style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-                  ),
-                  Text(
-                    "11 Years Old",
-                    style: TextStyle(color: Colors.grey, fontSize: 16),
-                  ),
+                  SizedBox(width: 15.w),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Hamza Ali", style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                      Text("11 Years Old", style: TextStyle(color: Colors.grey, fontSize: 13.sp)),
+                    ],
+                  )
                 ],
               ),
-            ),
+              SizedBox(height: 30.h),
+              Text("Alerts", style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+              SizedBox(height: 15.h),
 
-            const SizedBox(height: 30),
-            // Alerts Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Alerts ",
-                    style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                  ),
-                  // Stack ki jagah direct Container use kiya hai circular background ke liye
-                  Container(
-                    width: 35,
-                    height: 35,
-                    decoration: const BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Center(
-                      child: Text(
-                        "!",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 22,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+              // --- Alerts List ---
+              _buildAlertCard(
+                "Toxic Language Detected: Bullying in Social Media Chat",
+                "15min ago",
+                Colors.red,
+                Icons.security, // Police hat icon replace
+                ["Block Source"],
               ),
-            ),
-            const SizedBox(height: 20),
-            // Alerts List
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 25),
-                children: [
-                  _buildAlertCard(
-                    title: "Toxic Language Detected:",
-                    subtitle: "Bullying in Social Media Chat",
-                    color: Colors.red,
-                    icon: Icons.security,
-                    time: "15min ago",
-                    buttons: [_buildActionButton("Block Source", Colors.red)],
-                  ),
-                  _buildAlertCard(
-                    title: "Late Night Usage:",
-                    subtitle: "App Activity after Bedtime",
-                    color: Colors.orange,
-                    icon: Icons.person_off_rounded,
-                    time: "15min ago",
-                    buttons: [
-                      _buildActionButton("Extend Limit", Colors.orange),
-                      const SizedBox(width: 10),
-                      _buildActionButton("Lock Screen", Colors.orange),
-                    ],
-                  ),
-                  _buildAlertCard(
-                    title: "Behavior:",
-                    subtitle: "Signs of Anxiety Detected",
-                    color: const Color(0xFF8B428D), // Purple
-                    icon: Icons.psychology,
-                    time: "15min ago",
-                    buttons: [
-                      _buildActionButton(
-                        "View Sugestions",
-                        const Color(0xFF8B428D),
-                      ),
-                    ],
-                  ),
-                  _buildAlertCard(
-                    title: "Mood Analysis:",
-                    subtitle: "Signs of happiness",
-                    color: const Color(0xFFB8731D), // Brownish Orange
-                    icon: Icons.lightbulb,
-                    time: "15min ago",
-                    buttons: [
-                      _buildActionButton(
-                        "Extend Limit",
-                        const Color(0xFFB8731D),
-                      ),
-                    ],
-                  ),
-                  _buildAlertCard(
-                    title: "Toxic Language Detected:",
-                    subtitle: "Bullying in Social Media Chat",
-                    color: Colors.red,
-                    icon: Icons.security,
-                    time: "15min ago",
-                    buttons: [_buildActionButton("Block Source", Colors.red)],
-                  ),
-                ],
+              _buildAlertCard(
+                "Late Night Usage: App Activity after Bedtime",
+                "15min ago",
+                Colors.orange,
+                Icons.person, // Bedtime/person icon
+                ["Extend Limit", "Lock Screen"],
               ),
-            ),
-          ],
+              _buildAlertCard(
+                "Behavior: Signs of Anxiety Detected",
+                "15min ago",
+                Colors.purple,
+                Icons.psychology, 
+                ["View Suggestions"],
+              ),
+              _buildAlertCard(
+                "Mood Analysis: Signs of happiness",
+                "15min ago",
+                const Color(0xFFB07F2E),
+                Icons.lightbulb,
+                ["Extend Limit"],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // Helper function to build the Card
-  Widget _buildAlertCard({
-    required String title,
-    required String subtitle,
-    required Color color,
-    required IconData icon,
-    required String time,
-    required List<Widget> buttons,
-  }) {
+  Widget _buildAlertCard(String title, String time, Color color, IconData icon, List<String> actions) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(18),
+      margin: EdgeInsets.only(bottom: 20.h),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(35),
-        border: Border.all(color: color, width: 2.5),
+        borderRadius: BorderRadius.circular(25.r),
+        border: Border.all(color: color, width: 2.w),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06), 
+            blurRadius: 10, 
+            offset: const Offset(0, 4)
+          )
+        ],
       ),
       child: Column(
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icon, color: color, size: 35),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+          Padding(
+            padding: EdgeInsets.all(15.w),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, color: color, size: 35.sp),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14.sp, 
+                          fontWeight: FontWeight.bold, 
+                          color: color,
+                          height: 1.2,
+                        ),
                       ),
-                    ),
-                    Text(
-                      subtitle,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+                      SizedBox(height: 4.h),
+                      Text(
+                        time,
+                        style: TextStyle(color: Colors.redAccent, fontSize: 12.sp, fontWeight: FontWeight.w500),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      time,
-                      style: TextStyle(
-                        color: color.withOpacity(0.8),
-                        fontSize: 16,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              Icon(icon, color: color, size: 35),
-            ],
+                SizedBox(width: 10.w),
+                Icon(icon, color: color, size: 35.sp),
+              ],
+            ),
           ),
-          const SizedBox(height: 12),
-          Row(mainAxisAlignment: MainAxisAlignment.center, children: buttons),
+          const Divider(height: 1, thickness: 1.5),
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 10.w),
+            child: Wrap( // Buttons ke liye wrap use kiya taake overflow na ho
+              alignment: WrapAlignment.center,
+              spacing: 10.w,
+              children: actions.map((btnText) {
+                return ElevatedButton(
+                  onPressed: () {},
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color,
+                    elevation: 3,
+                    shadowColor: color.withOpacity(0.4),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                  ),
+                  child: Text(
+                    btnText,
+                    style: TextStyle(color: Colors.white, fontSize: 11.sp, fontWeight: FontWeight.bold),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  // Helper function for the custom buttons with Shadow
-  Widget _buildActionButton(String label, Color color) {
-    return Container(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: () {},
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: Colors.white,
-          elevation: 0, // Shadow is handled by Container
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-        ),
-        child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
       ),
     );
   }
