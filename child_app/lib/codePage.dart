@@ -20,6 +20,7 @@ class _otpState extends State<otp> {
   // Error message
   String error = "";
   String error_message = "";
+  int screen_limit = 0;
 
   void validateOTP() {
     setState(() {
@@ -59,12 +60,15 @@ class _otpState extends State<otp> {
 
       if (response.statusCode == 200) {
         print('Verification successful');
+        var data = jsonDecode(response.body);
+        screen_limit = data["screen_limit"];
+
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text("Pairing successful!")));
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => WatcherScreen()),
+          MaterialPageRoute(builder: (context) => WatcherScreen(screen_limit:screen_limit)),
         );
       } else {
         var data = jsonDecode(response.body);
