@@ -266,11 +266,12 @@ def pairingCodeVerification_api(request):
         code_record.save()
 
         child = models.child.objects.filter(pairingCode=pairing_code).first()
+        screen_limit = child.screen_time_limit
         if child:
             child.is_paired = True
             child.save()
 
-        return Response({"message": "Pairing successful"}, status=status.HTTP_200_OK)
+        return Response({"message": "Pairing successful", "screen_limit": screen_limit}, status=status.HTTP_200_OK)
     except Exception as e:
         print("Error during pairing:", e)
         return Response({"error": "Error Occured"}, status=status.HTTP_400_BAD_REQUEST)
@@ -305,3 +306,4 @@ def collectAppUsageData_Api(request):
             return Response({"message": "Data saved successfully"}, status=status.HTTP_200_OK)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
