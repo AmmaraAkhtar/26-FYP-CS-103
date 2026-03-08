@@ -155,42 +155,36 @@ class _loginState extends State<login> {
                       decoration: InputDecoration(
                         hintText: 'Enter Your Email',
                         errorText: email_error.isEmpty ? null : email_error,
+                        
+
                         hintStyle: TextStyle(
-                          color: Color.fromARGB(255, 189, 188, 188),
+                          color: Color(0xFFbdbcbc),
                           fontSize: 16.sp,
                         ),
+                        
                         contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(7.r),
                           borderSide: BorderSide(
-                            color: Color.fromARGB(255, 189, 188, 188),
+                            color: Color(0xFFbdbcbc),
                             width: 1.4.w,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10.r),
-                          borderSide: BorderSide(
-                            color: Color(0xFF147CF4),
-                            width: 2.w,
-                          ),
+                          borderSide: BorderSide(color: Color(0xFF147CF4), width: 2.w),
                         ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 206, 39, 28),
-                            width: 2.w,
-                          ),
+                          borderSide: BorderSide(color: Colors.red, width: 2.w),
                         ),
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 206, 39, 28),
-                            width: 2.w,
-                          ),
+                          borderSide: BorderSide(color: Colors.red, width: 2.w),
                         ),
                       ),
-                    ),
-                  ),
+                    ),),
+                
                   SizedBox(height: 20.h),
 
                   // Password TextField
@@ -201,31 +195,31 @@ class _loginState extends State<login> {
                       decoration: InputDecoration(
                         hintText: 'Enter Your Password',
                         errorText: password_error.isEmpty ? null : password_error,
+                    
                         hintStyle: TextStyle(
-                          color: Color.fromARGB(255, 189, 188, 188),
+                          color: Color(0xFFbdbcbc),
                           fontSize: 16.sp,
                         ),
+                        
                         contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.r),
+                          borderRadius: BorderRadius.circular(7.r),
                           borderSide: BorderSide(
-                            color: Color.fromARGB(255, 189, 188, 188),
+                            color: Color(0xFFbdbcbc),
                             width: 1.4.w,
                           ),
                         ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.r),
+                          borderSide: BorderSide(color: Color(0xFF147CF4), width: 2.w),
+                        ),
                         errorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 206, 39, 28),
-                            width: 2.w,
-                          ),
+                          borderSide: BorderSide(color: Colors.red, width: 2.w),
                         ),
                         focusedErrorBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(
-                            color: Color.fromARGB(255, 206, 39, 28),
-                            width: 2.w,
-                          ),
+                          borderSide: BorderSide(color: Colors.red, width: 2.w),
                         ),
                       ),
                     ),
