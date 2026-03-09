@@ -47,5 +47,11 @@ class appUasge(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     date = models.DateField()
 
+# Alerts Model
+class Alert(models.Model):
+    child = models.ForeignKey(child, on_delete=models.CASCADE)
+    alert_type = models.CharField(max_length=100)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
