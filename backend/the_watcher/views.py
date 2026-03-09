@@ -316,11 +316,11 @@ def create_alert(request):
         alert_type=request.data['alert_type'],
         message=request.data['message']
     )
-    send_alert(email,request.data['message'],request.data['alert_type'])
+    send_alert(alert)
     return Response({"status": "alert created"})
 
 # Send Alert Function
-def send_alert(email,message,alert_type):
+def send_alert(alert):
     
     try:
 
@@ -330,10 +330,10 @@ def send_alert(email,message,alert_type):
         print("Created")
         send_mail(
 
-            subject='Alert ................... ',
-            message=f'alert Type {alert_type}\n {message}',
+            subject='Child Activity Alert ',
+            message=f'alert Type {alert.alert_type}\n {alert.message}',
             from_email='22ntucs1145amnaali@gmail.com',
-            recipient_list=[email],
+            recipient_list=[alert.child.parent.email],
             fail_silently=False
            
         )
