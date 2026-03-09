@@ -307,3 +307,12 @@ def collectAppUsageData_Api(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Alerts Api (Creation + Sending)
+@api_view(['POST'])
+def create_alert(request):
+    Alert.objects.create(
+        child_id=request.data['child_id'],
+        alert_type=request.data['alert_type'],
+        message=request.data['message']
+    )
+    return Response({"status": "alert created"})
