@@ -50,7 +50,7 @@ class appUasge(models.Model):
 # Alerts Model
 class Alert(models.Model):
     child = models.ForeignKey(child, on_delete=models.CASCADE)
-    parent_email = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    
     alert_type = models.CharField(max_length=100)
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
