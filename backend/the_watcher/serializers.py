@@ -107,5 +107,11 @@ class AppUsageSerializer(serializers.ModelSerializer):
 
         return validated_data
 
+# Alert Serializer
+class AlertSerializer(serializers.ModelSerializer):
+    
+    child_id = serializers.IntegerField()
+    alert_type = serializers.CharField()
+    message = serializers.CharField()
 
       

@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer
+from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -307,3 +307,36 @@ def collectAppUsageData_Api(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# Alerts Api (Creation + Sending)
+@api_view(['POST'])
+def create_alert(request):
+    serializer = AlertSerializer(data=request.data)
+    alert = models.Alert.objects.create(
+        child_id=request.data['child_id'],
+        alert_type=request.data['alert_type'],
+        message=request.data['message']
+    )
+    send_alert(alert)
+    return Response({"status": "alert created"})
+
+# Send Alert Function
+def send_alert(alert):
+    
+    try:
+
+       
+        
+       
+        print("Created")
+        send_mail(
+
+            subject='Child Activity Alert ',
+            message=f'alert Type {alert.alert_type}\n {alert.message}',
+            from_email='22ntucs1145amnaali@gmail.com',
+            recipient_list=[alert.child.parent.email],
+            fail_silently=False
+           
+        )
+    except Exception as e:
+            print("Error:", e)
+            return Response({"error": f"Error sending Alert: {e}"}, status=status.HTTP_400_BAD_REQUEST)

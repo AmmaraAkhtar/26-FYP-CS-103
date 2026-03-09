@@ -5,6 +5,7 @@ import 'package:usage_stats/usage_stats.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'lockScreen.dart';
 
 class WatcherScreen extends StatefulWidget {
   int screen_limit = 0;
@@ -26,8 +27,6 @@ class _WatcherScreenState extends State<WatcherScreen> {
       fetchAppUsageData();
     });
   }
-  
-  
 
   Future<void> fetchAppUsageData() async {
     DateTime endDate = DateTime.now();
@@ -43,17 +42,16 @@ class _WatcherScreenState extends State<WatcherScreen> {
     return packageName.startsWith("com.android") ||
         packageName.startsWith("com.google.android");
   }
-  
+
   int calculateTotalUsage(List<Map<String, dynamic>> apps) {
-  int totalSeconds = 0;
+    int totalSeconds = 0;
 
-  for (var app in apps) {
-    totalSeconds += app["usage_time"] as int;
+    for (var app in apps) {
+      totalSeconds += app["usage_time"] as int;
+    }
+
+    return totalSeconds ~/ 60; // convert to minutes
   }
-
-  return totalSeconds ~/ 60; // convert to minutes
-  }
-
 
   void processData(Map<String, UsageInfo> stats) {
     List<Map<String, dynamic>> filteredData = [];
@@ -76,9 +74,10 @@ class _WatcherScreenState extends State<WatcherScreen> {
     sendToBackend(filteredData);
     int totalUsageMinutes = calculateTotalUsage(filteredData);
 
-  if (totalUsageMinutes >= widget.screen_limit) {
+    if (totalUsageMinutes >= widget.screen_limit) {
       // showLockScreen();
-  }
+      triggerAlert("Low", "Screen Limit Exceede");
+    }
   }
 
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
@@ -97,6 +96,20 @@ class _WatcherScreenState extends State<WatcherScreen> {
     );
 
     print(response.statusCode);
+  }
+
+  void triggerAlert(String type, String message) async {
+    var response = await http.post(
+      Uri.parse("http://10.27.190.96:8000/sendalert/"),
+      body: {"child_id": 2, "alert_type": type, "message": message},
+    );
+  }
+
+  void showLocKScreen(){
+    Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => lockScreen()),
+        );
   }
 
   @override
