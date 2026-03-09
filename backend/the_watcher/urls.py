@@ -13,4 +13,5 @@ urlpatterns = [
     path('pairDevice/', views.pairingCodeVerification_api),
     path('fetchChildren/', views.fetchChildren_api),
     path('appdata/',views.collectAppUsageData_Api),
+    path('sendalert/',views.create_alert),
 ]
