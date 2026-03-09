@@ -109,7 +109,7 @@ class AppUsageSerializer(serializers.ModelSerializer):
 
 # Alert Serializer
 class AlertSerializer(serializers.ModelSerializer):
-    parent_email = serializers.CharField()
+    
     child_id = serializers.IntegerField()
     alert_type = serializers.CharField()
     message = serializers.CharField()
