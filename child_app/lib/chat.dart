@@ -5,6 +5,7 @@ import 'package:usage_stats/usage_stats.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'lockScreen.dart';
 
 class WatcherScreen extends StatefulWidget {
   int screen_limit = 0;
@@ -102,6 +103,13 @@ class _WatcherScreenState extends State<WatcherScreen> {
       Uri.parse("http://10.27.190.96:8000/sendalert/"),
       body: {"child_id": 2, "alert_type": type, "message": message},
     );
+  }
+
+  void showLocKScreen(){
+    Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => lockScreen()),
+        );
   }
 
   @override
