@@ -142,6 +142,15 @@ class _WatcherScreenState extends State<WatcherScreen> {
     }
   }
 
+  // Web Monitoring 
+
+  void openVpnConsent() {
+  final intent = AndroidIntent(
+    action: 'android.net.VpnService',
+  );
+  intent.launch();
+}
+
   // Alert MEchanism
 
   void triggerAlert(String type, String message) async {
