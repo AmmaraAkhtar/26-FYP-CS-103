@@ -14,6 +14,8 @@ class WatcherScreen extends StatefulWidget {
   _WatcherScreenState createState() => _WatcherScreenState();
 }
 
+// APP MOnitoring 
+
 class _WatcherScreenState extends State<WatcherScreen> {
   Future<void> checkPermission() async {
     bool? granted = await UsageStats.checkUsagePermission();
@@ -42,6 +44,8 @@ class _WatcherScreenState extends State<WatcherScreen> {
     return packageName.startsWith("com.android") ||
         packageName.startsWith("com.google.android");
   }
+
+  // Screen Time MOnitoring 
 
   int calculateTotalUsage(List<Map<String, dynamic>> apps) {
     int totalSeconds = 0;
@@ -97,7 +101,9 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
     print(response.statusCode);
   }
-
+  
+  // Alert MEchanism  
+  
   void triggerAlert(String type, String message) async {
     var response = await http.post(
       Uri.parse("http://10.27.190.96:8000/sendalert/"),
