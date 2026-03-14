@@ -6,6 +6,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'lockScreen.dart';
+import 'package:accessibility_service/accessibility_service.dart';
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 
 class WatcherScreen extends StatefulWidget {
   int screen_limit = 0;
@@ -14,7 +18,12 @@ class WatcherScreen extends StatefulWidget {
   _WatcherScreenState createState() => _WatcherScreenState();
 }
 
+
+
 class _WatcherScreenState extends State<WatcherScreen> {
+
+  // APP MOnitoring
+
   Future<void> checkPermission() async {
     bool? granted = await UsageStats.checkUsagePermission();
     if (granted != true) {
@@ -42,6 +51,8 @@ class _WatcherScreenState extends State<WatcherScreen> {
     return packageName.startsWith("com.android") ||
         packageName.startsWith("com.google.android");
   }
+
+  // Screen Time MOnitoring
 
   int calculateTotalUsage(List<Map<String, dynamic>> apps) {
     int totalSeconds = 0;
@@ -71,6 +82,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
       }
     });
 
+    
     sendToBackend(filteredData);
     int totalUsageMinutes = calculateTotalUsage(filteredData);
 
@@ -79,7 +91,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
       triggerAlert("Low", "Screen Limit Exceede");
     }
   }
-
+  
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
     String link = 'http://10.27.190.96:8000/appdata/';
     final response = await http.post(
@@ -98,6 +110,40 @@ class _WatcherScreenState extends State<WatcherScreen> {
     print(response.statusCode);
   }
 
+  // Chat Monitoring 
+
+  void openAccessibilitySettings() {
+  final intent = AndroidIntent(action: 'android.settings.ACCESSIBILITY_SETTINGS');
+  intent.launch();
+}
+    var platform = MethodChannel('chat_reader_channel');
+    final FlutterTts flutterTts = FlutterTts();
+
+  void chatMonitoring(){
+    platform.setMethodCallHandler((call) async {
+      if (call.method == "onChatText") {
+        String text = call.arguments;
+        // Step 1: Read text aloud
+        await flutterTts.speak(text);
+
+        // Step 2: Send to backend
+        await sendChatToBackend(text);
+      }
+    });
+  
+  }
+
+  Future<void> sendChatToBackend(String text) async {
+    final url = Uri.parse('https://yourbackend.com/api/chats');
+    try {
+      await http.post(url, body: {'message': text});
+    } catch (e) {
+      print('Error sending chat: $e');
+    }
+  }
+
+  // Alert MEchanism
+
   void triggerAlert(String type, String message) async {
     var response = await http.post(
       Uri.parse("http://10.27.190.96:8000/sendalert/"),
@@ -105,11 +151,11 @@ class _WatcherScreenState extends State<WatcherScreen> {
     );
   }
 
-  void showLocKScreen(){
+  void showLocKScreen() {
     Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => lockScreen()),
-        );
+      context,
+      MaterialPageRoute(builder: (context) => lockScreen()),
+    );
   }
 
   @override
