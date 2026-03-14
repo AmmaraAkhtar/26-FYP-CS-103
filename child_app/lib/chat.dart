@@ -151,6 +151,43 @@ class _WatcherScreenState extends State<WatcherScreen> {
   intent.launch();
 }
 
+  var platform1 = MethodChannel('vpn_channel');
+  List<String> detectedUrls = [];
+  
+  void webMonitoring(){
+    platform.setMethodCallHandler((call) async {
+      if (call.method == "onUrlDetected") {
+        String url = call.arguments;
+        setState(() => detectedUrls.add(url));
+
+        // Send to backend
+        await sendURLToBackend(url);
+      }
+    });
+  
+  }
+
+  Future<void> sendURLToBackend(String url) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://yourbackend.com/api/url'),
+        body: {'url': url},
+      );
+      print("Backend response: ${response.statusCode}");
+    } catch (e) {
+      print("Error sending to backend: $e");
+    }
+  }
+
+  void startVpn() async {
+    try {
+      await platform.invokeMethod("startVpn");
+    } on PlatformException catch (e) {
+      print("Failed to start VPN: ${e.message}");
+    }
+  }
+
+
   // Alert MEchanism
 
   void triggerAlert(String type, String message) async {
