@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'lockScreen.dart';
 import 'package:accessibility_service/accessibility_service.dart';
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
@@ -110,6 +111,11 @@ class _WatcherScreenState extends State<WatcherScreen> {
   }
 
   // Chat Monitoring 
+
+  void openAccessibilitySettings() {
+  final intent = AndroidIntent(action: 'android.settings.ACCESSIBILITY_SETTINGS');
+  intent.launch();
+}
     var platform = MethodChannel('chat_reader_channel');
     final FlutterTts flutterTts = FlutterTts();
 
@@ -135,7 +141,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
       print('Error sending chat: $e');
     }
   }
-  
+
   // Alert MEchanism
 
   void triggerAlert(String type, String message) async {
