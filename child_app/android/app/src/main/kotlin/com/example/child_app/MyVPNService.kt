@@ -1,11 +1,19 @@
 package com.example.childmonitor
 
+import android.content.Intent
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
+import io.flutter.plugin.common.MethodChannel
 
 class MyVpnService : VpnService() {
+
+    companion object {
+        var channel: MethodChannel? = null // Flutter side set karegi
+    }
 
     private var vpnInterface: ParcelFileDescriptor? = null
 
@@ -16,11 +24,10 @@ class MyVpnService : VpnService() {
 
     private fun startVpn() {
         val builder = Builder()
-        builder.addAddress("10.0.0.2", 24)      // VPN IP on device
-        builder.addRoute("0.0.0.0", 0)          // Route all traffic
+        builder.addAddress("10.0.0.2", 24)
+        builder.addRoute("0.0.0.0", 0)
         vpnInterface = builder.setSession("ChildMonitorVPN").establish()
 
-        // Traffic reading thread
         Thread {
             val inputStream = FileInputStream(vpnInterface?.fileDescriptor)
             val outputStream = FileOutputStream(vpnInterface?.fileDescriptor)
@@ -29,23 +36,49 @@ class MyVpnService : VpnService() {
             while (true) {
                 val length = inputStream.read(packet)
                 if (length > 0) {
-                    // TODO: Parse packet & extract URL
                     val url = parsePacket(packet, length)
-                    sendToBackend(url)
+                    if (url.isNotEmpty()) {
+                        sendToFlutter(url)
+                        // Optional: Native backend call
+                        sendToBackend(url)
+                    }
                     outputStream.write(packet, 0, length) // Forward traffic
                 }
             }
         }.start()
     }
 
+    // HTTP URL & HTTPS domain parsing
     private fun parsePacket(packet: ByteArray, length: Int): String {
-        // Simplest version: Extract HTTP Host header
-        return "dummy_url"
+        val data = String(packet, 0, length)
+
+        // HTTP request
+        if (data.contains("GET") || data.contains("POST")) {
+            val lines = data.split("\r\n")
+            var host = ""
+            var path = ""
+            for (line in lines) {
+                if (line.startsWith("Host:")) host = line.replace("Host:", "").trim()
+                if (line.startsWith("GET") || line.startsWith("POST")) path = line.split(" ")[1]
+            }
+            if (host.isNotEmpty() && path.isNotEmpty()) return "http://$host$path"
+        }
+
+        // HTTPS domain detection (TLS SNI)
+        if (data.contains("Client Hello")) {
+            val hostMatch = Regex("(?<=\\x00)[a-zA-Z0-9.-]+(?=\\x00)").find(data)
+            if (hostMatch != null) return hostMatch.value
+        }
+
+        return ""
     }
 
-    private fun sendToBackend(url: String) {
-        // Send URL to Flutter via MethodChannel OR directly to server
+    // Send URL to Flutter frontend
+    private fun sendToFlutter(url: String) {
+        channel?.invokeMethod("onUrlDetected", url)
     }
+
+    
 
     override fun onDestroy() {
         vpnInterface?.close()
