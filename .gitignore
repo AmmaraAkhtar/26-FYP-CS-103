@@ -15,3 +15,7 @@ models/WebAnalysis/data/
 *.csv
 *.xlsx
 *.pkl
+backend/.env
+backend/__pycache__/
+*.pyc
+db.sqlite3
