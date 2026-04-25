@@ -1,5 +1,17 @@
 backend/venv/
+models/venv/
+venv/
+.env/
+__pycache__/
 backend/.env
 backend/__pycache__/
 *.pyc
 db.sqlite3
+models/Chat Analysis/data/
+*.csv
+*.xlsx
+*.pkl
+models/WebAnalysis/data/
+*.csv
+*.xlsx
+*.pkl
