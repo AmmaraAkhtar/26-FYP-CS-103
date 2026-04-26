@@ -6,7 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'lockScreen.dart';
-import 'package:accessibility_service/accessibility_service.dart';
+import 'package:flutter_accessibility_service/flutter_accessibility_service.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -18,10 +18,7 @@ class WatcherScreen extends StatefulWidget {
   _WatcherScreenState createState() => _WatcherScreenState();
 }
 
-
-
 class _WatcherScreenState extends State<WatcherScreen> {
-
   // APP MOnitoring
 
   Future<void> checkPermission() async {
@@ -58,7 +55,8 @@ class _WatcherScreenState extends State<WatcherScreen> {
     int totalSeconds = 0;
 
     for (var app in apps) {
-      totalSeconds += app["usage_time"] as int;
+      int time = (app["usage_time"] ?? 0) as int;
+      totalSeconds += time;
     }
 
     return totalSeconds ~/ 60; // convert to minutes
@@ -77,21 +75,22 @@ class _WatcherScreenState extends State<WatcherScreen> {
       if (time > 0 && !isSystemApp(packageName)) {
         filteredData.add({
           "package_name": packageName,
-          "usage_time": time / 1000, // seconds
+          "usage_time": (time ~/ 1000), // integer seconds
         });
       }
     });
 
-    
     sendToBackend(filteredData);
     int totalUsageMinutes = calculateTotalUsage(filteredData);
+    bool alertSent = false;
 
     if (totalUsageMinutes >= widget.screen_limit) {
       // showLockScreen();
-      triggerAlert("Low", "Screen Limit Exceede");
+      triggerAlert("Low", "Screen Limit Exceeded");
+      alertSent = true;
     }
   }
-  
+
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
     String link = 'http://10.27.190.96:8000/appdata/';
     final response = await http.post(
@@ -110,16 +109,19 @@ class _WatcherScreenState extends State<WatcherScreen> {
     print(response.statusCode);
   }
 
-  // Chat Monitoring 
+  // Chat Monitoring
 
   void openAccessibilitySettings() {
-  final intent = AndroidIntent(action: 'android.settings.ACCESSIBILITY_SETTINGS');
-  intent.launch();
-}
-    var platform = MethodChannel('chat_reader_channel');
-    final FlutterTts flutterTts = FlutterTts();
+    final intent = AndroidIntent(
+      action: 'android.settings.ACCESSIBILITY_SETTINGS',
+    );
+    intent.launch();
+  }
 
-  void chatMonitoring(){
+  var platform = MethodChannel('chat_reader_channel');
+  final FlutterTts flutterTts = FlutterTts();
+
+  void chatMonitoring() {
     platform.setMethodCallHandler((call) async {
       if (call.method == "onChatText") {
         String text = call.arguments;
@@ -130,7 +132,6 @@ class _WatcherScreenState extends State<WatcherScreen> {
         await sendChatToBackend(text);
       }
     });
-  
   }
 
   Future<void> sendChatToBackend(String text) async {
@@ -142,19 +143,17 @@ class _WatcherScreenState extends State<WatcherScreen> {
     }
   }
 
-  // Web Monitoring 
+  // Web Monitoring
 
   void openVpnConsent() {
-  final intent = AndroidIntent(
-    action: 'android.net.VpnService',
-  );
-  intent.launch();
-}
+    final intent = AndroidIntent(action: 'android.net.VpnService');
+    intent.launch();
+  }
 
   var platform1 = MethodChannel('vpn_channel');
   List<String> detectedUrls = [];
-  
-  void webMonitoring(){
+
+  void webMonitoring() {
     platform.setMethodCallHandler((call) async {
       if (call.method == "onUrlDetected") {
         String url = call.arguments;
@@ -164,7 +163,6 @@ class _WatcherScreenState extends State<WatcherScreen> {
         await sendURLToBackend(url);
       }
     });
-  
   }
 
   Future<void> sendURLToBackend(String url) async {
@@ -187,7 +185,6 @@ class _WatcherScreenState extends State<WatcherScreen> {
     }
   }
 
-
   // Alert MEchanism
 
   void triggerAlert(String type, String message) async {
@@ -202,6 +199,13 @@ class _WatcherScreenState extends State<WatcherScreen> {
       context,
       MaterialPageRoute(builder: (context) => lockScreen()),
     );
+  }
+  @override
+  void initState() {
+    super.initState();
+
+    checkPermission();
+    startAppMonitoring();
   }
 
   @override

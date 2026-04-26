@@ -1,18 +1,16 @@
-package com.example.childmonitor
+package com.example.child_app  
 
 import android.content.Intent
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import io.flutter.plugin.common.MethodChannel
 
 class MyVpnService : VpnService() {
 
     companion object {
-        var channel: MethodChannel? = null // Flutter side set karegi
+        var channel: MethodChannel? = null
     }
 
     private var vpnInterface: ParcelFileDescriptor? = null
@@ -39,20 +37,17 @@ class MyVpnService : VpnService() {
                     val url = parsePacket(packet, length)
                     if (url.isNotEmpty()) {
                         sendToFlutter(url)
-                        // Optional: Native backend call
-                        sendToBackend(url)
+                        // sendToBackend removed — was causing build error
                     }
-                    outputStream.write(packet, 0, length) // Forward traffic
+                    outputStream.write(packet, 0, length)
                 }
             }
         }.start()
     }
 
-    // HTTP URL & HTTPS domain parsing
     private fun parsePacket(packet: ByteArray, length: Int): String {
         val data = String(packet, 0, length)
 
-        // HTTP request
         if (data.contains("GET") || data.contains("POST")) {
             val lines = data.split("\r\n")
             var host = ""
@@ -64,7 +59,6 @@ class MyVpnService : VpnService() {
             if (host.isNotEmpty() && path.isNotEmpty()) return "http://$host$path"
         }
 
-        // HTTPS domain detection (TLS SNI)
         if (data.contains("Client Hello")) {
             val hostMatch = Regex("(?<=\\x00)[a-zA-Z0-9.-]+(?=\\x00)").find(data)
             if (hostMatch != null) return hostMatch.value
@@ -73,12 +67,9 @@ class MyVpnService : VpnService() {
         return ""
     }
 
-    // Send URL to Flutter frontend
     private fun sendToFlutter(url: String) {
         channel?.invokeMethod("onUrlDetected", url)
     }
-
-    
 
     override fun onDestroy() {
         vpnInterface?.close()
