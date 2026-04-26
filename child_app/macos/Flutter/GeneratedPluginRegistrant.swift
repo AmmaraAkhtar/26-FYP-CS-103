@@ -5,7 +5,7 @@
 import FlutterMacOS
 import Foundation
 
-import battery_plus_macos
+import battery_plus
 import flutter_tts
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {

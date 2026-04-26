@@ -1,4 +1,4 @@
-package com.example.yourapp
+package com.example.child_app
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityEvent
