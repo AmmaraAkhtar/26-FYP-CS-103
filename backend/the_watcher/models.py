@@ -40,10 +40,10 @@ class pairingCode(models.Model):
             return True
 
 # App Usage Model
-class appUasge(models.Model):
-    child = models.ForeignKey(child, on_delete=models.CASCADE)
+class appUsage(models.Model):
+    child = models.ForeignKey('child', on_delete=models.CASCADE)
     usage_time = models.IntegerField(default = 0) 
-    package_name = models.CharField(null=True)
+    package_name = models.CharField(null=True,max_length = 255)
     created_at = models.DateTimeField(auto_now_add=True)
     date = models.DateField()
 

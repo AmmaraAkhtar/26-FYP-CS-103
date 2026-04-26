@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
+from django.shortcuts import get_object_or_404
 from . import models
 
 # Parent Serializer
@@ -92,18 +93,21 @@ class AppUsageSerializer(serializers.ModelSerializer):
         child_id = validated_data["child_id"]
         usage_data = validated_data["usage_data"]
         timestamp = validated_data["timestamp"]
-        child = models.child.objects.get(id=child_id)
+        child = get_object_or_404(models.child, id=child_id) # Error HAndling
         today = timestamp.date()
 
+
         for app in usage_data:
-            models.appUsage.objects.update_or_create(
-                child=child,
-                package_name=app["package_name"],
-                date=today,
-                defaults={
-                    "usage_seconds": app["usage_time"] # agr record mil jaye to is field ko update krna hai (role of default)
-                }
-            )
+            obj, created = models.appUsage.objects.get_or_create(
+            child=child,
+            package_name=app["package_name"],
+            date=today,
+            defaults={"usage_time": app["usage_time"]}
+        )
+
+            if not created:
+                obj.usage_time += app["usage_time"]
+                obj.save()
 
         return validated_data
 
