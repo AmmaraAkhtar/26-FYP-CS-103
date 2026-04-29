@@ -29,14 +29,16 @@ class _WatcherScreenState extends State<WatcherScreen> {
   }
 
   void startAppMonitoring() async {
-    Timer.periodic(Duration(hours: 1), (timer) {
+    print("App Monitoring is called");
+    Timer.periodic(Duration(seconds: 10), (timer) {
+        print("TIMER TICK 🔁");
       fetchAppUsageData();
     });
   }
 
   Future<void> fetchAppUsageData() async {
     DateTime endDate = DateTime.now();
-    DateTime startDate = endDate.subtract(Duration(hours: 1));
+    DateTime startDate = endDate.subtract(Duration(minutes: 1));
 
     Map<String, UsageInfo> usageStats =
         await UsageStats.queryAndAggregateUsageStats(startDate, endDate);
@@ -64,9 +66,11 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
   void processData(Map<String, UsageInfo> stats) {
     List<Map<String, dynamic>> filteredData = [];
+    print("RAW STATS: $stats");
 
     stats.forEach((packageName, info) {
       var usageTime = info.totalTimeInForeground;
+
       int time = 0;
       if (usageTime != null) {
         time = int.parse(usageTime);
@@ -78,7 +82,11 @@ class _WatcherScreenState extends State<WatcherScreen> {
           "usage_time": (time ~/ 1000), // integer seconds
         });
       }
+      print("PACKAGE: $packageName");
+      print("TIME: $time");
     });
+    print("FILTERED APPS:");
+    print(filteredData);
 
     sendToBackend(filteredData);
     int totalUsageMinutes = calculateTotalUsage(filteredData);
@@ -92,12 +100,13 @@ class _WatcherScreenState extends State<WatcherScreen> {
   }
 
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
-    String link = 'http://10.27.190.96:8000/appdata/';
+    print("🚀 SENDING TO BACKEND: $data");
+    String link = 'http://192.168.18.31:8000/appdata/';
     final response = await http.post(
       Uri.parse(link),
       headers: {
         "Content-Type": "application/json",
-        "Authorization": "Bearer YOUR_TOKEN",
+        
       },
       body: jsonEncode({
         "child_id": 2,
@@ -107,6 +116,8 @@ class _WatcherScreenState extends State<WatcherScreen> {
     );
 
     print(response.statusCode);
+    print("STATUS CODE: ${response.statusCode}");
+    print("RESPONSE BODY: ${response.body}");
   }
 
   // Chat Monitoring
@@ -189,8 +200,12 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
   void triggerAlert(String type, String message) async {
     var response = await http.post(
-      Uri.parse("http://10.27.190.96:8000/sendalert/"),
-      body: {"child_id": 2, "alert_type": type, "message": message},
+      Uri.parse("http://192.168.18.31/sendalert/"),
+      body:  jsonEncode({
+    "child_id": 2,
+    "alert_type": type,
+    "message": message,
+  }),
     );
   }
 
@@ -200,9 +215,11 @@ class _WatcherScreenState extends State<WatcherScreen> {
       MaterialPageRoute(builder: (context) => lockScreen()),
     );
   }
+
   @override
   void initState() {
     super.initState();
+    print("INIT STATE CALLED 🚀");
 
     checkPermission();
     startAppMonitoring();

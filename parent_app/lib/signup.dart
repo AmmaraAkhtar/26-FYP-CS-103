@@ -90,7 +90,8 @@ class _SignupState extends State<Signup> {
     String password,
   ) async {
     //String link = 'http://127.0.0.1:8000/signup/';
-    String link = 'http://10.27.190.96:8000/signup/';
+    print(">>> BEFORE API CALL");
+    String link = 'http://192.168.18.31:8000/signup/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(
@@ -102,7 +103,7 @@ class _SignupState extends State<Signup> {
           'password': password,
         }),
       );
-
+      print(">>> AFTER API CALL");
       if (response.statusCode == 200) {
         Navigator.push(
           context,
@@ -128,22 +129,38 @@ class _SignupState extends State<Signup> {
   }
 
   void submit() async {
+    print("BUTTON CLICKED");
+    
     validateUsername();
     validateEmail();
     validatePassword();
     validateConfirmPassword();
+    print("Username error: $usernameError");
+print("Email error: $emailError");
+print("Password error: $passwordError");
+print("Confirm error: $confirmPasswordError");
 
     if (usernameError.isEmpty &&
         emailError.isEmpty &&
         passwordError.isEmpty &&
         confirmPasswordError.isEmpty) {
+          print("CALLING API");
+
+      try {
       await signupRequest(
         _username.text.trim(),
         _email.text.trim(),
         _password.text.trim(),
       );
+    } catch (e) {
+      print("ERROR WHILE CALLING FUNCTION: $e");
     }
+
+  } else {
+    print("VALIDATION FAILED");
   }
+}
+  
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +346,10 @@ class _SignupState extends State<Signup> {
                     width: 285.w,
                     height: 47.h,
                     child: ElevatedButton(
-                      onPressed: submit,
+                      onPressed: () {
+                          print("BUTTON CLICKED");
+                              submit();
+                          }  , 
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.white,
                         side: BorderSide(color: Color(0xFFEB9974), width: 2.w),

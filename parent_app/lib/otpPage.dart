@@ -36,7 +36,7 @@ class _OTPState extends State<OTP> {
 
   Future<void> verifyOTP() async {
     String otp = _num1.text + _num2.text + _num3.text + _num4.text;
-    String link = 'http://10.27.190.96:8000/verifyOtp/';
+    String link = 'http://192.168.18.31:8000/verifyOtp/';
 
     try {
       final response = await http.post(
