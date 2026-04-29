@@ -19,7 +19,7 @@ class _EditprofileState extends State<profile> {
   TextEditingController screenTimeController = TextEditingController();
 
   Future<void> registerChild() async {
-    String link = 'http://10.27.190.96:8000/createChild/';
+    String link = 'http://192.168.18.31:8000/createChild/';
     final url = Uri.parse(link);
 
     final response = await http.post(

@@ -48,7 +48,7 @@ class _otpState extends State<otp> {
     String num4,
   ) async {
     String code = num1 + num2 + num3 + num4;
-    String link = 'http://10.27.190.96:8000/pairDevice/';
+    String link = 'http://192.168.18.31:8000/pairDevice/';
     final url = Uri.parse(link);
 
     try {

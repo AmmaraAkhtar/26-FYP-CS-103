@@ -71,7 +71,7 @@ class _homeState extends State<home> {
     //final url = Uri.parse(
     //'http://127.0.0.1:8000/fetchChildren/?parent_email=${widget.email}');
     final url = Uri.parse(
-      'http://10.27.190.96:8000/fetchChildren/?parent_email=${widget.email}',
+      'http://192.168.18.31:8000/fetchChildren/?parent_email=${widget.email}',
     );
     try {
       final response = await http.get(url);

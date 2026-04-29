@@ -77,15 +77,20 @@ class PairingCodeSerializer(serializers.Serializer):
         return data
 
 # ChildSerializer for paired children
-class PairedChildSerializer(serializers.ModelSerializer):
+class PairedChildSerializer(serializers.Serializer):
     class Meta:
         model =  models.child
         fields = ['firstname', 'lastname', 'age', 'screen_time_limit']
 
+# Usage Data Serializer
+class UsageDataSerializer(serializers.Serializer):
+    package_name = serializers.CharField()
+    usage_time = serializers.IntegerField()
+
 # App Usage Serializer 
-class AppUsageSerializer(serializers.ModelSerializer):
+class AppUsageSerializer(serializers.Serializer):
     child_id = serializers.IntegerField()
-    usage_data = serializers.ListField()
+    usage_data =  UsageDataSerializer(many=True)
     timestamp = serializers.DateTimeField()
     
 
@@ -112,7 +117,7 @@ class AppUsageSerializer(serializers.ModelSerializer):
         return validated_data
 
 # Alert Serializer
-class AlertSerializer(serializers.ModelSerializer):
+class AlertSerializer(serializers.Serializer):
     
     child_id = serializers.IntegerField()
     alert_type = serializers.CharField()

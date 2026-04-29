@@ -17,6 +17,7 @@ from datetime import timedelta
 # Sign UP API
 @api_view(['POST'])
 def signup_api(request):
+    print("sign UP is called")
     serializer = ParentSerializer(data=request.data)
     if serializer.is_valid():
         email = serializer.validated_data['email']
@@ -35,6 +36,8 @@ def signup_api(request):
         return Response({
             "message": "OTP sent to your email."
         }, status=status.HTTP_200_OK)
+    print("STATUS CODE: ${response.statusCode}");
+    print("RESPONSE BODY: ${response.body}");
     return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 # Log In API 
@@ -300,9 +303,12 @@ def fetchChildren_api(request):
 # Collect data for app usage monitoring 
 @api_view(['POST'])
 def collectAppUsageData_Api(request):
-    serializer = AppUsageSerializer(data=request.data)
+    print("app API calling")
+    serializer = AppUsageSerializer(data=request.data,many=False)
+    print(request.data)
     if serializer.is_valid():
             serializer.save()
+            print(request.data)
             return Response({"message": "Data saved successfully"}, status=status.HTTP_200_OK)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

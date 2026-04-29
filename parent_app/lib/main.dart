@@ -3,6 +3,7 @@ import 'splashScreen.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'AlertMonitoring.dart';
 import 'appUsage.dart';
+import 'splashScreen.dart';
 
 
 
@@ -22,13 +23,13 @@ class MyApp extends StatelessWidget {
       builder: (context, child) {
           return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home:AppUsageMonitoringScreen(),
+      home: //AppUsageMonitoringScreen(),
       // AlertMonitoringDashboard(),
       // AppUsageMonitoringScreen(),
       // AlertMonitoringDashboard(),
       // YoutubeActivityScreen(),
 
-      // splashpage(),
+      splashpage(),
     );
     }
     
