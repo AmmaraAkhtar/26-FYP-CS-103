@@ -346,3 +346,12 @@ def send_alert(alert):
     except Exception as e:
             print("Error:", e)
             return Response({"error": f"Error sending Alert: {e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+# Decide Action based on risk level
+def decide_action(risk):
+    if risk == "High":
+        return "Block"
+    elif risk == "Medium":
+        return "Warn"
+    else:
+        return "Allow"
