@@ -3,6 +3,7 @@ import 'chat.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart  ';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class otp extends StatefulWidget {
   const otp({super.key});
@@ -63,6 +64,10 @@ class _otpState extends State<otp> {
         var data = jsonDecode(response.body);
         screen_limit = data["screen_limit"];
         int childId = data["child_id"];
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setInt("child_id", childId);
+        await prefs.setInt("screen_limit", screen_limit);
+
 
         ScaffoldMessenger.of(
           context,
