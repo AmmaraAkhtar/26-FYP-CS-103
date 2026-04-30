@@ -94,27 +94,12 @@ class AppUsageSerializer(serializers.Serializer):
     timestamp = serializers.DateTimeField()
     
 
-    def create(self,validated_data):
-        child_id = validated_data["child_id"]
-        usage_data = validated_data["usage_data"]
-        timestamp = validated_data["timestamp"]
-        child = get_object_or_404(models.child, id=child_id) # Error HAndling
-        today = timestamp.date()
+    def validate_usage_data(self, value):
+        if not value:
+            raise serializers.ValidationError("usage_data cannot be empty")
+        return value
 
-
-        for app in usage_data:
-            obj, created = models.appUsage.objects.get_or_create(
-            child=child,
-            package_name=app["package_name"],
-            date=today,
-            defaults={"usage_time": app["usage_time"]}
-        )
-
-            if not created:
-                obj.usage_time += app["usage_time"]
-                obj.save()
-
-        return validated_data
+       
 
 # Alert Serializer
 class AlertSerializer(serializers.Serializer):

@@ -308,39 +308,57 @@ with open("models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
     model = pickle.load(f)
 
 # Collect data for app usage monitoring 
+
 @api_view(['POST'])
 def collectAppUsageData_Api(request):
     print("app API calling")
-    serializer = AppUsageSerializer(data=request.data,many=False)
-    print(request.data)
+
+    serializer = AppUsageSerializer(data=request.data)
+
     if serializer.is_valid():
-            validated_data = serializer.validated_data
-            usage_data = validated_data["usage_data"]
-            app_names = [app["package_name"] for app in usage_data]
+        validated_data = serializer.validated_data
+        usage_data = validated_data["usage_data"]
+        app_names = [app["package_name"] for app in usage_data]
 
-        #  ML prediction
-            category_predictions = model.predict(app_names)
-            result = []
-            for i in range(len(usage_data)):
-                app = usage_data[i]
-                pred = predictions[i]
-                risk = get_risk(pred)
-                action = decide_action(risk)
+        # ML prediction
+        category_predictions = model.predict(app_names)
 
-                result.append({
-                    "package_name": app["package_name"],
-                    "usage_time": app["usage_time"],
-                    "category": pred,
-                    'risk': risk,
-                    'action': action
-                })
+        result = []
 
-            serializer.save()
-            print(request.data)
-            
-            return Response({"message": "Data saved successfully"}, status=status.HTTP_200_OK)
+        child_id = validated_data["child_id"]
+        child = models.child.objects.get(id=child_id)
 
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        for i in range(len(usage_data)):
+            app = usage_data[i]
+            pred = category_predictions[i]
+            risk = get_risk(pred)
+            action = decide_action(risk)
+
+            # save with prediction
+            models.appUsage.objects.create(
+                child=child,
+                package_name=app["package_name"],
+                usage_time=app["usage_time"],
+                category=pred,
+                risk=risk,
+                action=action,
+                date=validated_data["timestamp"].date()
+            )
+
+            result.append({
+                "package_name": app["package_name"],
+                "usage_time": app["usage_time"],
+                "category": pred,
+                "risk": risk,
+                "action": action
+            })
+
+        return Response({
+            "message": "Data saved successfully",
+            "predictions": result
+        })
+
+    return Response(serializer.errors, status=400)
 
 # Alerts Api (Creation + Sending)
 @api_view(['POST'])
