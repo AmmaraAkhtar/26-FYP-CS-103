@@ -355,3 +355,14 @@ def decide_action(risk):
         return "Warn"
     else:
         return "Allow"
+
+# get app Risk Category
+def get_risk(category):
+    if category == "Sensitive":
+        return "High"
+    elif category in ["Social", "Games", "Entertainment"]:
+        return "Medium"
+    elif category in ["Education", "Tools"]:
+        return "Low"
+    else:
+        return "Unknown"

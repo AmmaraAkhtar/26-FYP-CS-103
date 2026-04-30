@@ -45,9 +45,9 @@ class appUsage(models.Model):
     usage_time = models.IntegerField(default = 0) 
     package_name = models.CharField(null=True,max_length = 255)
     created_at = models.DateTimeField(auto_now_add=True)
-    risk = models.CharField(max_length=20)
-    action = models.CharField(max_length=20)
-    category = models.CharField(max_length=50)
+    risk = models.CharField(max_length=20,null=True)
+    action = models.CharField(max_length=20,null=True)
+    category = models.CharField(max_length=50,null=True)
     date = models.DateField()
 
 # Alerts Model
