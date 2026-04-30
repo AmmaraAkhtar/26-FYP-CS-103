@@ -8,17 +8,36 @@ import 'package:http/http.dart' as http;
 import 'lockScreen.dart';
 import 'package:flutter_accessibility_service/flutter_accessibility_service.dart';
 import 'package:android_intent_plus/android_intent.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class WatcherScreen extends StatefulWidget {
   int screen_limit = 0;
-  WatcherScreen({super.key, required this.screen_limit});
+  int child_id = 0;
+  WatcherScreen({
+    super.key,
+    required this.screen_limit,
+    required this.child_id,
+  });
   @override
   _WatcherScreenState createState() => _WatcherScreenState();
 }
 
 class _WatcherScreenState extends State<WatcherScreen> {
+  int? storedChildId;
+  int? storedScreenLimit;
+  // Load Child Data
+  Future<void> loadChildData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    setState(() {
+      storedChildId = prefs.getInt("child_id");
+      storedScreenLimit = prefs.getInt("screen_limit");
+    });
+
+    print("Loaded Child ID: $storedChildId");
+  }
   // APP MOnitoring
 
   Future<void> checkPermission() async {
@@ -31,7 +50,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
   void startAppMonitoring() async {
     print("App Monitoring is called");
     Timer.periodic(Duration(seconds: 10), (timer) {
-        print("TIMER TICK 🔁");
+      print("TIMER TICK ");
       fetchAppUsageData();
     });
   }
@@ -104,12 +123,9 @@ class _WatcherScreenState extends State<WatcherScreen> {
     String link = 'http://192.168.18.31:8000/appdata/';
     final response = await http.post(
       Uri.parse(link),
-      headers: {
-        "Content-Type": "application/json",
-        
-      },
+      headers: {"Content-Type": "application/json"},
       body: jsonEncode({
-        "child_id": 2,
+        "child_id": widget.child_id != 0 ? widget.child_id : storedChildId,
         "usage_data": data,
         "timestamp": DateTime.now().toIso8601String(),
       }),
@@ -201,11 +217,11 @@ class _WatcherScreenState extends State<WatcherScreen> {
   void triggerAlert(String type, String message) async {
     var response = await http.post(
       Uri.parse("http://192.168.18.31/sendalert/"),
-      body:  jsonEncode({
-    "child_id": 2,
-    "alert_type": type,
-    "message": message,
-  }),
+      body: jsonEncode({
+        "child_id": widget.child_id,
+        "alert_type": type,
+        "message": message,
+      }),
     );
   }
 
@@ -220,7 +236,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
   void initState() {
     super.initState();
     print("INIT STATE CALLED 🚀");
-
+    loadChildData();
     checkPermission();
     startAppMonitoring();
   }

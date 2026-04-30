@@ -274,7 +274,7 @@ def pairingCodeVerification_api(request):
             child.is_paired = True
             child.save()
 
-        return Response({"message": "Pairing successful", "screen_limit": screen_limit}, status=status.HTTP_200_OK)
+        return Response({"message": "Pairing successful", "screen_limit": screen_limit, "child_id": child.id}, status=status.HTTP_200_OK)
     except Exception as e:
         print("Error during pairing:", e)
         return Response({"error": "Error Occured"}, status=status.HTTP_400_BAD_REQUEST)
