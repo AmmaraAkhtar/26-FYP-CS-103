@@ -1,3 +1,5 @@
+from xml.parsers.expat import model
+
 from django.shortcuts import render
 from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer
 from rest_framework.response import Response
@@ -11,6 +13,7 @@ from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
+import pickle
 
 
 
@@ -300,18 +303,62 @@ def fetchChildren_api(request):
     serializer = PairedChildSerializer(children, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+# app category prediction model 
+with open("models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
+    model = pickle.load(f)
+
 # Collect data for app usage monitoring 
+
 @api_view(['POST'])
 def collectAppUsageData_Api(request):
     print("app API calling")
-    serializer = AppUsageSerializer(data=request.data,many=False)
-    print(request.data)
-    if serializer.is_valid():
-            serializer.save()
-            print(request.data)
-            return Response({"message": "Data saved successfully"}, status=status.HTTP_200_OK)
 
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer = AppUsageSerializer(data=request.data)
+
+    if serializer.is_valid():
+        validated_data = serializer.validated_data
+        usage_data = validated_data["usage_data"]
+        app_names = [app["package_name"] for app in usage_data]
+
+        # ML prediction
+        category_predictions = model.predict(app_names)
+
+        result = []
+
+        child_id = validated_data["child_id"]
+        child = models.child.objects.get(id=child_id)
+
+        for i in range(len(usage_data)):
+            app = usage_data[i]
+            pred = category_predictions[i]
+            risk = get_risk(pred)
+            action = decide_action(risk)
+
+            # save with prediction
+            models.appUsage.objects.create(
+                child=child,
+                package_name=app["package_name"],
+                usage_time=app["usage_time"],
+                category=pred,
+                risk=risk,
+                action=action,
+                date=validated_data["timestamp"].date()
+            )
+
+            result.append({
+                "package_name": app["package_name"],
+                "usage_time": app["usage_time"],
+                "category": pred,
+                "risk": risk,
+                "action": action
+            })
+
+        return Response({
+            "message": "Data saved successfully",
+            "predictions": result
+        })
+
+    return Response(serializer.errors, status=400)
 
 # Alerts Api (Creation + Sending)
 @api_view(['POST'])
@@ -346,3 +393,23 @@ def send_alert(alert):
     except Exception as e:
             print("Error:", e)
             return Response({"error": f"Error sending Alert: {e}"}, status=status.HTTP_400_BAD_REQUEST)
+
+# Decide Action based on risk level
+def decide_action(risk):
+    if risk == "High":
+        return "Block"
+    elif risk == "Medium":
+        return "Warn"
+    else:
+        return "Allow"
+
+# get app Risk Category
+def get_risk(category):
+    if category == "Sensitive":
+        return "High"
+    elif category in ["Social", "Games", "Entertainment"]:
+        return "Medium"
+    elif category in ["Education", "Tools"]:
+        return "Low"
+    else:
+        return "Unknown"
