@@ -1,3 +1,5 @@
+from xml.parsers.expat import model
+
 from django.shortcuts import render
 from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer
 from rest_framework.response import Response
@@ -11,6 +13,7 @@ from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
+import pickle
 
 
 
@@ -300,6 +303,10 @@ def fetchChildren_api(request):
     serializer = PairedChildSerializer(children, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+# app category prediction model 
+with open("models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
+    model = pickle.load(f)
+
 # Collect data for app usage monitoring 
 @api_view(['POST'])
 def collectAppUsageData_Api(request):
@@ -307,8 +314,30 @@ def collectAppUsageData_Api(request):
     serializer = AppUsageSerializer(data=request.data,many=False)
     print(request.data)
     if serializer.is_valid():
+            validated_data = serializer.validated_data
+            usage_data = validated_data["usage_data"]
+            app_names = [app["package_name"] for app in usage_data]
+
+        #  ML prediction
+            category_predictions = model.predict(app_names)
+            result = []
+            for i in range(len(usage_data)):
+                app = usage_data[i]
+                pred = predictions[i]
+                risk = get_risk(pred)
+                action = decide_action(risk)
+
+                result.append({
+                    "package_name": app["package_name"],
+                    "usage_time": app["usage_time"],
+                    "category": pred,
+                    'risk': risk,
+                    'action': action
+                })
+
             serializer.save()
             print(request.data)
+            
             return Response({"message": "Data saved successfully"}, status=status.HTTP_200_OK)
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
