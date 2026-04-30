@@ -62,13 +62,14 @@ class _otpState extends State<otp> {
         print('Verification successful');
         var data = jsonDecode(response.body);
         screen_limit = data["screen_limit"];
+        int childId = data["child_id"];
 
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text("Pairing successful!")));
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => WatcherScreen(screen_limit:screen_limit)),
+          MaterialPageRoute(builder: (context) => WatcherScreen(screen_limit:screen_limit, child_id: childId)),
         );
       } else {
         var data = jsonDecode(response.body);
