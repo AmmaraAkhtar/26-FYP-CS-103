@@ -34,6 +34,7 @@ __main__.preprocess_app_name = preprocess_app_name
 class MLModelService:
     _instance = None
     _model = None
+    _encoder = None
     _lock = threading.Lock()
 
     def __new__(cls):
@@ -70,10 +71,17 @@ class MLModelService:
                     print("MODEL LOADED SUCCESSFULLY")
 
         return self._model
+    def load_encoder(self):
+        if self._encoder is None:
+            encoder_path = os.path.join(settings.BASE_DIR, "..", "models","App_Analysis_Data", "app_label_encoder.pkl")
+            with open(encoder_path, "rb") as f:
+                self._encoder = pickle.load(f)
+        return self._encoder
 
     def predict(self, data):
 
         model = self.load_model()
+        encoder = self.load_encoder()
 
         # agar single string aaye to list bana do
         if isinstance(data, str):
@@ -81,7 +89,7 @@ class MLModelService:
 
         predictions = model.predict(data)
 
-        return predictions
+        return encoder.inverse_transform(predictions)
 
 
 ml_service = MLModelService()
