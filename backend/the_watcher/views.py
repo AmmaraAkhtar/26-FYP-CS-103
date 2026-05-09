@@ -444,6 +444,7 @@ def get_risk(category):
     else:
         return "Unknown"
 
+# Parent Unlock API
 @api_view(['POST'])
 def unlock_device(request):
 
