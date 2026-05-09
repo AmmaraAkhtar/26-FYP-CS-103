@@ -113,7 +113,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
     if (totalUsageMinutes >= widget.screen_limit) {
       // showLockScreen();
-      //triggerAlert("Low", "Screen Limit Exceeded");
+      triggerAlert("Low", "Screen Limit Exceeded");
       alertSent = true;
     }
   }
