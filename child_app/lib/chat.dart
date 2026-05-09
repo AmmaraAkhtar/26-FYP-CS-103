@@ -11,6 +11,7 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'monitor_service.dart';
 
 class WatcherScreen extends StatefulWidget {
   int screen_limit = 0;
@@ -261,6 +262,8 @@ void triggerAlert(String type, String message) async {
     loadChildData();
     checkPermission();
     startAppMonitoring();
+    // START BACKGROUND SERVICE HERE
+    MonitorService().startService();
   }
 
   @override
