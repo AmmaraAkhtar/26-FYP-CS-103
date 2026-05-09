@@ -14,7 +14,8 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 import pickle
-from .utils import preprocess_app_name,app_model
+from .ml_service import ml_service
+from .utils import preprocess_app_name
 
 
 
@@ -43,6 +44,7 @@ def signup_api(request):
         }, status=status.HTTP_200_OK)
     print("STATUS CODE: ${response.statusCode}");
     print("RESPONSE BODY: ${response.body}");
+    print(serializer.errors)
     return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 # Log In API 
@@ -328,11 +330,13 @@ def collectAppUsageData_Api(request):
     if serializer.is_valid():
         validated_data = serializer.validated_data
         usage_data = validated_data["usage_data"]
-        app_names = [app["package_name"] for app in usage_data]
+        #app_names = [app["package_name"] for app in usage_data]
+        app_names = [preprocess_app_name(app["package_name"]) for app in usage_data]
 
         # ML prediction
         # model = get_model()
-        category_predictions = app_model.predict(app_names)
+        #category_predictions = app_model.predict(app_names)
+        category_predictions = ml_service.predict(app_names)
 
         result = []
 

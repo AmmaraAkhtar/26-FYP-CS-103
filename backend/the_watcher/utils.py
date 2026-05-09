@@ -1,8 +1,8 @@
 import re 
 import pandas as pd
-from django.conf import settings
-import os
-import pickle
+# from django.conf import settings
+# import os
+# import pickle
 
 ## App NAme Preprocessing for ML Pipeline (Training + Prediction)
 def preprocess_app_name(text):
@@ -29,10 +29,10 @@ def preprocess_app_name(text):
 
 
 
-MODEL_PATH = os.path.join(
-    settings.BASE_DIR,
-    "models/App_Analysis_Data/AppAnalysisModel.pkl"
-)
+# MODEL_PATH = os.path.join(
+#     settings.BASE_DIR,
+#     "models/App_Analysis_Data/AppAnalysisModel.pkl"
+# )
 
-with open(MODEL_PATH, "rb") as f:
-    app_model = pickle.load(f)
+# with open(MODEL_PATH, "rb") as f:
+#     app_model = pickle.load(f)

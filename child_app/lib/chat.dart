@@ -214,16 +214,25 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
   // Alert MEchanism
 
-  void triggerAlert(String type, String message) async {
-    var response = await http.post(
-      Uri.parse("http://192.168.18.163:8000/sendalert/"),
-      body: jsonEncode({
-        "child_id": widget.child_id,
-        "alert_type": type,
-        "message": message,
-      }),
-    );
-  }
+void triggerAlert(String type, String message) async {
+
+  var response = await http.post(
+    Uri.parse("http://192.168.18.163:8000/sendalert/"),
+
+    headers: {
+      "Content-Type": "application/json",
+    },
+
+    body: jsonEncode({
+      "child_id": widget.child_id,
+      "alert_type": type,
+      "message": message,
+    }),
+  );
+
+  print(response.statusCode);
+  print(response.body);
+}
 
   void showLocKScreen() {
     Navigator.pushReplacement(
