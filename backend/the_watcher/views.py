@@ -14,6 +14,7 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 import pickle
+from .utils import preprocess_app_name
 
 
 
@@ -304,8 +305,14 @@ def fetchChildren_api(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 # app category prediction model 
-with open(r"..\models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
-    model = pickle.load(f)
+model = None
+
+def get_model():
+    global model
+    if model is None:
+        with open(r"..\models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
+            model = pickle.load(f)
+    return model
 
 # Collect data for app usage monitoring 
 
@@ -318,9 +325,10 @@ def collectAppUsageData_Api(request):
     if serializer.is_valid():
         validated_data = serializer.validated_data
         usage_data = validated_data["usage_data"]
-        app_names = [app["package_name"] for app in usage_data]
+        app_names = [preprocess_app_name(app["package_name"]) for app in usage_data]
 
         # ML prediction
+        model = get_model()
         category_predictions = model.predict(app_names)
 
         result = []
