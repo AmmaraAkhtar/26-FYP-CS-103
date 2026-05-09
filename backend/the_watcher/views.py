@@ -304,7 +304,7 @@ def fetchChildren_api(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 # app category prediction model 
-with open("models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
+with open(r"..\models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
     model = pickle.load(f)
 
 # Collect data for app usage monitoring 

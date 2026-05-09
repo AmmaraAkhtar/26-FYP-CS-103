@@ -120,7 +120,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
     print("🚀 SENDING TO BACKEND: $data");
-    String link = 'http://192.168.18.31:8000/appdata/';
+    String link = 'http://192.168.18.163:8000/appdata/';
     final response = await http.post(
       Uri.parse(link),
       headers: {"Content-Type": "application/json"},
@@ -216,7 +216,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
   void triggerAlert(String type, String message) async {
     var response = await http.post(
-      Uri.parse("http://192.168.18.31/sendalert/"),
+      Uri.parse("http://192.168.18.163:8000/sendalert/"),
       body: jsonEncode({
         "child_id": widget.child_id,
         "alert_type": type,
