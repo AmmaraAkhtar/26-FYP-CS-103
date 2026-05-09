@@ -1,13 +1,16 @@
 import 'package:flutter/services.dart';
 
 class MonitorService {
+
   static const platform = MethodChannel('monitor_channel');
 
   Future<void> startService() async {
+
     try {
       await platform.invokeMethod("startService");
+      print("Foreground Service Started");
     } catch (e) {
-      print("Failed to start service: $e");
+      print("ERROR: $e");
     }
   }
 }
