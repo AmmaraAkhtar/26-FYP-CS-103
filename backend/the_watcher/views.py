@@ -274,6 +274,8 @@ def pairingCodeVerification_api(request):
         code_record.save()
 
         child = models.child.objects.filter(pairingCode=pairing_code).first()
+        if not child:
+             return Response({"error": "Child not found"}, status=400)
         screen_limit = child.screen_time_limit
         if child:
             child.is_paired = True
