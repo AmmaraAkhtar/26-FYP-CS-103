@@ -443,3 +443,17 @@ def get_risk(category):
         return "Low"
     else:
         return "Unknown"
+
+@api_view(['POST'])
+def unlock_device(request):
+
+    child_id = request.data.get("child_id")
+
+    child = models.child.objects.get(id=child_id)
+
+    child.is_locked = False
+    child.save()
+
+    return Response({
+        "message": "Device Unlocked"
+    })
