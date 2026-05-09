@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'monitor_service.dart';
+import 'lock_service.dart';
 
 class WatcherScreen extends StatefulWidget {
   int screen_limit = 0;
@@ -144,9 +145,16 @@ class _WatcherScreenState extends State<WatcherScreen> {
         app["action"] == "Block" || app["risk"] == "High");
 
     if (shouldLock) {
-      triggerAlert("High", "Risk detected - Screen Locked");
-      showLockScreen();
-    }
+
+  await LockService.lockDevice();
+
+  triggerAlert(
+    "High",
+    "High Risk App Detected - Device Locked"
+  );
+
+  showLockScreen();
+}
   }
   }
 
@@ -255,6 +263,15 @@ void triggerAlert(String type, String message) async {
     );
   }
 
+  Future<void> checkLockState() async {
+
+  bool locked = await LockService.isLocked();
+
+  if (locked) {
+    showLockScreen();
+  }
+}
+
   @override
   void initState() {
     super.initState();
@@ -264,6 +281,8 @@ void triggerAlert(String type, String message) async {
     startAppMonitoring();
     // START BACKGROUND SERVICE HERE
     MonitorService().startService();
+
+    checkLockState();
   }
 
   @override
