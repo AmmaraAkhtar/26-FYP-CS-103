@@ -1,53 +1,40 @@
 package com.example.child_app
 
 import android.content.Intent
+import android.os.Build
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
 
-    private val MONITOR_CHANNEL = "monitor_channel"
+    private val CHANNEL = "monitor_channel"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        // Chat channel (existing)
         MyAccessibilityService.channel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "chat_reader_channel"
         )
 
-        // Monitor channel (NEW)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            MONITOR_CHANNEL
+            CHANNEL
         ).setMethodCallHandler { call, result ->
 
-            when (call.method) {
+            if (call.method == "startService") {
 
-                "startService" -> {
-                    startMonitorService()
-                    result.success("Foreground Service Started")
+                val intent = Intent(this, MyForegroundService::class.java)
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
                 }
 
-                "stopService" -> {
-                    stopMonitorService()
-                    result.success("Foreground Service Stopped")
-                }
-
-                else -> result.notImplemented()
+                result.success("Service Started")
             }
         }
-    }
-
-    private fun startMonitorService() {
-        val intent = Intent(this, MyForegroundService::class.java)
-        startForegroundService(intent)
-    }
-
-    private fun stopMonitorService() {
-        val intent = Intent(this, MyForegroundService::class.java)
-        stopService(intent)
     }
 }
