@@ -14,6 +14,9 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 import pickle
+from .ml_service import ml_service
+from .utils import preprocess_app_name
+
 
 
 
@@ -41,6 +44,7 @@ def signup_api(request):
         }, status=status.HTTP_200_OK)
     print("STATUS CODE: ${response.statusCode}");
     print("RESPONSE BODY: ${response.body}");
+    print(serializer.errors)
     return Response({"errors": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
 # Log In API 
@@ -272,6 +276,8 @@ def pairingCodeVerification_api(request):
         code_record.save()
 
         child = models.child.objects.filter(pairingCode=pairing_code).first()
+        if not child:
+             return Response({"error": "Child not found"}, status=400)
         screen_limit = child.screen_time_limit
         if child:
             child.is_paired = True
@@ -304,73 +310,96 @@ def fetchChildren_api(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 # app category prediction model 
-with open("models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
-    model = pickle.load(f)
+# model = None
+
+# def get_model():
+#     global model
+#     if model is None:
+#         with open(r"..\models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
+#             model = pickle.load(f)
+#     return model
 
 # Collect data for app usage monitoring 
 
 @api_view(['POST'])
 def collectAppUsageData_Api(request):
-    print("app API calling")
+    try:
+        print("app API calling")
 
-    serializer = AppUsageSerializer(data=request.data)
 
-    if serializer.is_valid():
-        validated_data = serializer.validated_data
-        usage_data = validated_data["usage_data"]
-        app_names = [app["package_name"] for app in usage_data]
+        if not request.data:
+                return Response({"message": "No data received"}, status=200)
 
-        # ML prediction
-        category_predictions = model.predict(app_names)
+        serializer = AppUsageSerializer(data=request.data)
+        print(request.data)
 
-        result = []
+        if serializer.is_valid():
+            validated_data = serializer.validated_data
+            # usage_data = validated_data["usage_data"]
+            usage_data = validated_data.get("usage_data", [])
 
-        child_id = validated_data["child_id"]
-        child = models.child.objects.get(id=child_id)
+            if not usage_data:
+                return Response({"message": "Empty usage data"}, status=200)
+            
+            #app_names = [app["package_name"] for app in usage_data]
+            app_names = [preprocess_app_name(app["package_name"]) for app in usage_data]
 
-        for i in range(len(usage_data)):
-            app = usage_data[i]
-            pred = category_predictions[i]
-            risk = get_risk(pred)
-            action = decide_action(risk)
+            # ML prediction
+            # model = get_model()
+            #category_predictions = app_model.predict(app_names)
+            category_predictions = ml_service.predict(app_names)
 
-            # save with prediction
-            models.appUsage.objects.create(
-                child=child,
-                package_name=app["package_name"],
-                usage_time=app["usage_time"],
-                category=pred,
-                risk=risk,
-                action=action,
-                date=validated_data["timestamp"].date()
-            )
+            result = []
 
-            result.append({
-                "package_name": app["package_name"],
-                "usage_time": app["usage_time"],
-                "category": pred,
-                "risk": risk,
-                "action": action
+            child_id = validated_data["child_id"]
+            child = models.child.objects.get(id=child_id)
+
+            for i in range(len(usage_data)):
+                app = usage_data[i]
+                pred = category_predictions[i]
+                risk = get_risk(pred)
+                action = decide_action(risk)
+
+                # save with prediction
+                models.appUsage.objects.create(
+                    child=child,
+                    package_name=app["package_name"],
+                    usage_time=app["usage_time"],
+                    category=pred,
+                    risk=risk,
+                    action=action,
+                    date=validated_data["timestamp"].date()
+                )
+
+                result.append({
+                    "package_name": app["package_name"],
+                    "usage_time": app["usage_time"],
+                    "category": pred,
+                    "risk": risk,
+                    "action": action
+                })
+                print(f"App: {app['package_name']}, Category: {pred}, Risk: {risk}, Action: {action}")
+
+            return Response({
+                "message": "Data saved successfully",
+                "predictions": result
             })
 
-        return Response({
-            "message": "Data saved successfully",
-            "predictions": result
-        })
-
-    return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=400)
+    except Exception as e:
+        print("Backend error:", e)
+        return Response({"error": str(e)}, status=500)
 
 # Alerts Api (Creation + Sending)
 @api_view(['POST'])
 def create_alert(request):
     serializer = AlertSerializer(data=request.data)
-    alert = models.Alert.objects.create(
-        child_id=request.data['child_id'],
-        alert_type=request.data['alert_type'],
-        message=request.data['message']
-    )
-    send_alert(alert)
-    return Response({"status": "alert created"})
+    if serializer.is_valid():
+        alert = serializer.save()
+        send_alert(alert)
+        return Response({"status": "alert created"})
+
+    return Response(serializer.errors, status=400)
 
 # Send Alert Function
 def send_alert(alert):
@@ -390,6 +419,7 @@ def send_alert(alert):
             fail_silently=False
            
         )
+        print(alert.message)
     except Exception as e:
             print("Error:", e)
             return Response({"error": f"Error sending Alert: {e}"}, status=status.HTTP_400_BAD_REQUEST)
@@ -413,3 +443,18 @@ def get_risk(category):
         return "Low"
     else:
         return "Unknown"
+
+# Parent Unlock API
+@api_view(['POST'])
+def unlock_device(request):
+
+    child_id = request.data.get("child_id")
+
+    child = models.child.objects.get(id=child_id)
+
+    child.is_locked = False
+    child.save()
+
+    return Response({
+        "message": "Device Unlocked"
+    })

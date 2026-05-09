@@ -34,7 +34,7 @@ class _Resetpassword1State extends State<Resetpassword1> {
   }
 
   Future<void> emailcheckRequest(String email) async {
-    String link = 'http://192.168.18.31:8000/checkEmail/';
+    String link = 'http://192.168.18.163:8000/checkEmail/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(

@@ -11,6 +11,8 @@ import 'package:android_intent_plus/android_intent.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'monitor_service.dart';
+import 'lock_service.dart';
 
 class WatcherScreen extends StatefulWidget {
   int screen_limit = 0;
@@ -120,7 +122,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
     print("🚀 SENDING TO BACKEND: $data");
-    String link = 'http://192.168.18.31:8000/appdata/';
+    String link = 'http://192.168.18.163:8000/appdata/';
     final response = await http.post(
       Uri.parse(link),
       headers: {"Content-Type": "application/json"},
@@ -134,6 +136,26 @@ class _WatcherScreenState extends State<WatcherScreen> {
     print(response.statusCode);
     print("STATUS CODE: ${response.statusCode}");
     print("RESPONSE BODY: ${response.body}");
+     if (response.statusCode == 200) {
+    final result = jsonDecode(response.body);
+
+    List predictions = result["predictions"];
+
+    bool shouldLock = predictions.any((app) =>
+        app["action"] == "Block" || app["risk"] == "High");
+
+    if (shouldLock) {
+
+  await LockService.lockDevice();
+
+  triggerAlert(
+    "High",
+    "High Risk App Detected - Device Locked"
+  );
+
+  showLockScreen();
+}
+  }
   }
 
   // Chat Monitoring
@@ -214,23 +236,41 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
   // Alert MEchanism
 
-  void triggerAlert(String type, String message) async {
-    var response = await http.post(
-      Uri.parse("http://192.168.18.31/sendalert/"),
-      body: jsonEncode({
-        "child_id": widget.child_id,
-        "alert_type": type,
-        "message": message,
-      }),
-    );
-  }
+void triggerAlert(String type, String message) async {
 
-  void showLocKScreen() {
+  var response = await http.post(
+    Uri.parse("http://192.168.18.163:8000/sendalert/"),
+
+    headers: {
+      "Content-Type": "application/json",
+    },
+
+    body: jsonEncode({
+      "child_id": widget.child_id,
+      "alert_type": type,
+      "message": message,
+    }),
+  );
+
+  print(response.statusCode);
+  print(response.body);
+}
+
+  void showLockScreen() {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => lockScreen()),
     );
   }
+
+  Future<void> checkLockState() async {
+
+  bool locked = await LockService.isLocked();
+
+  if (locked) {
+    showLockScreen();
+  }
+}
 
   @override
   void initState() {
@@ -239,6 +279,10 @@ class _WatcherScreenState extends State<WatcherScreen> {
     loadChildData();
     checkPermission();
     startAppMonitoring();
+    // START BACKGROUND SERVICE HERE
+    MonitorService().startService();
+
+    checkLockState();
   }
 
   @override

@@ -102,10 +102,21 @@ class AppUsageSerializer(serializers.Serializer):
        
 
 # Alert Serializer
+
+
+
 class AlertSerializer(serializers.Serializer):
-    
+
     child_id = serializers.IntegerField()
     alert_type = serializers.CharField()
     message = serializers.CharField()
 
-      
+    def create(self, validated_data):
+
+        child_obj = models.child.objects.get(id=validated_data['child_id'])
+
+        return models.Alert.objects.create(
+            child=child_obj,
+            alert_type=validated_data['alert_type'],
+            message=validated_data['message']
+        )
