@@ -406,6 +406,7 @@ def send_alert(alert):
             fail_silently=False
            
         )
+        print(alert.message)
     except Exception as e:
             print("Error:", e)
             return Response({"error": f"Error sending Alert: {e}"}, status=status.HTTP_400_BAD_REQUEST)

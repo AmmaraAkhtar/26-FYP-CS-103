@@ -113,7 +113,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
     if (totalUsageMinutes >= widget.screen_limit) {
       // showLockScreen();
-      triggerAlert("Low", "Screen Limit Exceeded");
+      //triggerAlert("Low", "Screen Limit Exceeded");
       alertSent = true;
     }
   }
@@ -134,6 +134,19 @@ class _WatcherScreenState extends State<WatcherScreen> {
     print(response.statusCode);
     print("STATUS CODE: ${response.statusCode}");
     print("RESPONSE BODY: ${response.body}");
+     if (response.statusCode == 200) {
+    final result = jsonDecode(response.body);
+
+    List predictions = result["predictions"];
+
+    bool shouldLock = predictions.any((app) =>
+        app["action"] == "Block" || app["risk"] == "High");
+
+    if (shouldLock) {
+      triggerAlert("High", "Risk detected - Screen Locked");
+      showLockScreen();
+    }
+  }
   }
 
   // Chat Monitoring
@@ -234,7 +247,7 @@ void triggerAlert(String type, String message) async {
   print(response.body);
 }
 
-  void showLocKScreen() {
+  void showLockScreen() {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => lockScreen()),
