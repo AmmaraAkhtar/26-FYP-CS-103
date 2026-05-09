@@ -374,13 +374,11 @@ def collectAppUsageData_Api(request):
 def create_alert(request):
     serializer = AlertSerializer(data=request.data)
     if serializer.is_valid():
-        alert = models.Alert.objects.create(
-            child_id=request.data['child_id'],
-            alert_type=request.data['alert_type'],
-            message=request.data['message']
-        )
-    send_alert(alert)
-    return Response({"status": "alert created"})
+        alert = serializer.save()
+        send_alert(alert)
+        return Response({"status": "alert created"})
+
+    return Response(serializer.errors, status=400)
 
 # Send Alert Function
 def send_alert(alert):
