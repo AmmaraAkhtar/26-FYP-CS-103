@@ -14,7 +14,8 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
 import pickle
-from .utils import preprocess_app_name
+from .utils import preprocess_app_name,app_model
+
 
 
 
@@ -305,14 +306,14 @@ def fetchChildren_api(request):
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 # app category prediction model 
-model = None
+# model = None
 
-def get_model():
-    global model
-    if model is None:
-        with open(r"..\models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
-            model = pickle.load(f)
-    return model
+# def get_model():
+#     global model
+#     if model is None:
+#         with open(r"..\models\App_Analysis_Data\AppAnalysisModel.pkl", "rb") as f:
+#             model = pickle.load(f)
+#     return model
 
 # Collect data for app usage monitoring 
 
@@ -325,11 +326,11 @@ def collectAppUsageData_Api(request):
     if serializer.is_valid():
         validated_data = serializer.validated_data
         usage_data = validated_data["usage_data"]
-        app_names = [preprocess_app_name(app["package_name"]) for app in usage_data]
+        app_names = [app["package_name"] for app in usage_data]
 
         # ML prediction
-        model = get_model()
-        category_predictions = model.predict(app_names)
+        # model = get_model()
+        category_predictions = app_model.predict(app_names)
 
         result = []
 
@@ -372,11 +373,12 @@ def collectAppUsageData_Api(request):
 @api_view(['POST'])
 def create_alert(request):
     serializer = AlertSerializer(data=request.data)
-    alert = models.Alert.objects.create(
-        child_id=request.data['child_id'],
-        alert_type=request.data['alert_type'],
-        message=request.data['message']
-    )
+    if serializer.is_valid():
+        alert = models.Alert.objects.create(
+            child_id=request.data['child_id'],
+            alert_type=request.data['alert_type'],
+            message=request.data['message']
+        )
     send_alert(alert)
     return Response({"status": "alert created"})
 
