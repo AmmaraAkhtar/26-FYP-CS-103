@@ -326,6 +326,7 @@ def collectAppUsageData_Api(request):
     print("app API calling")
 
     serializer = AppUsageSerializer(data=request.data)
+    print(request.data)
 
     if serializer.is_valid():
         validated_data = serializer.validated_data
@@ -367,6 +368,7 @@ def collectAppUsageData_Api(request):
                 "risk": risk,
                 "action": action
             })
+            print(f"App: {app['package_name']}, Category: {pred}, Risk: {risk}, Action: {action}")
 
         return Response({
             "message": "Data saved successfully",
