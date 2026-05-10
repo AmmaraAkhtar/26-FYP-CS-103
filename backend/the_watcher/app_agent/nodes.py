@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 from dotenv import load_dotenv
 from .state import AppState
-# from myapp import models
+from the_watcher import models
 from django.utils import timezone
 from datetime import timedelta
 from the_watcher.views import send_alert #send_alert function from views.py file
@@ -33,7 +33,7 @@ def context_fetcher_node(state: AppState) -> AppState:
 
     # Last 3 alerts — kisi bhi app ke liye jo parent ko bheje gaye ho
     recent_alerts = list(
-        models.alert.objects
+        models.Alert.objects
         .filter(child=child)
         .order_by("-created_at")[:3]
         .values("alert_type", "message", "created_at")
@@ -191,7 +191,7 @@ def action_executor_node(state: AppState) -> AppState:
         child.save()
 
     if state["should_send_alert"] and state["alert_message"]:
-        alert_obj = models.alert.objects.create(
+        alert_obj = models.Alert.objects.create(
             child=child,
             alert_type=state["action"].capitalize(),
             message=state["alert_message"]
