@@ -65,8 +65,14 @@ override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
     }
     override fun onTaskRemoved(rootIntent: Intent?) {
     val restartIntent = Intent(applicationContext, MyForegroundService::class.java)
-    startService(restartIntent)
-
+    restartIntent.putExtra("child_id", childId) // ✅ child_id pass karo
+    
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        startForegroundService(restartIntent)
+    } else {
+        startService(restartIntent)
+    }
+    
     super.onTaskRemoved(rootIntent)
 }
 
