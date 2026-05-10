@@ -4,18 +4,17 @@ from pydantic import BaseModel, Field
 from typing import Literal
 from dotenv import load_dotenv
 from .state import AppState
-from myapp import models
+# from myapp import models
 from django.utils import timezone
 from datetime import timedelta
+from the_watcher.views import send_alert #send_alert function from views.py file
 
 load_dotenv()
 model = ChatGroq( model="llama-3.1-8b-instant",temperature= 0)
 
 
-# ══════════════════════════════════════════════════════
-# NODE 1 — Context Fetcher
-# DB se saari history uthao taake LLM ko pura picture mile
-# ══════════════════════════════════════════════════════
+# Defining Context Fetcher Node -- Ye node database se child aur app usage ki history fetch karega, jo baad mein LLM ke reasoning ke liye use hoga.
+
 def context_fetcher_node(state: AppState) -> AppState:
     child_id = state["child_id"]
     child = models.child.objects.select_related("parent").get(id=child_id)
@@ -32,7 +31,7 @@ def context_fetcher_node(state: AppState) -> AppState:
     for h in history:
         h["date"] = str(h["date"])
 
-    # Last 3 alerts — kisi bhi app ke liye
+    # Last 3 alerts — kisi bhi app ke liye jo parent ko bheje gaye ho
     recent_alerts = list(
         models.alert.objects
         .filter(child=child)
@@ -40,7 +39,7 @@ def context_fetcher_node(state: AppState) -> AppState:
         .values("alert_type", "message", "created_at")
     )
     for a in recent_alerts:
-        a["created_at"] = str(a["created_at"])
+        a["created_at"] = str(a["created_at"]) # alert kbb create hua tha usko string mein convert karo
 
     # Aaj ka total screen time (all apps)
     today = timezone.now().date()
@@ -54,15 +53,12 @@ def context_fetcher_node(state: AppState) -> AppState:
         "usage_history":    history,
         "recent_alerts":    recent_alerts,
         "total_usage_today": total_today,
-    }
+    } 
 
 
-# ══════════════════════════════════════════════════════
-# NODE 2 — LLM Reasoning + Decision
-# Koi rules nahi — LLM khud socha kar decide karega
-# ══════════════════════════════════════════════════════
+#### LLM Reasoning and Decision Making Node
 
-# Structured output — LLM sirf yeh format return karega
+# Creating the pydantic model for agent's decision — isse LLM ko structured output dena easy hoga, aur hum reasoning ko bhi capture kar sakte hain for better transparency.
 class AgentDecision(BaseModel):
     action: Literal["block", "alert", "allow", "escalate"] = Field(
         description="Action to take on this app right now"
@@ -145,11 +141,8 @@ Reason step by step before deciding."""
     }
 
 
-# ══════════════════════════════════════════════════════
-# NODE 3 — Alert Content Composer
-# Parent ko kya message bhejein — LLM decide karega
-# context-aware, personalized, actionable
-# ══════════════════════════════════════════════════════
+ ## Alert Creation Node — Parent ko bhejne ke liye alert message compose karega, based on the action and reasoning. Agar action "allow" hai toh koi alert nahi bhejna.
+
 def alert_composer_node(state: AppState) -> AppState:
     # Allow ka matlab — koi message nahi
     if state["action"] == "allow":
@@ -188,10 +181,8 @@ Write ONLY the message, nothing else."""
     }
 
 
-# ══════════════════════════════════════════════════════
-# NODE 4 — Action Executor
-# DB save + child device ko command
-# ══════════════════════════════════════════════════════
+## Action TAking Node — Jo bhi action LLM ne decide kiya hai, usko execute karega. Agar action "block" hai toh app ko lock karna, agar alert bhejna hai toh alert create karke parent ko notify karna.
+
 def action_executor_node(state: AppState) -> AppState:
     child = models.child.objects.get(id=state["child_id"])
 
@@ -205,8 +196,7 @@ def action_executor_node(state: AppState) -> AppState:
             alert_type=state["action"].capitalize(),
             message=state["alert_message"]
         )
-        # Tumhara existing send_alert function
-        from myapp.views import send_alert
+        
         send_alert(alert_obj)
 
     return state
