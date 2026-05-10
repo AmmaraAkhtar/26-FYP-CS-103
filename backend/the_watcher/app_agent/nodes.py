@@ -22,22 +22,22 @@ def context_fetcher_node(state: AppState) -> AppState:
     # Last 7 days — same app ka usage
     seven_days_ago = timezone.now().date() - timedelta(days=7)
     history = list(
-        models.appUsage.objects
-        .filter(child=child, package_name=state["package_name"], date__gte=seven_days_ago)
-        .order_by("-date")
-        .values("date", "usage_time", "category", "action")
-    )
+    models.appUsage.objects
+    .filter(child=child, package_name=state["package_name"], date__gte=seven_days_ago)
+    .order_by("-date")
+    .values("date", "usage_time", "category", "action")  
+)
     # date objects ko string mein convert karo JSON ke liye
     for h in history:
         h["date"] = str(h["date"])
 
     # Last 3 alerts — kisi bhi app ke liye jo parent ko bheje gaye ho
     recent_alerts = list(
-        models.Alert.objects
-        .filter(child=child)
-        .order_by("-created_at")[:3]
-        .values("alert_type", "message", "created_at")
-    )
+    models.Alert.objects        
+    .filter(child=child)
+    .order_by("-created_at")
+    .values("alert_type", "message", "created_at")[:3]
+)
     for a in recent_alerts:
         a["created_at"] = str(a["created_at"]) # alert kbb create hua tha usko string mein convert karo
 
