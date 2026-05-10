@@ -72,9 +72,11 @@
 
         <!-- Foreground Service -->
         <service
-            android:name=".MyForegroundService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync"/>
+    android:name=".MyForegroundService"
+    android:enabled="true"
+    android:exported="false"
+    android:stopWithTask="false"
+    android:foregroundServiceType="dataSync" />
         
         <!-- Boot Receiver -->
         <receiver

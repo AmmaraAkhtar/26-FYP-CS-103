@@ -279,6 +279,19 @@ void triggerAlert(String type, String message) async {
     showLockScreen();
   }
 }
+Future<void> _startServiceWithDelay() async {
+  // Thoda wait karo taake SharedPreferences load ho jaye
+  await Future.delayed(Duration(milliseconds: 500));
+  
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  int childId = widget.child_id != 0 
+      ? widget.child_id 
+      : (prefs.getInt("child_id") ?? -1);
+  
+  print("🚀 Starting service with Child ID: $childId");
+  
+  await MonitorService().startService(childId);
+}
 
   @override
   void initState() {
@@ -289,7 +302,8 @@ void triggerAlert(String type, String message) async {
     checkPermission();
     // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
-    MonitorService().startService(widget.child_id);
+    _startServiceWithDelay();
+    
     
 
     //checkLockState();
