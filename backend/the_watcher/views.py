@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import authenticate
 import random
 from . import models
+from .app_agent.graph import app_agent
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -354,31 +355,46 @@ def collectAppUsageData_Api(request):
             child_id = validated_data["child_id"]
             child = models.child.objects.get(id=child_id)
 
-            for i in range(len(usage_data)):
-                app = usage_data[i]
-                pred = category_predictions[i]
-                risk = get_risk(pred)
-                action = decide_action(risk)
+            for i, app in enumerate(usage_data):
+
+                initial_state = {
+                "package_name":   app["package_name"],
+                "usage_time":     app["usage_time"],
+                "ml_category":    category_predictions[i],
+                "child_id":       child_id,
+
+                # Baaki sab None — agent ne ye sbb data fill krna hai 
+                "child_age": None, "screen_limit_mins": None,
+                "usage_history": None, "recent_alerts": None,
+                "total_usage_today": None, "action": None,
+                "reasoning": None, "alert_message": None,
+                "should_send_alert": None,
+            }
+                
+                # thread_id = child_id — isi se memory maintain hogi per child
+                config = {"configurable": {"thread_id": f"child_{child_id}"}}
+                final = app_agent.invoke(initial_state, config=config) ## Invoking the agent with the initial state and config. Agent will process through the graph and return the final state with action, reasoning, alert message, etc.
 
                 # save with prediction
                 models.appUsage.objects.create(
-                    child=child,
-                    package_name=app["package_name"],
-                    usage_time=app["usage_time"],
-                    category=pred,
-                    risk=risk,
-                    action=action,
-                    date=validated_data["timestamp"].date()
-                )
+                child=child,
+                package_name=app["package_name"],
+                usage_time=app["usage_time"],
+                category=category_predictions[i],
+                risk=final["action"],       # action hi risk hai ab
+                action=final["action"],
+                date=validated_data["timestamp"].date()
+            )
 
                 result.append({
-                    "package_name": app["package_name"],
-                    "usage_time": app["usage_time"],
-                    "category": pred,
-                    "risk": risk,
-                    "action": action
+                    "package_name":  app["package_name"],
+                    "usage_time":    app["usage_time"],
+                    "category":      category_predictions[i],
+                    "action":        final["action"],
+                    "reasoning":     final["reasoning"],    
+                    "alert_message": final["alert_message"],
                 })
-                print(f"App: {app['package_name']}, Category: {pred}, Risk: {risk}, Action: {action}")
+                print(f"App: {app['package_name']}, Category: {category_predictions[i]}, Risk: {final['action']}, Action: {final['action']},reasoning: {final['reasoning']}, Alert: {final['alert_message']}")
 
             return Response({
                 "message": "Data saved successfully",
