@@ -521,3 +521,16 @@ def unlock_device(request):
         "message": "Device Unlocked"
     })
 
+# api to send data to parent app 
+@api_view(['GET'])
+def get_child_usage(request, child_id):
+    # Last saved usage data return karo
+    usage = models.appUsage.objects.filter(child_id=child_id).last()
+    if usage:
+        return Response({
+            "usage_data": usage.usage_data,
+            "timestamp": usage.timestamp,
+            "total_screen_time": usage.total_screen_time
+        })
+    return Response({"error": "No data found"}, status=404)
+

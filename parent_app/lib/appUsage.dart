@@ -221,7 +221,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
     fetchUsageData();
   }
 
-  // ✅ Package name se readable app name nikalo - fully dynamic
+  // Package name se readable app name nikalo - fully dynamic
   String getAppName(String packageName) {
     // com.whatsapp → WhatsApp
     // com.instagram.android → Instagram
@@ -240,7 +240,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
     return last[0].toUpperCase() + last.substring(1);
   }
 
-  // ✅ Package name se category detect karo - dynamic
+  // Package name se category detect karo - dynamic
   String getCategory(String packageName) {
     if (packageName.contains('whatsapp') || 
         packageName.contains('telegram') ||
@@ -281,7 +281,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
     return 'App';
   }
 
-  // ✅ Category se color - dynamic
+  // Category se color - dynamic
   Color getCategoryColor(String category) {
     switch (category) {
       case 'Chatting': return Colors.green;
@@ -295,7 +295,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
     }
   }
 
-  // ✅ Category se background color
+  // Category se background color
   Color getHeaderBg(String category) {
     switch (category) {
       case 'Chatting': return const Color(0xFFE8F5E9);
@@ -309,7 +309,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
     }
   }
 
-  // ✅ Category se icon - dynamic
+  // Category se icon - dynamic
   IconData getCategoryIcon(String category) {
     switch (category) {
       case 'Chatting': return Icons.chat_bubble_rounded;
@@ -323,7 +323,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
     }
   }
 
-  // ✅ Seconds ko readable format
+  //  Seconds ko readable format
   String formatTime(int seconds) {
     if (seconds < 60) return "${seconds}s";
     int minutes = seconds ~/ 60;
