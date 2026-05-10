@@ -63,6 +63,12 @@ override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 
         startMonitoring()
     }
+    override fun onTaskRemoved(rootIntent: Intent?) {
+    val restartIntent = Intent(applicationContext, MyForegroundService::class.java)
+    startService(restartIntent)
+
+    super.onTaskRemoved(rootIntent)
+}
 
     private fun lockDevice() {
 
