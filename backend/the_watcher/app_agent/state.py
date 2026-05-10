@@ -1,6 +1,6 @@
 from typing import TypedDict, Optional, List
 
-from typing import TypedDict, Optional, List, Any
+
 
 class AppState(TypedDict):
      # Input se jo data aa rha hai ... yaani collected data from the device
