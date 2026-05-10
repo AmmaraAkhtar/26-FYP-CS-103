@@ -25,6 +25,7 @@ class child(models.Model):
     pairingCode = models.CharField(max_length=4,unique=True,null=True)
     screen_time_limit = models.IntegerField(default=60)  # in minutes
     is_paired = models.BooleanField(default=False)
+    is_locked = models.BooleanField(default=False)
 
 
 # Pairing Code Model
