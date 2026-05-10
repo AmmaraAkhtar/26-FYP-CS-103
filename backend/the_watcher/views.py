@@ -354,8 +354,54 @@ def collectAppUsageData_Api(request):
 
             child_id = validated_data["child_id"]
             child = models.child.objects.get(id=child_id)
+            SKIP_PACKAGES = {
+    'com.android', 'android',
+    'com.samsung.android.app.galaxyfinder',
+    'com.samsung.android.bixby.agent',
+    'com.google.android.permissioncontroller',
+    'com.sec.android.app.launcher',
+    'com.samsung.android.dialer',
+}
+            AGENT_CATEGORIES = {"Social", "Sensitive", "Games", "Entertainment"}
 
             for i, app in enumerate(usage_data):
+                category = category_predictions[i]
+                package  = app["package_name"]
+
+                # System apps aur zero-usage apps skip karne ke liye simple rule — inhe allow kar dete hain bina agent ko involve kiye, taki unnecessary processing na ho.
+                if app["usage_time"] == 0 or package in SKIP_PACKAGES:
+                    result.append({
+                        "package_name": package,
+                        "usage_time":   app["usage_time"],
+                        "category":     category,
+                        "action":       "allow",
+                        "reasoning":    "Skipped — system app or zero usage",
+                        "alert_message": None,
+                    })
+                    continue
+
+                # Sirf meaningful categories par agent chalao
+                if category not in AGENT_CATEGORIES:
+                    # Education, Tools — simple allow, no LLM needed
+                    models.appUsage.objects.create(
+                        child=child,
+                        package_name=package,
+                        usage_time=app["usage_time"],
+                        category=category,
+                        risk="allow",
+                        action="allow",
+                        date=validated_data["timestamp"].date()
+                    )
+                    result.append({
+                        "package_name": package,
+                        "usage_time":   app["usage_time"],
+                        "category":     category,
+                        "action":       "allow",
+                        "reasoning":    "Education/Tools — allowed by default",
+                        "alert_message": None,
+                    })
+                    continue
+
 
                 initial_state = {
                 "package_name":   app["package_name"],

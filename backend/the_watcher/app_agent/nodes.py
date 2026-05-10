@@ -4,13 +4,13 @@ from pydantic import BaseModel, Field
 from typing import Literal
 from dotenv import load_dotenv
 from .state import AppState
-from the_watcher import models
+from .. import models
 from django.utils import timezone
 from datetime import timedelta
-from the_watcher.views import send_alert #send_alert function from views.py file
+from ..utils  import send_alert #send_alert function from views.py file
 
 load_dotenv()
-model = ChatGroq( model="llama-3.1-8b-instant",temperature= 0)
+llm = ChatGroq( model="llama-3.3-70b-versatile",temperature= 0)
 
 
 # Defining Context Fetcher Node -- Ye node database se child aur app usage ki history fetch karega, jo baad mein LLM ke reasoning ke liye use hoga.
@@ -70,7 +70,7 @@ class AgentDecision(BaseModel):
         description="How urgent is this situation for the parent"
     )
 
-llm_with_structure = llm.with_structured_output(AgentDecision)
+llm_with_structure = llm.with_structured_output(AgentDecision,)
 
 
 def reasoning_node(state: AppState) -> AppState:
@@ -130,14 +130,22 @@ Consider:
 4. Is this a first-time risky app or a repeated behavior?
 5. Would sending another alert actually help or just create alert fatigue?
 
-Reason step by step before deciding."""
+Reason step by step before deciding.
+Respond in JSON format with keys: action, reasoning, urgency."""
 
-    decision = llm_with_structure.invoke([HumanMessage(content=prompt)])
+    try:
+        decision = llm_with_structure.invoke([HumanMessage(content=prompt)])
+        action   = decision.action
+        reasoning = decision.reasoning
+    except Exception as e:
+        # Agar LLM se kuch galat response aata hai ya error hota hai, toh default action "alert" rakhte hain with a simple message.
+        action = "alert"
+        reasoning = f"LLM Error: {str(e)}. Defaulting to alert to be safe."
 
     return {
         **state,
-        "action":   decision.action,
-        "reasoning": decision.reasoning,
+        "action":   action,
+        "reasoning": reasoning,
     }
 
 
