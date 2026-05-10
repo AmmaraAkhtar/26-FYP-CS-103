@@ -40,6 +40,14 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
     print("Loaded Child ID: $storedChildId");
   }
+
+  // Save Child Data
+  Future<void> saveChildData(int childId, int screenLimit) async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  await prefs.setInt("child_id", childId);
+  await prefs.setInt("screen_limit", screenLimit);
+  print("Saved child_id: $childId");
+}
   // APP MOnitoring
 
   Future<void> checkPermission() async {
@@ -121,7 +129,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
   }
 
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
-    print("🚀 SENDING TO BACKEND: $data");
+    print("SENDING TO BACKEND: $data");
     String link = 'http://192.168.18.163:8000/appdata/';
     final response = await http.post(
       Uri.parse(link),
@@ -271,18 +279,34 @@ void triggerAlert(String type, String message) async {
     showLockScreen();
   }
 }
+Future<void> _startServiceWithDelay() async {
+  // Thoda wait karo taake SharedPreferences load ho jaye
+  await Future.delayed(Duration(milliseconds: 500));
+  
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  int childId = widget.child_id != 0 
+      ? widget.child_id 
+      : (prefs.getInt("child_id") ?? -1);
+  
+  print("🚀 Starting service with Child ID: $childId");
+  
+  await MonitorService().startService(childId);
+}
 
   @override
   void initState() {
     super.initState();
-    print("INIT STATE CALLED 🚀");
+    print("INIT STATE CALLED ");
     loadChildData();
+    saveChildData(widget.child_id, widget.screen_limit);
     checkPermission();
-    startAppMonitoring();
+    // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
-    MonitorService().startService();
+    _startServiceWithDelay();
+    
+    
 
-    checkLockState();
+    //checkLockState();
   }
 
   @override

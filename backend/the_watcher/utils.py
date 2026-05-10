@@ -3,6 +3,7 @@ import pandas as pd
 # from django.conf import settings
 # import os
 # import pickle
+from django.core.mail import send_mail
 
 ## App NAme Preprocessing for ML Pipeline (Training + Prediction)
 def preprocess_app_name(text):
@@ -36,3 +37,16 @@ def preprocess_app_name(text):
 
 # with open(MODEL_PATH, "rb") as f:
 #     app_model = pickle.load(f)
+
+def send_alert(alert):
+    try:
+        send_mail(
+            subject='Child Activity Alert',
+            message=f'Alert Type: {alert.alert_type}\n{alert.message}',
+            from_email='22ntucs1145amnaali@gmail.com',
+            recipient_list=[alert.child.parent.email],
+            fail_silently=False
+        )
+        print(alert.message)
+    except Exception as e:
+        print("Error:", e)
