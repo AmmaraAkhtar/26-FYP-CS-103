@@ -278,11 +278,11 @@ void triggerAlert(String type, String message) async {
     print("INIT STATE CALLED 🚀");
     loadChildData();
     checkPermission();
-    startAppMonitoring();
+    // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
-    MonitorService().startService();
+    MonitorService().startService(widget.child_id);
 
-    checkLockState();
+    //checkLockState();
   }
 
   @override
