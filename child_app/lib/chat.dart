@@ -288,7 +288,7 @@ Future<void> _startServiceWithDelay() async {
       ? widget.child_id 
       : (prefs.getInt("child_id") ?? -1);
   
-  print("🚀 Starting service with Child ID: $childId");
+  print(" Starting service with Child ID: $childId");
   
   await MonitorService().startService(childId);
 }
