@@ -222,16 +222,23 @@ class _WatcherScreenState extends State<WatcherScreen> {
   //   });
   // }
 
-  void webMonitoring() {
+  
+void webMonitoring() {
+  print("Web Monitoring Started");
+
   platform1.setMethodCallHandler((call) async {
+
+    print("FROM ANDROID METHOD: ${call.method}");
 
     if (call.method == "onUrlDetected") {
 
       String url = call.arguments;
 
-      setState(() => detectedUrls.add(url));
+      print("🔥 URL RECEIVED: $url");
 
-      print("URL DETECTED: $url");
+      setState(() {
+        detectedUrls.add(url);
+      });
 
       await sendURLToBackend(url);
     }
@@ -253,9 +260,10 @@ class _WatcherScreenState extends State<WatcherScreen> {
   Future<void> sendURLToBackend(String url) async {
 
   try {
+    print("Sending URL to backend: $url," " Child ID: ${widget.child_id}");
 
     final response = await http.post(
-
+       
       Uri.parse("http://192.168.18.163:8000/collectwebusage/"),
 
       headers: {
@@ -270,9 +278,9 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
         "timestamp": DateTime.now().toIso8601String(),
 
-      }),
+      }), 
     );
-
+    
     print("Backend response: ${response.statusCode}");
 
   } catch (e) {
@@ -372,11 +380,11 @@ void setupListener() {
     setupListener();
     webMonitoring();
     loadChildData();
-    saveChildData(widget.child_id, widget.screen_limit);
-    checkPermission();
+    //saveChildData(widget.child_id, widget.screen_limit);
+    //checkPermission();
     // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
-    _startServiceWithDelay();
+   // _startServiceWithDelay();
     
     
 
