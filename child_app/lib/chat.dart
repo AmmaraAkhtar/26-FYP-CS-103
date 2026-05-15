@@ -234,7 +234,7 @@ void webMonitoring() {
 
       String url = call.arguments;
 
-      print("🔥 URL RECEIVED: $url");
+      print(" URL RECEIVED: $url");
 
       setState(() {
         detectedUrls.add(url);
@@ -360,11 +360,16 @@ void setupListener() {
     }
 
     if (call.method == "onUrlDetected") {
+  String url = call.arguments;
 
-      print("URL: ${call.arguments}");
+  print("RAW URL: $url");
 
-      await sendURLToBackend(call.arguments);
-    }
+  setState(() {
+    detectedUrls.add(url);
+  });
+
+  await sendURLToBackend(url);
+}
 
     if (call.method == "onAppEvent") {
 
