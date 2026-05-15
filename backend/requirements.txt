@@ -5,7 +5,7 @@ django-cors-headers
 scikit-learn
 pandas
 numpy
-pickle
+
 langchain
 langgraph
 pydantic
