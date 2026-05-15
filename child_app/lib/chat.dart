@@ -293,10 +293,36 @@ Future<void> _startServiceWithDelay() async {
   await MonitorService().startService(childId);
 }
 
+void setupListener() {
+
+  platform.setMethodCallHandler((call) async {
+
+    if (call.method == "onChatText") {
+
+      print("CHAT: ${call.arguments}");
+
+      await sendChatToBackend(call.arguments);
+    }
+
+    if (call.method == "onUrlDetected") {
+
+      print("URL: ${call.arguments}");
+
+      await sendURLToBackend(call.arguments);
+    }
+
+    if (call.method == "onAppEvent") {
+
+      print("APP: ${call.arguments}");
+    }
+  });
+}
+
   @override
   void initState() {
     super.initState();
     print("INIT STATE CALLED ");
+    setupListener();
     loadChildData();
     saveChildData(widget.child_id, widget.screen_limit);
     checkPermission();
