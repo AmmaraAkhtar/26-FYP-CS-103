@@ -210,17 +210,33 @@ class _WatcherScreenState extends State<WatcherScreen> {
   var platform1 = MethodChannel('vpn_channel');
   List<String> detectedUrls = [];
 
-  void webMonitoring() {
-    platform.setMethodCallHandler((call) async {
-      if (call.method == "onUrlDetected") {
-        String url = call.arguments;
-        setState(() => detectedUrls.add(url));
+  // void webMonitoring() {
+  //   platform.setMethodCallHandler((call) async {
+  //     if (call.method == "onUrlDetected") {
+  //       String url = call.arguments;
+  //       setState(() => detectedUrls.add(url));
 
-        // Send to backend
-        await sendURLToBackend(url);
-      }
-    });
-  }
+  //       // Send to backend
+  //       await sendURLToBackend(url);
+  //     }
+  //   });
+  // }
+
+  void webMonitoring() {
+  platform1.setMethodCallHandler((call) async {
+
+    if (call.method == "onUrlDetected") {
+
+      String url = call.arguments;
+
+      setState(() => detectedUrls.add(url));
+
+      print("URL DETECTED: $url");
+
+      await sendURLToBackend(url);
+    }
+  });
+}
 
   Future<void> sendURLToBackend(String url) async {
     try {
@@ -323,6 +339,7 @@ void setupListener() {
     super.initState();
     print("INIT STATE CALLED ");
     setupListener();
+    webMonitoring();
     loadChildData();
     saveChildData(widget.child_id, widget.screen_limit);
     checkPermission();
