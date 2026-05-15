@@ -7,6 +7,10 @@ backend/.env
 backend/__pycache__/
 *.pyc
 db.sqlite3
+data/
+*.csv
+*.xlsx
+*.pkl
 models/Chat Analysis/data/
 *.csv
 *.xlsx
@@ -19,8 +23,12 @@ backend/.env
 backend/__pycache__/
 *.pyc
 db.sqlite3
-env/
-
-
-# Environment variables
-.env
+*.pyc
+__pycache__/
+db.sqlite3
+__pycache__/
+*.pyc
+venv/
+backend/venv/
+__pycache__/
+*.pyc
