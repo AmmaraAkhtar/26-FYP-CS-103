@@ -70,7 +70,7 @@ class MyVpnService : VpnService() {
     private fun sendToFlutter(url: String) {
 
         if (url.isNotEmpty()) {
-    channel?.invokeMethod("onUrlDetected", url)
+    channel?.invokeMethod("onUrlDetected", "VPN:$url")
 }
     }
 

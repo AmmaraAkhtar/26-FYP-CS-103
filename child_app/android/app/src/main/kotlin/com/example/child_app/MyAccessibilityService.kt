@@ -52,10 +52,7 @@ class MyAccessibilityService : AccessibilityService() {
 
             if (url != null) {
 
-                channel?.invokeMethod(
-                    "onUrlDetected",
-                    url
-                )
+                channel?.invokeMethod("onUrlDetected", "UI:$url")
             }
         }
     }
