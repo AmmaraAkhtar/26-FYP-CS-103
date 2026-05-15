@@ -45,6 +45,7 @@ class MainActivity : FlutterActivity() {
             }
         }
     }
+    // vpn channel
     val vpnChannel = MethodChannel(
         flutterEngine.dartExecutor.binaryMessenger,
         "vpn_channel"
