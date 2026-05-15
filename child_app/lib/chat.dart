@@ -238,17 +238,48 @@ class _WatcherScreenState extends State<WatcherScreen> {
   });
 }
 
+  // Future<void> sendURLToBackend(String url) async {
+  //   try {
+  //     final response = await http.post(
+  //       Uri.parse("http://192.168.18.163:8000/collectwebusage/"),
+  //       body: {'url': url},
+  //     );
+  //     print("Backend response: ${response.statusCode}");
+  //   } catch (e) {
+  //     print("Error sending to backend: $e");
+  //   }
+  // }
+
   Future<void> sendURLToBackend(String url) async {
-    try {
-      final response = await http.post(
-        Uri.parse("http://192.168.18.163:8000/collectwebusage/"),
-        body: {'url': url},
-      );
-      print("Backend response: ${response.statusCode}");
-    } catch (e) {
-      print("Error sending to backend: $e");
-    }
+
+  try {
+
+    final response = await http.post(
+
+      Uri.parse("http://192.168.18.163:8000/collectwebusage/"),
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: jsonEncode({
+
+        "child_id": widget.child_id,
+
+        "url": url,
+
+        "timestamp": DateTime.now().toIso8601String(),
+
+      }),
+    );
+
+    print("Backend response: ${response.statusCode}");
+
+  } catch (e) {
+
+    print("Error sending to backend: $e");
   }
+}
 
   void startVpn() async {
     try {
