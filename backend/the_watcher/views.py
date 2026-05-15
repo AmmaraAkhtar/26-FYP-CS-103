@@ -535,10 +535,31 @@ def get_child_usage(request, child_id):
     return Response({"error": "No data found"}, status=404)
 
 # API to collect web usage data
+
 @api_view(['POST'])
 def collect_web_usage(request):
+
     serializer = WebUsageDataSerializer(data=request.data)
+
     if serializer.is_valid():
-        # Process the web usage data
-        return Response({"status": "Data received"}, status=200)
+
+        child_id = serializer.validated_data['child_id']
+        url = serializer.validated_data['url']
+
+        child_obj = models.child.objects.get(id=child_id)
+
+        models.webUsage.objects.create(
+            child=child_obj,
+            url=url,
+            usage_time=0,
+            risk="Unknown",
+            action="Monitor",
+            category="Website",
+            date=timezone.now().date()
+        )
+
+        return Response({
+            "status": "saved"
+        }, status=200)
+
     return Response(serializer.errors, status=400)
