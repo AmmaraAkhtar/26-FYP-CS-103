@@ -1,7 +1,7 @@
 from xml.parsers.expat import model
 
 from django.shortcuts import render
-from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer
+from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,WebUsageDataSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -534,3 +534,11 @@ def get_child_usage(request, child_id):
         })
     return Response({"error": "No data found"}, status=404)
 
+# API to collect web usage data
+@api_view(['POST'])
+def collect_web_usage(request):
+    serializer = WebUsageDataSerializer(data=request.data)
+    if serializer.is_valid():
+        # Process the web usage data
+        return Response({"status": "Data received"}, status=200)
+    return Response(serializer.errors, status=400)
