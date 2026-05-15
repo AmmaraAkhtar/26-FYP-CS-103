@@ -225,7 +225,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
   Future<void> sendURLToBackend(String url) async {
     try {
       final response = await http.post(
-        Uri.parse('https://yourbackend.com/api/url'),
+        Uri.parse("http://192.168.18.163:8000/collectwebusage/"),
         body: {'url': url},
       );
       print("Backend response: ${response.statusCode}");
