@@ -2,8 +2,8 @@ package com.example.child_app
 
 import android.accessibilityservice.AccessibilityService
 import android.view.accessibility.AccessibilityEvent
+import android.view.accessibility.AccessibilityNodeInfo
 import io.flutter.plugin.common.MethodChannel
-import io.flutter.embedding.engine.FlutterEngine
 
 class MyAccessibilityService : AccessibilityService() {
 
@@ -16,77 +16,87 @@ class MyAccessibilityService : AccessibilityService() {
         if (event == null) return
 
         val packageName = event.packageName?.toString() ?: return
-        val text = event.text?.toString() ?: ""
 
-        // ignore empty noise
-        if (text.isBlank()) return
+       
 
 
-//  CHAT DETECTION
+// CHAT MONITORING
 
         if (
             packageName.contains("whatsapp") ||
-            packageName.contains("messenger") ||
-            packageName.contains("telegram")
+            packageName.contains("messenger")
         ) {
-            channel?.invokeMethod(
-                "onChatText",
-                mapOf(
-                    "package" to packageName,
-                    "text" to text
-                )
-            )
-        }
 
-// WEB / URL DETECTION
+            val text = event.text.toString()
 
-        if (
-            packageName.contains("chrome") ||
-            packageName.contains("browser")
-        ) {
-            val url = extractUrl(text)
+            if (text.isNotEmpty()) {
 
-            if (url != null) {
                 channel?.invokeMethod(
-                    "onUrlDetected",
-                    mapOf(
-                        "package" to packageName,
-                        "url" to url
-                    )
+                    "onChatText",
+                    text
                 )
             }
         }
 
-      
-//  GENERAL APP ACTIVITY
+       
+// WEB MONITORING
+       
+        if (
+            packageName.contains("chrome") ||
+            packageName.contains("browser")
+        ) {
 
-        channel?.invokeMethod(
-            "onAppEvent",
-            mapOf(
-                "package" to packageName,
-                "text" to text
-            )
-        )
+            val source = event.source ?: return
+
+            val url = findUrl(source)
+
+            if (url != null) {
+
+                channel?.invokeMethod(
+                    "onUrlDetected",
+                    url
+                )
+            }
+        }
     }
 
     override fun onInterrupt() {}
 
+  
+    // URL Finder
 
-// URL EXTRACTION
-   
-    private fun extractUrl(text: String): String? {
+    private fun findUrl(node: AccessibilityNodeInfo): String? {
 
-        val lower = text.lowercase()
+        // Current node text
+        val text = node.text?.toString()
 
-        return if (
-            lower.contains("http") ||
-            lower.contains(".com") ||
-            lower.contains(".pk") ||
-            lower.contains(".org")
-        ) {
-            text
-        } else {
-            null
+        if (text != null) {
+
+            if (
+                text.startsWith("http") ||
+                text.contains(".com") ||
+                text.contains(".org") ||
+                text.contains(".pk")
+            ) {
+                return text
+            }
         }
+
+        // Search children recursively
+        for (i in 0 until node.childCount) {
+
+            val child = node.getChild(i)
+
+            if (child != null) {
+
+                val result = findUrl(child)
+
+                if (result != null) {
+                    return result
+                }
+            }
+        }
+
+        return null
     }
 }
