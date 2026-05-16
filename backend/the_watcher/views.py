@@ -563,7 +563,6 @@ def collect_web_usage(request):
             risk = "High"
             action = "Block"
             category = "Malicious"
-
         else:
             risk = "Low"
             action = "Allow"
@@ -578,6 +577,7 @@ def collect_web_usage(request):
         category=category,
         date=timezone.now().date()
     )
+        print(f"Web usage saved - Child ID: {child_id}, URL: {url}, Risk: {risk}, Action: {action}")
 
         return Response({"prediction": prediction,"risk": risk,"action": action}, status=200)
 
