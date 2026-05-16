@@ -592,10 +592,8 @@ def collect_web_usage(request):
     return Response(serializer.errors, status=400)
 
 # URL cleaning Function
-import re
-from urllib.parse import urlparse
 
-def is_valid_url(url):
+def clean_url(url):
     if not isinstance(url, str):
         return False
 
