@@ -11,3 +11,4 @@ langgraph
 pydantic
 dotenv
 langchain_groq
+xgboost

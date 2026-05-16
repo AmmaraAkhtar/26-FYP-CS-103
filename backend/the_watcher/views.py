@@ -17,6 +17,9 @@ from datetime import timedelta
 import pickle
 from .ml_service import ml_service
 from .utils import preprocess_app_name
+from .web_ml_service import web_ml_service
+from urllib.parse import urlparse
+import re
 
 
 
@@ -547,6 +550,11 @@ def collect_web_usage(request):
         
         child_id = request.data.get('child_id')
         url = request.data.get('url')
+        url = clean_url(request.data.get("url"))
+
+        if not url:
+            print("IGNORED URL:", url)
+            return Response({"status": "ignored"}, status=200)
 
         try:
             child_obj = models.child.objects.get(id=child_id)
@@ -554,18 +562,88 @@ def collect_web_usage(request):
             return Response({"error": "Child not found"}, status=404)
 
         print(f"Saving - Child ID: {child_id}, URL: {url}")
+        prediction = web_ml_service.predict(url)
+
+        print("WEB PREDICTION:", prediction)
+
+        if prediction == 1:
+            risk = "High"
+            action = "Block"
+            category = "Malicious"
+        else:
+            risk = "Low"
+            action = "Allow"
+            category = "Safe"
 
         models.webUsage.objects.create(
-            child=child_obj,
-            url=url,
-            usage_time=0,
-            risk="Unknown",
-            action="Monitor",
-            category="Website",
-            date=timezone.now().date()
-        )
+         child=child_obj,
+        url=url,
+        usage_time=0,
+        risk=risk,
+        action=action,
+        category=category,
+        date=timezone.now().date()
+    )
+        print(f"Web usage saved - Child ID: {child_id}, URL: {url}, Risk: {risk}, Action: {action}")
 
-        return Response({"status": "saved"}, status=200)
+        return Response({"prediction": prediction,"risk": risk,"action": action}, status=200)
 
     print("SERIALIZER ERRORS:", serializer.errors)
     return Response(serializer.errors, status=400)
+
+# URL cleaning Function
+
+def clean_url(url):
+    if not isinstance(url, str):
+        return False
+
+    url = url.strip()
+
+    # must start with http/https
+    if not url.startswith(("http://", "https://")):
+        return False
+
+    # basic parse
+    try:
+        parsed = urlparse(url)
+    except:
+        return False
+
+    domain = parsed.netloc.lower()
+
+    if not domain:
+        return False
+
+    # must contain at least one dot (real domain)
+    if "." not in domain:
+        return False
+
+    # reject localhost / private noise
+    if domain in ["localhost", "127.0.0.1"]:
+        return False
+
+    # reject obvious numeric garbage (like 98.35% or 264.4K)
+    if re.search(r"\d+\.\d+[kKmM%]$", url):
+        return False
+
+    # reject pure number domains like 264.4k or 123.45m
+    if re.fullmatch(r"\d+(\.\d+)?[kKmM%]?", domain):
+        return False
+
+    # reject URLs with no real TLD (e.g. google)
+    if len(domain.split(".")) < 2:
+        return False
+
+    # reject spaces (broken URL)
+    if " " in url:
+        return False
+
+    # reject weird percent-only URLs
+    if url.count("%") > 3:
+        return False
+
+    # optional: reject very short domains
+    if len(domain) < 4:
+        return False
+
+    return True

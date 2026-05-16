@@ -3,6 +3,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
 from django.shortcuts import get_object_or_404
 from . import models
+from urllib.parse import urlparse
 
 # Parent Serializer
 class ParentSerializer(serializers.ModelSerializer):
@@ -138,3 +139,4 @@ class AlertSerializer(serializers.Serializer):
             alert_type=validated_data['alert_type'],
             message=validated_data['message']
         )
+
