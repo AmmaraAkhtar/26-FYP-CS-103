@@ -17,6 +17,7 @@ from datetime import timedelta
 import pickle
 from .ml_service import ml_service
 from .utils import preprocess_app_name
+from .web_ml_service import web_ml_service
 
 
 
@@ -554,18 +555,31 @@ def collect_web_usage(request):
             return Response({"error": "Child not found"}, status=404)
 
         print(f"Saving - Child ID: {child_id}, URL: {url}")
+        prediction = web_ml_service.predict(url)
+
+        print("WEB PREDICTION:", prediction)
+
+        if prediction == 1:
+            risk = "High"
+            action = "Block"
+            category = "Malicious"
+
+        else:
+            risk = "Low"
+            action = "Allow"
+            category = "Safe"
 
         models.webUsage.objects.create(
-            child=child_obj,
-            url=url,
-            usage_time=0,
-            risk="Unknown",
-            action="Monitor",
-            category="Website",
-            date=timezone.now().date()
-        )
+         child=child_obj,
+        url=url,
+        usage_time=0,
+        risk=risk,
+        action=action,
+        category=category,
+        date=timezone.now().date()
+    )
 
-        return Response({"status": "saved"}, status=200)
+        return Response({"prediction": prediction,"risk": risk,"action": action}, status=200)
 
     print("SERIALIZER ERRORS:", serializer.errors)
     return Response(serializer.errors, status=400)
