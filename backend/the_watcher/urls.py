@@ -14,4 +14,6 @@ urlpatterns = [
     path('fetchChildren/', views.fetchChildren_api),
     path('appdata/',views.collectAppUsageData_Api),
     path('sendalert/',views.create_alert),
+    path('childusage/<int:child_id>/', views.get_child_usage),
+    path('collectwebusage/', views.collect_web_usage),
 ]

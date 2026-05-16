@@ -87,10 +87,28 @@ class UsageDataSerializer(serializers.Serializer):
     package_name = serializers.CharField()
     usage_time = serializers.IntegerField()
 
+# Web Usage Data Serializer
+class WebUsageDataSerializer(serializers.Serializer):
+    url = serializers.URLField()
+    usage_time = serializers.IntegerField()
+
 # App Usage Serializer 
 class AppUsageSerializer(serializers.Serializer):
     child_id = serializers.IntegerField()
     usage_data =  UsageDataSerializer(many=True)
+    timestamp = serializers.DateTimeField()
+    
+
+    def validate_usage_data(self, value):
+        if not value:
+            raise serializers.ValidationError("usage_data cannot be empty")
+        return value
+
+# Web Usage Serializer
+class WebUsageSerializer(serializers.Serializer):
+    child_id = serializers.IntegerField()
+    usage_data = WebUsageDataSerializer(many=True)
+    usage_time = serializers.IntegerField(default=0, required=False)
     timestamp = serializers.DateTimeField()
     
 

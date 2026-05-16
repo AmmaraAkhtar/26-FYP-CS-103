@@ -25,6 +25,7 @@ class child(models.Model):
     pairingCode = models.CharField(max_length=4,unique=True,null=True)
     screen_time_limit = models.IntegerField(default=60)  # in minutes
     is_paired = models.BooleanField(default=False)
+    is_locked = models.BooleanField(default=False)
 
 
 # Pairing Code Model
@@ -58,4 +59,13 @@ class Alert(models.Model):
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
-
+# Web Usage Model
+class webUsage(models.Model):
+    child = models.ForeignKey('child', on_delete=models.CASCADE)
+    usage_time = models.IntegerField(default = 0) 
+    url = models.URLField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    risk = models.CharField(max_length=20,null=True)
+    action = models.CharField(max_length=20,null=True)
+    category = models.CharField(max_length=50,null=True)
+    date = models.DateField()

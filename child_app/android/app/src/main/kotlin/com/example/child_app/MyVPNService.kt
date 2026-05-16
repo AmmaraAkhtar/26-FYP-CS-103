@@ -68,7 +68,10 @@ class MyVpnService : VpnService() {
     }
 
     private fun sendToFlutter(url: String) {
-        channel?.invokeMethod("onUrlDetected", url)
+
+        if (url.isNotEmpty()) {
+    channel?.invokeMethod("onUrlDetected", "VPN:$url")
+}
     }
 
     override fun onDestroy() {

@@ -40,6 +40,14 @@ class _WatcherScreenState extends State<WatcherScreen> {
 
     print("Loaded Child ID: $storedChildId");
   }
+
+  // Save Child Data
+  Future<void> saveChildData(int childId, int screenLimit) async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  await prefs.setInt("child_id", childId);
+  await prefs.setInt("screen_limit", screenLimit);
+  print("Saved child_id: $childId");
+}
   // APP MOnitoring
 
   Future<void> checkPermission() async {
@@ -121,7 +129,7 @@ class _WatcherScreenState extends State<WatcherScreen> {
   }
 
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
-    print("🚀 SENDING TO BACKEND: $data");
+    print("SENDING TO BACKEND: $data");
     String link = 'http://192.168.18.163:8000/appdata/';
     final response = await http.post(
       Uri.parse(link),
@@ -202,30 +210,86 @@ class _WatcherScreenState extends State<WatcherScreen> {
   var platform1 = MethodChannel('vpn_channel');
   List<String> detectedUrls = [];
 
-  void webMonitoring() {
-    platform.setMethodCallHandler((call) async {
-      if (call.method == "onUrlDetected") {
-        String url = call.arguments;
-        setState(() => detectedUrls.add(url));
+  // void webMonitoring() {
+  //   platform.setMethodCallHandler((call) async {
+  //     if (call.method == "onUrlDetected") {
+  //       String url = call.arguments;
+  //       setState(() => detectedUrls.add(url));
 
-        // Send to backend
-        await sendURLToBackend(url);
-      }
-    });
-  }
+  //       // Send to backend
+  //       await sendURLToBackend(url);
+  //     }
+  //   });
+  // }
+
+  
+void webMonitoring() {
+  print("Web Monitoring Started");
+
+  platform1.setMethodCallHandler((call) async {
+
+    print("FROM ANDROID METHOD: ${call.method}");
+
+    if (call.method == "onUrlDetected") {
+
+      String url = call.arguments;
+
+      print(" URL RECEIVED: $url");
+
+      setState(() {
+        detectedUrls.add(url);
+      });
+
+      await sendURLToBackend(url);
+    }
+  });
+}
+
+  // Future<void> sendURLToBackend(String url) async {
+  //   try {
+  //     final response = await http.post(
+  //       Uri.parse("http://192.168.18.163:8000/collectwebusage/"),
+  //       body: {'url': url},
+  //     );
+  //     print("Backend response: ${response.statusCode}");
+  //   } catch (e) {
+  //     print("Error sending to backend: $e");
+  //   }
+  // }
 
   Future<void> sendURLToBackend(String url) async {
-    try {
-      final response = await http.post(
-        Uri.parse('https://yourbackend.com/api/url'),
-        body: {'url': url},
-      );
-      print("Backend response: ${response.statusCode}");
-    } catch (e) {
-      print("Error sending to backend: $e");
-    }
+  // Removing prefix
+  String cleanUrl = url
+      .replaceFirst("UI:", "")
+      .replaceFirst("VPN:", "")
+      .trim();
+
+  if (cleanUrl.isEmpty) return;
+
+  // adding https:// 
+  if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+    cleanUrl = "https://$cleanUrl";
   }
 
+  try {
+    print("Sending URL: $cleanUrl");
+
+    final response = await http.post(
+      Uri.parse("http://192.168.18.163:8000/collectwebusage/"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "child_id": widget.child_id != 0 ? widget.child_id : storedChildId,
+        "url": cleanUrl,
+        "usage_time": 0,        
+        "timestamp": DateTime.now().toIso8601String(),
+      }),
+    );
+
+    print("Backend response: ${response.statusCode}");
+  } catch (e) {
+    print("Error: $e");
+  }
+}
   void startVpn() async {
     try {
       await platform.invokeMethod("startVpn");
@@ -271,18 +335,67 @@ void triggerAlert(String type, String message) async {
     showLockScreen();
   }
 }
+Future<void> _startServiceWithDelay() async {
+  // Thoda wait karo taake SharedPreferences load ho jaye
+  await Future.delayed(Duration(milliseconds: 500));
+  
+  SharedPreferences prefs = await SharedPreferences.getInstance();
+  int childId = widget.child_id != 0 
+      ? widget.child_id 
+      : (prefs.getInt("child_id") ?? -1);
+  
+  print(" Starting service with Child ID: $childId");
+  
+  await MonitorService().startService(childId);
+}
+
+void setupListener() {
+  // Chat reader channel (accessibility)
+  platform.setMethodCallHandler((call) async {
+    print("CHANNEL CALL: ${call.method}");
+    
+    if (call.method == "onChatText") {
+      print("CHAT: ${call.arguments}");
+      await sendChatToBackend(call.arguments);
+    }
+
+    if (call.method == "onUrlDetected") {
+      String url = call.arguments;
+      print("URL FROM ACCESSIBILITY: $url");
+      setState(() => detectedUrls.add(url));
+      await sendURLToBackend(url);
+    }
+  });
+
+  // VPN channel — alag handler
+  platform1.setMethodCallHandler((call) async {
+    print("VPN CHANNEL CALL: ${call.method}");
+    
+    if (call.method == "onUrlDetected") {
+      String url = call.arguments;
+      print("URL FROM VPN: $url");
+      setState(() => detectedUrls.add(url));
+      await sendURLToBackend(url);
+    }
+  });
+}
 
   @override
   void initState() {
     super.initState();
-    print("INIT STATE CALLED 🚀");
+    print("INIT STATE CALLED ");
+    setupListener();
+    //webMonitoring();
     loadChildData();
+    //saveChildData(widget.child_id, widget.screen_limit);
     checkPermission();
-    startAppMonitoring();
+    // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
-    MonitorService().startService();
+   // _startServiceWithDelay();
+    
+    
 
-    checkLockState();
+    //checkLockState();
   }
 
   @override

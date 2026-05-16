@@ -1,7 +1,7 @@
 from xml.parsers.expat import model
 
 from django.shortcuts import render
-from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer
+from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,WebUsageDataSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth import authenticate
 import random
 from . import models
+from .app_agent.graph import app_agent
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -353,32 +354,93 @@ def collectAppUsageData_Api(request):
 
             child_id = validated_data["child_id"]
             child = models.child.objects.get(id=child_id)
+            SKIP_PACKAGES = {
+    'com.android', 'android',
+    'com.samsung.android.app.galaxyfinder',
+    'com.samsung.android.bixby.agent',
+    'com.google.android.permissioncontroller',
+    'com.sec.android.app.launcher',
+    'com.samsung.android.dialer',
+}
+            AGENT_CATEGORIES = {"Social", "Sensitive", "Games", "Entertainment"}
 
-            for i in range(len(usage_data)):
-                app = usage_data[i]
-                pred = category_predictions[i]
-                risk = get_risk(pred)
-                action = decide_action(risk)
+            for i, app in enumerate(usage_data):
+                category = category_predictions[i]
+                package  = app["package_name"]
+
+                # System apps aur zero-usage apps skip karne ke liye simple rule — inhe allow kar dete hain bina agent ko involve kiye, taki unnecessary processing na ho.
+                if app["usage_time"] == 0 or package in SKIP_PACKAGES:
+                    result.append({
+                        "package_name": package,
+                        "usage_time":   app["usage_time"],
+                        "category":     category,
+                        "action":       "allow",
+                        "reasoning":    "Skipped — system app or zero usage",
+                        "alert_message": None,
+                    })
+                    continue
+
+                # Sirf meaningful categories par agent chalao
+                if category not in AGENT_CATEGORIES:
+                    # Education, Tools — simple allow, no LLM needed
+                    models.appUsage.objects.create(
+                        child=child,
+                        package_name=package,
+                        usage_time=app["usage_time"],
+                        category=category,
+                        risk="allow",
+                        action="allow",
+                        date=validated_data["timestamp"].date()
+                    )
+                    result.append({
+                        "package_name": package,
+                        "usage_time":   app["usage_time"],
+                        "category":     category,
+                        "action":       "allow",
+                        "reasoning":    "Education/Tools — allowed by default",
+                        "alert_message": None,
+                    })
+                    continue
+
+
+                initial_state = {
+                "package_name":   app["package_name"],
+                "usage_time":     app["usage_time"],
+                "ml_category":    category_predictions[i],
+                "child_id":       child_id,
+
+                # Baaki sab None — agent ne ye sbb data fill krna hai 
+                "child_age": None, "screen_limit_mins": None,
+                "usage_history": None, "recent_alerts": None,
+                "total_usage_today": None, "action": None,
+                "reasoning": None, "alert_message": None,
+                "should_send_alert": None,
+            }
+                
+                # thread_id = child_id — isi se memory maintain hogi per child
+                config = {"configurable": {"thread_id": f"child_{child_id}"}}
+                final = app_agent.invoke(initial_state, config=config) ## Invoking the agent with the initial state and config. Agent will process through the graph and return the final state with action, reasoning, alert message, etc.
 
                 # save with prediction
                 models.appUsage.objects.create(
-                    child=child,
-                    package_name=app["package_name"],
-                    usage_time=app["usage_time"],
-                    category=pred,
-                    risk=risk,
-                    action=action,
-                    date=validated_data["timestamp"].date()
-                )
+                child=child,
+                package_name=app["package_name"],
+                usage_time=app["usage_time"],
+                category=category_predictions[i],
+                risk=final["action"],       # action hi risk hai ab
+                action=final["action"],
+                date=validated_data["timestamp"].date()
+            )
 
                 result.append({
-                    "package_name": app["package_name"],
-                    "usage_time": app["usage_time"],
-                    "category": pred,
-                    "risk": risk,
-                    "action": action
+                    "package_name":  app["package_name"],
+                    "usage_time":    app["usage_time"],
+                    "category":      category_predictions[i],
+                    "action":        final["action"],
+                    "reasoning":     final["reasoning"],    
+                    "alert_message": final["alert_message"],
                 })
-                print(f"App: {app['package_name']}, Category: {pred}, Risk: {risk}, Action: {action}")
+                print(f"App: {app['package_name']}, Category: {category_predictions[i]}, Risk: {final['action']}, Action: {final['action']},reasoning: {final['reasoning']}, Alert: {final['alert_message']}")
 
             return Response({
                 "message": "Data saved successfully",
@@ -458,3 +520,52 @@ def unlock_device(request):
     return Response({
         "message": "Device Unlocked"
     })
+
+# api to send data to parent app 
+@api_view(['GET'])
+def get_child_usage(request, child_id):
+    # Last saved usage data return karo
+    usage = models.appUsage.objects.filter(child_id=child_id).last()
+    if usage:
+        return Response({
+            "usage_data": usage.usage_data,
+            "timestamp": usage.timestamp,
+            "total_screen_time": usage.total_screen_time
+        })
+    return Response({"error": "No data found"}, status=404)
+
+# API to collect web usage data
+
+@api_view(['POST'])
+def collect_web_usage(request):
+    print("Web API Called")
+    print("request.body (raw):", request.body)
+
+    serializer = WebUsageDataSerializer(data=request.data)
+
+    if serializer.is_valid():
+        
+        child_id = request.data.get('child_id')
+        url = request.data.get('url')
+
+        try:
+            child_obj = models.child.objects.get(id=child_id)
+        except models.child.DoesNotExist:
+            return Response({"error": "Child not found"}, status=404)
+
+        print(f"Saving - Child ID: {child_id}, URL: {url}")
+
+        models.webUsage.objects.create(
+            child=child_obj,
+            url=url,
+            usage_time=0,
+            risk="Unknown",
+            action="Monitor",
+            category="Website",
+            date=timezone.now().date()
+        )
+
+        return Response({"status": "saved"}, status=200)
+
+    print("SERIALIZER ERRORS:", serializer.errors)
+    return Response(serializer.errors, status=400)
