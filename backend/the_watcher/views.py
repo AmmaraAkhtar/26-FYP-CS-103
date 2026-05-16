@@ -538,15 +538,22 @@ def get_child_usage(request, child_id):
 
 @api_view(['POST'])
 def collect_web_usage(request):
+    print("Web API Called")
+    print("request.body (raw):", request.body)
 
     serializer = WebUsageDataSerializer(data=request.data)
 
     if serializer.is_valid():
+        
+        child_id = request.data.get('child_id')
+        url = request.data.get('url')
 
-        child_id = serializer.validated_data['child_id']
-        url = serializer.validated_data['url']
+        try:
+            child_obj = models.child.objects.get(id=child_id)
+        except models.child.DoesNotExist:
+            return Response({"error": "Child not found"}, status=404)
 
-        child_obj = models.child.objects.get(id=child_id)
+        print(f"Saving - Child ID: {child_id}, URL: {url}")
 
         models.webUsage.objects.create(
             child=child_obj,
@@ -558,8 +565,7 @@ def collect_web_usage(request):
             date=timezone.now().date()
         )
 
-        return Response({
-            "status": "saved"
-        }, status=200)
+        return Response({"status": "saved"}, status=200)
 
+    print("SERIALIZER ERRORS:", serializer.errors)
     return Response(serializer.errors, status=400)

@@ -258,37 +258,38 @@ void webMonitoring() {
   // }
 
   Future<void> sendURLToBackend(String url) async {
+  // Removing prefix
+  String cleanUrl = url
+      .replaceFirst("UI:", "")
+      .replaceFirst("VPN:", "")
+      .trim();
+
+  if (cleanUrl.isEmpty) return;
+
+  // adding https:// 
+  if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+    cleanUrl = "https://$cleanUrl";
+  }
 
   try {
-    print("Sending URL to backend: $url," " Child ID: ${widget.child_id}");
+    print("Sending URL: $cleanUrl");
 
     final response = await http.post(
-       
       Uri.parse("http://192.168.18.163:8000/collectwebusage/"),
-
-      headers: {
-        "Content-Type": "application/json",
-      },
-
+      headers: {"Content-Type": "application/json"},
       body: jsonEncode({
-
-        "child_id": widget.child_id,
-
-        "url": url,
-
+        "child_id": widget.child_id != 0 ? widget.child_id : storedChildId,
+        "url": cleanUrl,
+        "usage_time": 0,        
         "timestamp": DateTime.now().toIso8601String(),
-
-      }), 
+      }),
     );
-    
+
     print("Backend response: ${response.statusCode}");
-
   } catch (e) {
-
-    print("Error sending to backend: $e");
+    print("Error: $e");
   }
 }
-
   void startVpn() async {
     try {
       await platform.invokeMethod("startVpn");
@@ -349,31 +350,32 @@ Future<void> _startServiceWithDelay() async {
 }
 
 void setupListener() {
-
+  // Chat reader channel (accessibility)
   platform.setMethodCallHandler((call) async {
-
+    print("CHANNEL CALL: ${call.method}");
+    
     if (call.method == "onChatText") {
-
       print("CHAT: ${call.arguments}");
-
       await sendChatToBackend(call.arguments);
     }
 
     if (call.method == "onUrlDetected") {
-  String url = call.arguments;
-
-  print("RAW URL: $url");
-
-  setState(() {
-    detectedUrls.add(url);
+      String url = call.arguments;
+      print("URL FROM ACCESSIBILITY: $url");
+      setState(() => detectedUrls.add(url));
+      await sendURLToBackend(url);
+    }
   });
 
-  await sendURLToBackend(url);
-}
-
-    if (call.method == "onAppEvent") {
-
-      print("APP: ${call.arguments}");
+  // VPN channel — alag handler
+  platform1.setMethodCallHandler((call) async {
+    print("VPN CHANNEL CALL: ${call.method}");
+    
+    if (call.method == "onUrlDetected") {
+      String url = call.arguments;
+      print("URL FROM VPN: $url");
+      setState(() => detectedUrls.add(url));
+      await sendURLToBackend(url);
     }
   });
 }
@@ -383,10 +385,10 @@ void setupListener() {
     super.initState();
     print("INIT STATE CALLED ");
     setupListener();
-    webMonitoring();
+    //webMonitoring();
     loadChildData();
     //saveChildData(widget.child_id, widget.screen_limit);
-    //checkPermission();
+    checkPermission();
     // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
    // _startServiceWithDelay();

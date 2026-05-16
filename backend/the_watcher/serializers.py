@@ -108,6 +108,7 @@ class AppUsageSerializer(serializers.Serializer):
 class WebUsageSerializer(serializers.Serializer):
     child_id = serializers.IntegerField()
     usage_data = WebUsageDataSerializer(many=True)
+    usage_time = serializers.IntegerField(default=0, required=False)
     timestamp = serializers.DateTimeField()
     
 
