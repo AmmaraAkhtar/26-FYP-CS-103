@@ -20,6 +20,10 @@ from .utils import preprocess_app_name
 from .web_ml_service import web_ml_service
 from urllib.parse import urlparse
 import re
+from .web_agent.graph import web_graph
+import threading
+
+
 
 
 
@@ -575,18 +579,39 @@ def collect_web_usage(request):
             action = "Allow"
             category = "Safe"
 
+        # Agent baad mein risk aur action update karega
         models.webUsage.objects.create(
-         child=child_obj,
+        child=child_obj,
         url=url,
         usage_time=0,
-        risk=risk,
-        action=action,
-        category=category,
-        date=timezone.now().date()
-    )
+        risk="Pending",
+        action="Pending",
+        category="Pending",
+        date=timezone.now().date())
         print(f"Web usage saved - Child ID: {child_id}, URL: {url}, Risk: {risk}, Action: {action}")
+        #  Agent ko background thread mein chalao
+        # Warna API slow ho jayegi — agent ka LLM call 2-5 sec leta hai
+        def run_agent():
+            try:
+                config = {"configurable": {"thread_id": f"web_child_{child_id}"}}
 
-        return Response({"prediction": prediction,"risk": risk,"action": action}, status=200)
+                web_graph.invoke(
+                    {
+                        "child_id":      int(child_id),
+                        "url":           url,
+                        "ml_prediction": prediction,   # Sirf 0 ya 1
+                    },
+                    config=config
+                )
+                print(f"Agent completed for child {child_id}, url {url}, prediction {prediction},risk {risk}, action {action}")
+
+            except Exception as e:
+                print(f"Agent Error: {e}")
+
+        thread = threading.Thread(target=run_agent, daemon=True)
+        thread.start()
+
+        return Response({"status":"processing","ml_prediction": prediction,"message": "Agent is analyzing in background"}, status=200)
 
     print("SERIALIZER ERRORS:", serializer.errors)
     return Response(serializer.errors, status=400)
