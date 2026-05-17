@@ -599,12 +599,12 @@ def collect_web_usage(request):
         try:
             result= web_graph.invoke({"child_id":int(child_id),"url":url,"ml_prediction": prediction,"web_usage_id":  web_obj.id,})
             print(f"Agent completed for child {child_id}, url {url}, prediction {prediction},risk {risk}, action {action}")
-            return Response({"status":"completed", "ml_category": prediction,"action":result.get("action"),"risk_level":result.get("risk_level"),"reasoning":result.get("reasoning"), }, status=200)
+            return Response({"status":"completed", "ml_prediction": prediction,"action":result.get("action"),"risk_level":result.get("risk_level"),"reasoning":result.get("reasoning"), }, status=200)
         except Exception as e:
             print(f"Agent Error: {traceback.format_exc()}")
 
 
-            return Response({"status":"processing","ml_category": prediction,"message": "Agent is analyzing in background"}, status=200)
+            return Response({"status":"processing","ml_prediction": prediction,"message": "Agent is analyzing in background"}, status=200)
 
     print("SERIALIZER ERRORS:", serializer.errors)
     return Response(serializer.errors, status=400)

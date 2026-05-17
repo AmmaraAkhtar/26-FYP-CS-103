@@ -57,7 +57,7 @@ def web_context_fetcher_node(state: WebState) -> WebState:
        
         "child_id":state["child_id"],
         "url":state["url"],
-        "ml_prediction": state["ml_category"],  
+        "ml_prediction": state["ml_prediction"],  
         "web_usage_id":state["web_usage_id"],    
 
         # ── Context fetched ──

@@ -6,7 +6,7 @@ class WebState(TypedDict):
      # Input se jo data aa rha hai ... yaani collected data from the device
     url:str
    # usage_time: int          # seconds
-    ml_category: int         # ML se jo category aayi hai (0 ya 1)
+    ml_prediction: int         # ML se jo category aayi hai (0 ya 1)
     child_id: int
     web_usage_id:int
 
