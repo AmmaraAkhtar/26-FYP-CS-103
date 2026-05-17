@@ -555,6 +555,7 @@ def collect_web_usage(request):
         child_id = request.data.get('child_id')
         url = request.data.get('url')
         url = clean_url(request.data.get("url"))
+        print("Cleaned URL:", url)
 
         if not url:
             print("IGNORED URL:", url)
@@ -620,55 +621,44 @@ def collect_web_usage(request):
 
 def clean_url(url):
     if not isinstance(url, str):
-        return False
+        return None        
 
     url = url.strip()
 
-    # must start with http/https
     if not url.startswith(("http://", "https://")):
-        return False
-
-    # basic parse
+        return None          
     try:
         parsed = urlparse(url)
     except:
-        return False
+        return None
 
     domain = parsed.netloc.lower()
 
     if not domain:
-        return False
+        return None
 
-    # must contain at least one dot (real domain)
     if "." not in domain:
-        return False
+        return None
 
-    # reject localhost / private noise
     if domain in ["localhost", "127.0.0.1"]:
-        return False
+        return None
 
-    # reject obvious numeric garbage (like 98.35% or 264.4K)
     if re.search(r"\d+\.\d+[kKmM%]$", url):
-        return False
+        return None
 
-    # reject pure number domains like 264.4k or 123.45m
     if re.fullmatch(r"\d+(\.\d+)?[kKmM%]?", domain):
-        return False
+        return None
 
-    # reject URLs with no real TLD (e.g. google)
     if len(domain.split(".")) < 2:
-        return False
+        return None
 
-    # reject spaces (broken URL)
     if " " in url:
-        return False
+        return None
 
-    # reject weird percent-only URLs
     if url.count("%") > 3:
-        return False
+        return None
 
-    # optional: reject very short domains
     if len(domain) < 4:
-        return False
+        return None
 
-    return True
+    return url               
