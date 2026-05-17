@@ -54,12 +54,18 @@ def web_context_fetcher_node(state: WebState) -> WebState:
     ).count()
 
     return {
-        **state,
-        "child_age":         child.age,
+       
+        "child_id":state["child_id"],
+        "url":state["url"],
+        "ml_prediction": state["ml_category"],  
+        "web_usage_id":state["web_usage_id"],    
+
+        # ── Context fetched ──
+        "child_age":child.age,
         "screen_limit_mins": child.screen_time_limit,
-        "web_history":       web_history,
-        "recent_alerts":     recent_alerts,
-        "total_web_today":   total_web_today,
+        "web_history":web_history,
+        "recent_alerts": recent_alerts,
+        "total_web_today":total_web_today,
     }
 
 
