@@ -175,17 +175,27 @@ Reason step by step before giving your final answer."""
         decision  = llm_with_structure.invoke([HumanMessage(content=prompt)])
         action     = decision.action
         reasoning  = decision.reasoning
-        risk_level = decision.risk_level        # ✓ ab save ho raha hai
+        risk_level = decision.risk_level       
     except Exception as e:
         action     = "alert"
         reasoning  = f"LLM Error: {str(e)}. Defaulting to alert."
         risk_level = "medium"
 
     return {
-        **state,
-        "action":     action,
-        "reasoning":  reasoning,
-        "risk_level": risk_level,              
+        # explicitly sab return karo
+        "child_id":          state["child_id"],
+        "url":               state["url"],
+        "ml_prediction":     state["ml_prediction"],
+        "web_usage_id":      state["web_usage_id"],
+        "child_age":         state.get("child_age"),
+        "screen_limit_mins": state.get("screen_limit_mins"),
+        "web_history":       state.get("web_history", []),
+        "recent_alerts":     state.get("recent_alerts", []),
+        "total_web_today":   state.get("total_web_today", 0),
+        "action":            action,
+        "reasoning":         reasoning,
+        "risk_level":        risk_level,
+        "urgency":           decision.urgency if hasattr(decision, 'urgency') else "medium",
     }
 
 # Node3 - Alert Composer Node
