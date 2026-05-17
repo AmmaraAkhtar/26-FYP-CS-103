@@ -221,6 +221,7 @@ Write ONLY the message, nothing else."""
 
 
 # Node4 Action Executor Node --> Ye node final action lega, database update karega, aur parent ko alert bhejega agar zarurat hui toh.
+# web_action_executor_node mein — ID se update karo
 def web_action_executor_node(state: WebState) -> WebState:
     child = models.child.objects.get(id=state["child_id"])
 
@@ -228,17 +229,17 @@ def web_action_executor_node(state: WebState) -> WebState:
         child.is_locked = True
         child.save()
 
-    latest = models.webUsage.objects.filter(
-        child=child,
-        url__icontains=extract_domain(state["url"]),
-        date=timezone.now().date()
-    ).last()
-
-    if latest:
-        latest.action = state["action"].capitalize()
-        latest.risk   = state["risk_level"].capitalize()
-        latest.reasoning = state["reasoning"]  
-        latest.save()
+    # ID se exact record update karo
+    try:
+        web_obj = models.webUsage.objects.get(id=state["web_usage_id"])
+        web_obj.action    = state["action"].capitalize()
+        web_obj.risk      = state["risk_level"].capitalize()
+        web_obj.category  = "Malicious" if state["ml_prediction"] == 1 else "Safe"
+        web_obj.reasoning = state.get("reasoning", "")
+        web_obj.save()
+        print(f"DB Updated — action: {web_obj.action}, risk: {web_obj.risk}")
+    except models.webUsage.DoesNotExist:
+        print(f"webUsage ID {state['web_usage_id']} not found")
 
     if state.get("should_send_alert") and state.get("alert_message"):
         alert_obj = models.Alert.objects.create(

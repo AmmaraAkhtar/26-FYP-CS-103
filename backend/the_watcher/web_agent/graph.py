@@ -85,8 +85,8 @@ def build_web_graph():
     graph.add_edge("action_executor", END)
 
     # Memory — har child ka alag thread bne ga 
-    memory = MemorySaver()
-    return graph.compile(checkpointer=memory)
+   
+    return graph.compile()
 
 
 #  Building the graph

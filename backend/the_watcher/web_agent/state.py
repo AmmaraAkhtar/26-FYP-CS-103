@@ -4,10 +4,11 @@ from typing import TypedDict, Optional, List
 
 class WebState(TypedDict):
      # Input se jo data aa rha hai ... yaani collected data from the device
-    package_name: str
+    url:str
    # usage_time: int          # seconds
     ml_category: int         # ML se jo category aayi hai (0 ya 1)
     child_id: int
+    web_usage_id:int
 
     # agent should be aware of the child's profile and history to make informed decisions
     child_age: Optional[int]

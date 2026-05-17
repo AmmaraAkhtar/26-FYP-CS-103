@@ -22,6 +22,9 @@ from urllib.parse import urlparse
 import re
 from .web_agent.graph import web_graph
 import threading
+import traceback
+import uuid
+
 
 
 
@@ -581,7 +584,7 @@ def collect_web_usage(request):
             category = "Safe"
 
         # Agent baad mein risk aur action update karega
-        models.webUsage.objects.create(
+        web_obj=models.webUsage.objects.create(
         child=child_obj,
         url=url,
         usage_time=0,
@@ -591,28 +594,17 @@ def collect_web_usage(request):
         date=timezone.now().date())
         print(f"Web usage saved - Child ID: {child_id}, URL: {url}, Risk: {risk}, Action: {action}")
         #  Agent ko background thread mein chalao
-        # Warna API slow ho jayegi — agent ka LLM call 2-5 sec leta hai
-        def run_agent():
-            try:
-                config = {"configurable": {"thread_id": f"web_child_{child_id}"}}
+        # Warna API slow ho jayegi kyunki agent ko reasoning ke liye thoda time lag sakta hai, aur humein response jaldi dena hai taki user experience acha rahe.
+        # config = {"configurable": {"thread_id": f"web_child_{child_id}"}}
+        try:
+            result= web_graph.invoke({"child_id":int(child_id),"url":url,"ml_prediction": prediction,"web_usage_id":  web_obj.id,})
+            print(f"Agent completed for child {child_id}, url {url}, prediction {prediction},risk {risk}, action {action}")
+            return Response({"status":"completed", "ml_prediction": prediction,"action":result.get("action"),"risk_level":result.get("risk_level"),"reasoning":result.get("reasoning"), }, status=200)
+        except Exception as e:
+            print(f"Agent Error: {traceback.format_exc()}")
 
-                web_graph.invoke(
-                    {
-                        "child_id":      int(child_id),
-                        "url":           url,
-                        "ml_prediction": prediction,   # Sirf 0 ya 1
-                    },
-                    config=config
-                )
-                print(f"Agent completed for child {child_id}, url {url}, prediction {prediction},risk {risk}, action {action}")
 
-            except Exception as e:
-                print(f"Agent Error: {e}")
-
-        thread = threading.Thread(target=run_agent, daemon=True)
-        thread.start()
-
-        return Response({"status":"processing","ml_prediction": prediction,"message": "Agent is analyzing in background"}, status=200)
+            return Response({"status":"processing","ml_prediction": prediction,"message": "Agent is analyzing in background"}, status=200)
 
     print("SERIALIZER ERRORS:", serializer.errors)
     return Response(serializer.errors, status=400)
