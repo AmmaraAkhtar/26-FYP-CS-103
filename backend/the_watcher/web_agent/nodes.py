@@ -90,7 +90,7 @@ llm_with_structure = llm.with_structured_output(AgentDecision)
 def web_reasoning_node(state: WebState) -> WebState:
     domain = extract_domain(state["url"])
 
-    if state["web_history"]:
+    if state.get("web_history"):
         history_text = "\n".join([
             f"  - {h['date']}: {h['url']} | Action taken: {h['action']}"
             for h in state["web_history"]
