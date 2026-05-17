@@ -236,7 +236,8 @@ def web_action_executor_node(state: WebState) -> WebState:
 
     if latest:
         latest.action = state["action"].capitalize()
-        latest.risk   = state["risk_level"].capitalize()   # ✓ agent ka risk save karo
+        latest.risk   = state["risk_level"].capitalize()
+        latest.reasoning = state["reasoning"]  
         latest.save()
 
     if state.get("should_send_alert") and state.get("alert_message"):
