@@ -16,6 +16,8 @@ llm = ChatGroq( model="llama-3.3-70b-versatile",temperature= 0)
 # Defining Context Fetcher Node -- Ye node database se child aur app usage ki history fetch karega, jo baad mein LLM ke reasoning ke liye use hoga.
 
 def context_fetcher_node(state: AppState) -> AppState:
+    print("STATE RECEIVED:", state)   # ← yeh lagao
+    print("URL IN STATE:", state.get("url"))
     child_id = state["child_id"]
     child = models.child.objects.select_related("parent").get(id=child_id)
 

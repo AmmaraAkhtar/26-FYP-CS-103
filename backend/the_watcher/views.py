@@ -20,6 +20,13 @@ from .utils import preprocess_app_name
 from .web_ml_service import web_ml_service
 from urllib.parse import urlparse
 import re
+from .web_agent.graph import web_graph
+import threading
+import traceback
+import uuid
+
+
+
 
 
 
@@ -551,6 +558,7 @@ def collect_web_usage(request):
         child_id = request.data.get('child_id')
         url = request.data.get('url')
         url = clean_url(request.data.get("url"))
+        print("Cleaned URL:", url)
 
         if not url:
             print("IGNORED URL:", url)
@@ -575,18 +583,28 @@ def collect_web_usage(request):
             action = "Allow"
             category = "Safe"
 
-        models.webUsage.objects.create(
-         child=child_obj,
+        # Agent baad mein risk aur action update karega
+        web_obj=models.webUsage.objects.create(
+        child=child_obj,
         url=url,
         usage_time=0,
-        risk=risk,
-        action=action,
-        category=category,
-        date=timezone.now().date()
-    )
+        risk="Pending",
+        action="Pending",
+        category="Pending",
+        date=timezone.now().date())
         print(f"Web usage saved - Child ID: {child_id}, URL: {url}, Risk: {risk}, Action: {action}")
+        #  Agent ko background thread mein chalao
+        # Warna API slow ho jayegi kyunki agent ko reasoning ke liye thoda time lag sakta hai, aur humein response jaldi dena hai taki user experience acha rahe.
+        # config = {"configurable": {"thread_id": f"web_child_{child_id}"}}
+        try:
+            result= web_graph.invoke({"child_id":int(child_id),"url":url,"ml_prediction": prediction,"web_usage_id":  web_obj.id,})
+            print(f"Agent completed for child {child_id}, url {url}, prediction {prediction},risk {risk}, action {action}")
+            return Response({"status":"completed", "ml_prediction": prediction,"action":result.get("action"),"risk_level":result.get("risk_level"),"reasoning":result.get("reasoning"), }, status=200)
+        except Exception as e:
+            print(f"Agent Error: {traceback.format_exc()}")
 
-        return Response({"prediction": prediction,"risk": risk,"action": action}, status=200)
+
+            return Response({"status":"processing","ml_prediction": prediction,"message": "Agent is analyzing in background"}, status=200)
 
     print("SERIALIZER ERRORS:", serializer.errors)
     return Response(serializer.errors, status=400)
@@ -595,55 +613,44 @@ def collect_web_usage(request):
 
 def clean_url(url):
     if not isinstance(url, str):
-        return False
+        return None        
 
     url = url.strip()
 
-    # must start with http/https
     if not url.startswith(("http://", "https://")):
-        return False
-
-    # basic parse
+        return None          
     try:
         parsed = urlparse(url)
     except:
-        return False
+        return None
 
     domain = parsed.netloc.lower()
 
     if not domain:
-        return False
+        return None
 
-    # must contain at least one dot (real domain)
     if "." not in domain:
-        return False
+        return None
 
-    # reject localhost / private noise
     if domain in ["localhost", "127.0.0.1"]:
-        return False
+        return None
 
-    # reject obvious numeric garbage (like 98.35% or 264.4K)
     if re.search(r"\d+\.\d+[kKmM%]$", url):
-        return False
+        return None
 
-    # reject pure number domains like 264.4k or 123.45m
     if re.fullmatch(r"\d+(\.\d+)?[kKmM%]?", domain):
-        return False
+        return None
 
-    # reject URLs with no real TLD (e.g. google)
     if len(domain.split(".")) < 2:
-        return False
+        return None
 
-    # reject spaces (broken URL)
     if " " in url:
-        return False
+        return None
 
-    # reject weird percent-only URLs
     if url.count("%") > 3:
-        return False
+        return None
 
-    # optional: reject very short domains
     if len(domain) < 4:
-        return False
+        return None
 
-    return True
+    return url               
