@@ -2,7 +2,7 @@ from typing import TypedDict, Optional, List
 
 
 
-class AppState(TypedDict):
+class WebState(TypedDict):
      # Input se jo data aa rha hai ... yaani collected data from the device
     package_name: str
    # usage_time: int          # seconds

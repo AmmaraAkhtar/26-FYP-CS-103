@@ -3,7 +3,7 @@ from langchain_core.messages import HumanMessage
 from pydantic import BaseModel, Field
 from typing import Literal
 from dotenv import load_dotenv
-from .web_state import WebState
+from .state import WebState
 from .. import models
 from django.utils import timezone
 from datetime import timedelta

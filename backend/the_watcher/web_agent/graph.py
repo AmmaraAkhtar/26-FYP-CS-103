@@ -1,8 +1,8 @@
 
 from langgraph.graph import StateGraph, END,START
 from langgraph.checkpoint.memory import MemorySaver
-from .web_state import WebState
-from .web_nodes import (
+from .state import WebState
+from .nodes import (
     web_context_fetcher_node,
     web_reasoning_node,
     web_alert_composer_node,
