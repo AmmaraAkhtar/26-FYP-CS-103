@@ -94,6 +94,73 @@ Future<void> requestSmsPermission() async {
     return;
   }
 }
+// Notification Listener permission check
+Future<void> checkNotificationListenerPermission() async {
+  const platform = MethodChannel('monitor_channel');
+  
+  try {
+    final bool isEnabled = await platform.invokeMethod(
+      'isNotificationListenerEnabled'
+    );
+    
+    if (!isEnabled) {
+      // Settings pe le jao
+      showNotificationPermissionDialog();
+    }
+  } catch (e) {
+    print("Error checking notification permission: $e");
+  }
+}
+// Notification Listener permission 
+void showNotificationPermissionDialog() {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Text(
+        "Notification Access Required",
+        style: TextStyle(
+          color: Color(0xFF699886),
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Text(
+        "WhatsApp aur Instagram messages monitor karne ke liye "
+        "notification access zaruri hai.",
+        style: TextStyle(color: Colors.grey[700]),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text("Later", style: TextStyle(color: Colors.grey)),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            // Notification listener settings pe le jao
+            const AndroidIntent intent = AndroidIntent(
+              action: 'android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS',
+            );
+            intent.launch();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFFEB9974),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: Text(
+            "Enable Now",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   void startAppMonitoring() async {
     print("App Monitoring is called");
@@ -431,6 +498,7 @@ void setupListener() {
     // START BACKGROUND SERVICE HERE
    // _startServiceWithDelay();
    checkSmsPermission();
+   checkNotificationListenerPermission();
     
     
 
