@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'monitor_service.dart';
 import 'lock_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class WatcherScreen extends StatefulWidget {
   int screen_limit = 0;
@@ -29,6 +30,9 @@ class WatcherScreen extends StatefulWidget {
 class _WatcherScreenState extends State<WatcherScreen> {
   int? storedChildId;
   int? storedScreenLimit;
+  bool _smsPermissionGranted = false;
+
+  
   // Load Child Data
   Future<void> loadChildData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -48,6 +52,8 @@ class _WatcherScreenState extends State<WatcherScreen> {
   await prefs.setInt("screen_limit", screenLimit);
   print("Saved child_id: $childId");
 }
+
+
   // APP MOnitoring
 
   Future<void> checkPermission() async {
@@ -56,6 +62,105 @@ class _WatcherScreenState extends State<WatcherScreen> {
       await UsageStats.grantUsagePermission();
     }
   }
+
+  Future<void> checkSmsPermission() async {
+  final status = await Permission.sms.status;
+  setState(() {
+    _smsPermissionGranted = status.isGranted;
+  });
+}
+
+// SMS Permissions
+Future<void> requestSmsPermission() async {
+  final status = await Permission.sms.status;
+
+  if (status.isGranted) {
+    setState(() => _smsPermissionGranted = true);
+    return;
+  }
+
+  if (status.isDenied) {
+    final result = await Permission.sms.request();
+    setState(() => _smsPermissionGranted = result.isGranted);
+
+    if (!result.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("SMS permission denied"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+    return;
+  }
+}
+// Notification Listener permission check
+Future<void> checkNotificationListenerPermission() async {
+  const platform = MethodChannel('monitor_channel');
+  
+  try {
+    final bool isEnabled = await platform.invokeMethod(
+      'isNotificationListenerEnabled'
+    );
+    
+    if (!isEnabled) {
+      // Settings pe le jao
+      showNotificationPermissionDialog();
+    }
+  } catch (e) {
+    print("Error checking notification permission: $e");
+  }
+}
+// Notification Listener permission 
+void showNotificationPermissionDialog() {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Text(
+        "Notification Access Required",
+        style: TextStyle(
+          color: Color(0xFF699886),
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Text(
+        "WhatsApp aur Instagram messages monitor karne ke liye "
+        "notification access zaruri hai.",
+        style: TextStyle(color: Colors.grey[700]),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text("Later", style: TextStyle(color: Colors.grey)),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(ctx);
+            // Notification listener settings pe le jao
+            const AndroidIntent intent = AndroidIntent(
+              action: 'android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS',
+            );
+            intent.launch();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFFEB9974),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: Text(
+            "Enable Now",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   void startAppMonitoring() async {
     print("App Monitoring is called");
@@ -392,6 +497,8 @@ void setupListener() {
     // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
    // _startServiceWithDelay();
+   checkSmsPermission();
+   checkNotificationListenerPermission();
     
     
 

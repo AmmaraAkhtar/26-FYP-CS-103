@@ -7,6 +7,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.READ_SMS"/>
+    <uses-permission android:name="android.permission.RECEIVE_SMS"/>
 
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
@@ -57,8 +59,18 @@
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
         </service>
-
         
+        <!-- Notification Listener -->
+        <service
+            android:name=".ChatNotificationListener"
+            android:label="Chat Monitor"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name=
+                    "android.service.notification.NotificationListenerService"/>
+            </intent-filter>
+        </service>
 
         <!-- VPN -->
         <service
