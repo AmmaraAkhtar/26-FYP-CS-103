@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'monitor_service.dart';
 import 'lock_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class WatcherScreen extends StatefulWidget {
   int screen_limit = 0;
@@ -29,6 +30,9 @@ class WatcherScreen extends StatefulWidget {
 class _WatcherScreenState extends State<WatcherScreen> {
   int? storedChildId;
   int? storedScreenLimit;
+  bool _smsPermissionGranted = false;
+
+  
   // Load Child Data
   Future<void> loadChildData() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -48,6 +52,8 @@ class _WatcherScreenState extends State<WatcherScreen> {
   await prefs.setInt("screen_limit", screenLimit);
   print("Saved child_id: $childId");
 }
+
+
   // APP MOnitoring
 
   Future<void> checkPermission() async {
@@ -56,6 +62,38 @@ class _WatcherScreenState extends State<WatcherScreen> {
       await UsageStats.grantUsagePermission();
     }
   }
+
+  Future<void> checkSmsPermission() async {
+  final status = await Permission.sms.status;
+  setState(() {
+    _smsPermissionGranted = status.isGranted;
+  });
+}
+
+// SMS Permissions
+Future<void> requestSmsPermission() async {
+  final status = await Permission.sms.status;
+
+  if (status.isGranted) {
+    setState(() => _smsPermissionGranted = true);
+    return;
+  }
+
+  if (status.isDenied) {
+    final result = await Permission.sms.request();
+    setState(() => _smsPermissionGranted = result.isGranted);
+
+    if (!result.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("SMS permission denied"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+    return;
+  }
+}
 
   void startAppMonitoring() async {
     print("App Monitoring is called");
@@ -392,6 +430,7 @@ void setupListener() {
     // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
    // _startServiceWithDelay();
+   checkSmsPermission();
     
     
 
