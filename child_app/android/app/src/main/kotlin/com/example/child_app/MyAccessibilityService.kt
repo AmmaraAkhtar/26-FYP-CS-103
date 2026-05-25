@@ -1,6 +1,7 @@
 package com.example.child_app
 
 import android.accessibilityservice.AccessibilityService
+import android.content.Context
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -14,7 +15,6 @@ import java.util.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import android.content.Context
 
 class MyAccessibilityService : AccessibilityService() {
 
@@ -22,17 +22,25 @@ class MyAccessibilityService : AccessibilityService() {
         var channel: MethodChannel? = null
     }
 
-    // To avoid duplicate msgs
+    // Duplicate messages rokne ke liye
     private var lastSentMessage = ""
     private var lastSentTime    = 0L
-    private val COOLDOWN_MS     = 4000L  // 4 sec mein same message dobara nahi
+    private val COOLDOWN_MS     = 4000L
+
+    // child_id same key as ForegroundServices
+    private val childId: Int
+        get() {
+            val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            return prefs.getInt("flutter.child_id", -1)
+        }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
-
         val packageName = event.packageName?.toString() ?: return
 
-        //  Web Monitoring 
+        Log.d("MyAccessibilityService", "EVENT: $packageName | type: ${event.eventType}")
+
+        // Web Monitoring
         val isBrowser = packageName.contains("chrome") ||
                 packageName.contains("browser") ||
                 packageName.contains("sbrowser") ||
@@ -41,10 +49,13 @@ class MyAccessibilityService : AccessibilityService() {
 
         if (isBrowser) {
             val eventText = event.text?.joinToString(" ") ?: ""
+            Log.d("MyAccessibilityService", "EVENT TEXT: $eventText")
+
             if (isUrl(eventText)) {
                 sendUrl(eventText.trim())
                 return
             }
+
             val source = event.source
             if (source != null) {
                 val url = findUrlInNode(source)
@@ -70,18 +81,16 @@ class MyAccessibilityService : AccessibilityService() {
                 if (message.isNotBlank() && message.length > 3) {
                     val now = System.currentTimeMillis()
 
-                    // Duplicate check
                     if (message != lastSentMessage || now - lastSentTime > COOLDOWN_MS) {
                         lastSentMessage = message
                         lastSentTime    = now
 
-                        // Backend pe bhejo
-                        sendChatToBackend(
-                            appName = chatAppName,
-                            message = message,
-                        )
+                        Log.d("ChatMonitor", "App: $chatAppName | Msg: $message")
 
-                        // Flutter ko bhi bhejo (agar UI update chahiye)
+                        // Sending  to backend
+                        sendChatToBackend(appName = chatAppName, message = message)
+
+                        // Sending chats to flutter
                         channel?.invokeMethod("onChatText", message)
                     }
                 }
@@ -89,7 +98,7 @@ class MyAccessibilityService : AccessibilityService() {
         }
     }
 
-    // Extracting chat msgs from screen
+    // Extract Messages from Screen
     private fun extractChatMessages(node: AccessibilityNodeInfo): List<String> {
         val result = mutableListOf<String>()
         extractTextRecursive(node, result, depth = 0)
@@ -105,7 +114,6 @@ class MyAccessibilityService : AccessibilityService() {
 
         val text = node.text?.toString()?.trim()
         if (!text.isNullOrBlank() && text.length > 3 && !isUrl(text)) {
-            // Timestamp aur UI labels filter karo
             if (!isTimestamp(text) && !isUiLabel(text)) {
                 result.add(text)
             }
@@ -116,31 +124,32 @@ class MyAccessibilityService : AccessibilityService() {
         }
     }
 
-    // Common UI labels -- jo capture nahi karni screen se
     private fun isUiLabel(text: String): Boolean {
         val labels = setOf(
             "type a message", "message", "search", "reply",
             "forward", "delete", "copy", "share", "online",
-            "yesterday", "today", "delivered", "read", "sent"
+            "yesterday", "today", "delivered", "read", "sent",
+            "type a message...", "aa", "bb"
         )
         return labels.contains(text.lowercase())
     }
 
-    // Timestamp check (e.g. "10:30 AM", "12:45")
     private fun isTimestamp(text: String): Boolean {
         return text.matches(Regex("\\d{1,2}:\\d{2}(\\s?[APap][Mm])?"))
     }
 
-    // Sending collected messages to backend
+    // Sending Chat to Backend
     private fun sendChatToBackend(appName: String, message: String) {
-        val prefs   = getSharedPreferences("watcher_prefs", Context.MODE_PRIVATE)
-        val childId = prefs.getInt("child_id", -1)
-        if (childId == -1) return
+        val id = childId
+        if (id == -1) {
+            Log.e("ChatMonitor", "child_id not set — skipping")
+            return
+        }
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val json = JSONObject().apply {
-                    put("child_id",  childId)
+                    put("child_id",  id)
                     put("app_name",  appName)
                     put("sender",    "unknown")
                     put("message",   message)
@@ -160,7 +169,7 @@ class MyAccessibilityService : AccessibilityService() {
                     .build()
 
                 val response = client.newCall(request).execute()
-                Log.d("ChatMonitor", "Sent: $message | Response: ${response.code}")
+                Log.d("ChatMonitor", "Sent  | Response: ${response.code}")
 
             } catch (e: Exception) {
                 Log.e("ChatMonitor", "Send failed: ${e.message}")
@@ -168,7 +177,7 @@ class MyAccessibilityService : AccessibilityService() {
         }
     }
 
-    // Website MOnitoring Code
+    // Web Monitoring Code 
     private fun sendUrl(url: String) {
         Log.d("MyAccessibilityService", "SENDING URL: $url")
         channel?.invokeMethod("onUrlDetected", "UI:$url")
@@ -192,6 +201,7 @@ class MyAccessibilityService : AccessibilityService() {
             val nodes = node.findAccessibilityNodeInfosByViewId(id)
             if (nodes != null && nodes.isNotEmpty()) {
                 val text = nodes[0].text?.toString()
+                Log.d("MyAccessibilityService", "ADDRESS BAR FOUND: $text")
                 if (text != null && isUrl(text)) return text
             }
         }
