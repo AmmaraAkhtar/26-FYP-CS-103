@@ -696,7 +696,7 @@ def collect_chat(request):
         risk = "Pending",
         action= "Pending",
     )
-
+     
     print(f"Chat saved ID: {chat_obj.id}")
 
-    return Response({"status":  "saved","chat_id": chat_obj.id,}, status=200)
+    return Response({"status":"saved","chat_id": chat_obj.id,}, status=200)
