@@ -1,7 +1,7 @@
 from xml.parsers.expat import model
 
 from django.shortcuts import render
-from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,WebUsageDataSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer
+from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,WebUsageDataSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer,ChatMessageSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -654,3 +654,49 @@ def clean_url(url):
         return None
 
     return url               
+
+# Chat Analysis
+@api_view(['POST'])
+def collect_chat(request):
+    print("Chat API Called")
+    print("request.body:", request.body)
+
+    serializer = ChatMessageSerializer(data=request.data)
+
+    if not serializer.is_valid():
+        print("SERIALIZER ERRORS:", serializer.errors)
+        return Response(serializer.errors, status=400)
+
+    child_id  = request.data.get('child_id')
+    app_name  = request.data.get('app_name', '')
+    sender    = request.data.get('sender', 'unknown')
+    message   = request.data.get('message', '')
+    timestamp = request.data.get('timestamp')
+
+    # Chote msgs ko ignore karne ke liye simple rule — agar message 3 characters se kam ka hai, toh usse process mat karo. Isse unnecessary processing aur false positives dono se bachenge.
+    if not message or len(message.strip()) < 3:
+        print("IGNORED — message too short")
+        return Response({"status": "ignored"}, status=200)
+
+    try:
+        child_obj = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
+
+    # DB mein save karo
+    chat_obj = models.ChatMessage.objects.create(
+        child = child_obj,
+        app_name= app_name,
+        sender = sender,
+        message = message,
+        timestamp= timestamp,
+        category = "Pending", 
+        risk = "Pending",
+        action= "Pending",
+    )
+
+    print(f"Chat saved ID: {chat_obj.id}")
+
+    return Response({"status":  "saved","chat_id": chat_obj.id,}, status=200)
