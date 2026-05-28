@@ -1,4 +1,4 @@
-
+package com.example.child_app
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
