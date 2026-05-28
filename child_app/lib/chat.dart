@@ -498,6 +498,7 @@ void setupListener() {
     // START BACKGROUND SERVICE HERE
    _startServiceWithDelay();
    checkSmsPermission();
+   requestSmsPermission();
    checkNotificationListenerPermission();
     
     

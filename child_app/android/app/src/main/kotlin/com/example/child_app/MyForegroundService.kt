@@ -107,7 +107,7 @@ class MyForegroundService : Service() {
                 Log.d("MONITOR_SERVICE", "Tick - Child ID: $childId")
                 fetchAndSendData()
                 collectAndSendSms() 
-                handler.postDelayed(this, 10000) // Har 10 second baad
+                handler.postDelayed(this, 300000) // Har 10 second baad
             }
         })
     }

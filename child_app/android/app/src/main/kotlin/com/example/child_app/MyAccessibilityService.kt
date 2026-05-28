@@ -29,10 +29,10 @@ class MyAccessibilityService : AccessibilityService() {
 
     // child_id same key as ForegroundServices
     private val childId: Int
-        get() {
-            val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            return prefs.getInt("flutter.child_id", -1)
-        }
+    get() {
+        val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+        return (prefs.getLong("flutter.child_id", -1L)).toInt()  
+    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
