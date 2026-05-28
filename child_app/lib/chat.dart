@@ -235,7 +235,7 @@ void showNotificationPermissionDialog() {
 
   Future<void> sendToBackend(List<Map<String, dynamic>> data) async {
     print("SENDING TO BACKEND: $data");
-    String link = 'http://192.168.18.163:8000/appdata/';
+    String link = 'http://192.168.18.166:8000/appdata/';
     final response = await http.post(
       Uri.parse(link),
       headers: {"Content-Type": "application/json"},
@@ -380,7 +380,7 @@ void webMonitoring() {
     print("Sending URL: $cleanUrl");
 
     final response = await http.post(
-      Uri.parse("http://192.168.18.163:8000/collectwebusage/"),
+      Uri.parse("http://192.168.18.166:8000/collectwebusage/"),
       headers: {"Content-Type": "application/json"},
       body: jsonEncode({
         "child_id": widget.child_id != 0 ? widget.child_id : storedChildId,
@@ -408,7 +408,7 @@ void webMonitoring() {
 void triggerAlert(String type, String message) async {
 
   var response = await http.post(
-    Uri.parse("http://192.168.18.163:8000/sendalert/"),
+    Uri.parse("http://192.168.18.166:8000/sendalert/"),
 
     headers: {
       "Content-Type": "application/json",

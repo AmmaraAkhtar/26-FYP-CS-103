@@ -118,6 +118,13 @@ class WebUsageSerializer(serializers.Serializer):
             raise serializers.ValidationError("usage_data cannot be empty")
         return value
 
+#  Chat Analysis Serializer
+class ChatMessageSerializer(serializers.Serializer):
+    child_id  = serializers.IntegerField()
+    app_name  = serializers.CharField(max_length=50)
+    sender    = serializers.CharField(max_length=100,required=False,allow_blank=True,default="unknown")
+    message   = serializers.CharField()
+    timestamp = serializers.DateTimeField()
        
 
 # Alert Serializer

@@ -70,3 +70,16 @@ class webUsage(models.Model):
     category = models.CharField(max_length=50,null=True)
     date = models.DateField()
     reasoning = models.TextField(null=True, blank=True)
+
+# Chat Analysis Model
+class ChatMessage(models.Model):
+    child= models.ForeignKey('child', on_delete=models.CASCADE)
+    app_name= models.CharField(max_length=50)
+    sender = models.CharField(max_length=100, null=True, blank=True)
+    message = models.TextField()
+    timestamp = models.DateTimeField()
+    category = models.CharField(max_length=50, null=True, blank=True)
+    risk= models.CharField(max_length=20, null=True, blank=True)
+    action = models.CharField(max_length=20, null=True, blank=True)
+    reasoning = models.TextField(null=True, blank=True)
+    created_at  = models.DateTimeField(auto_now_add=True)
