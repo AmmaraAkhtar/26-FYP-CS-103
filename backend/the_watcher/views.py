@@ -28,6 +28,7 @@ from .chat_ml_service import ChatMLService
 from .chat_ml_service import chat_ml_service
 from django.utils.timezone import make_aware
 from datetime import datetime
+from .chat_agent.graph import chat_agent
 
 
 
@@ -731,13 +732,48 @@ def collect_chat(request):
         # DB update karo
         chat_obj.category = ml_category
 
-        # Simple risk assign karo
-        if ml_category in ["suicide", "bullying", "hate"]:
-            chat_obj.risk   = "High"
-            chat_obj.action = "Alert"
+        # Gent only for sensitive categories
+        AGENT_CATEGORIES = {"hate", "bullying", "suicide"}
+
+        if ml_category in AGENT_CATEGORIES:
+            print(f"SENSITIVE — invoking chat agent...")
+            try:
+                result = chat_agent.invoke({
+                    "child_id":    int(child_id),
+                    "app_name":    app_name,
+                    "message":     message,
+                    "chat_obj_id": chat_obj.id,
+                    "ml_category": ml_category,
+ 
+                    # Agent ye sab khud fill karega
+                    "child_age":         None,
+                    "screen_limit_mins": None,
+                    "recent_alerts":     None,
+                    "chat_history":      None,
+                    "total_chats_today": None,
+                    "final_category":    None,
+                    "action":            None,
+                    "reasoning":         None,
+                    "risk_level":        None,
+                    "urgency":           None,
+                    "alert_message":     None,
+                    "should_send_alert": None,
+                })
+                print(f"AGENT DONE — action: {result['action']}, risk: {result['risk_level']}")
+            except Exception as e:
+                print(f"Chat Agent Error: {e}")
+                # Fallback — ML result use karo
+                if ml_category in ["suicide"]:
+                    chat_obj.risk   = "High"
+                    chat_obj.action = "Alert"
+                else:
+                    chat_obj.risk   = "Medium"
+                    chat_obj.action = "Warn"
         else:
+            # Normal — agent ki zaroorat nahi
             chat_obj.risk   = "Low"
             chat_obj.action = "Allow"
+            chat_obj.save()
 
         chat_obj.save()
 
