@@ -805,4 +805,23 @@ def deactivate_child_admin(request):
     except models.child.DoesNotExist:
         return Response({'status': 'error', 'message': 'Child not found'}, status=404)
 
+
+# API for child agent to check if deactivate command is given by parent. Child agent is API ko periodically call karega, aur agar command milti hai toh wo apne aap ko deactivate kar dega (jaise ki alerts bhejna band kar dega) taki jab parent ke saath child ho toh unnecessary alerts na aaye.
+@api_view(['GET'])
+def check_deactivate_command(request):
+    child_id = request.query_params.get('child_id')
+    
+    try:
+        child = models.child.objects.get(id=child_id)
+        should_deactivate = child.deactivate_command
+        
+        # Command mil gayi toh reset karo
+        if should_deactivate:
+            child.deactivate_command = False
+            child.save()
+            
+        return Response({'deactivate': should_deactivate})
+    except models.child.DoesNotExist:
+        return Response({'deactivate': False})
+
     
