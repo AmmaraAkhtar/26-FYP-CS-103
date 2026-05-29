@@ -26,6 +26,7 @@ class child(models.Model):
     screen_time_limit = models.IntegerField(default=60)  # in minutes
     is_paired = models.BooleanField(default=False)
     is_locked = models.BooleanField(default=False)
+    deactivate_command = models.BooleanField(default=False)
 
 
 # Pairing Code Model
