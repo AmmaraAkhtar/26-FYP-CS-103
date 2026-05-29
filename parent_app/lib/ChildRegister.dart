@@ -18,6 +18,7 @@ class _EditprofileState extends State<profile> {
   TextEditingController ageController = TextEditingController();
   TextEditingController screenTimeController = TextEditingController();
 
+  
   Future<void> registerChild() async {
     String link = 'http://192.168.18.166:8000/createChild/';
     final url = Uri.parse(link);

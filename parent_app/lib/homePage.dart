@@ -7,7 +7,8 @@ import 'dart:convert';
 
 class home extends StatefulWidget {
   String email;
-  home({super.key, required this.email});
+  String token;
+  home({super.key, required this.email, required this.token});
 
   @override
   State<home> createState() => _homeState();
@@ -18,6 +19,28 @@ class _homeState extends State<home> {
   List<Map<String, dynamic>> filteredChildren = [];
   List<Map<String, dynamic>> children = []; // empty initially
   bool isLoading = true;
+
+  Future<void> _deactivateChildAdmin(int childId) async {
+  try {
+    final response = await http.post(
+      Uri.parse('http://192.168.18.166:8000/deactivate-admin/'),
+      headers: {
+        'Authorization': 'Bearer $widget.token', //  auth token
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'child_id': childId}),
+    );
+    
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Command sent! Child app will deactivate soon.')),
+      );
+    }
+  } catch (e) {
+    print('Error: $e');
+  }
+}
+
   //final List<Map<String, dynamic>> children = [
   /* {
       "name": "Hamza Ali",

@@ -33,9 +33,17 @@ class _loginState extends State<login> {
 
       if (response.statusCode == 200) {
         print('Login successful');
+        var data = jsonDecode(response.body);
+
+  // Token extract
+      String accessToken = data['tokens']['access'];
+      String refreshToken = data['tokens']['refresh'];
+
+      print("Access Token: $accessToken");
+      print("Refresh Token: $refreshToken");
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => home(email: email,)),
+          MaterialPageRoute(builder: (context) => home(email: email,token: accessToken,)),
         );
       } else {
         var data = jsonDecode(response.body);
