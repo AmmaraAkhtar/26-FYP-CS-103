@@ -9,10 +9,41 @@ from django.utils import timezone
 from datetime import timedelta
 from urllib.parse import urlparse
 from ..utils import send_alert
+import os
+import itertools
 
 load_dotenv()
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", temperature=0)
+# Rotate for multiple api keys
+GROQ_KEYS = [
+    k for k in [
+        os.getenv("GROQ_API_KEY_1"),
+        os.getenv("GROQ_API_KEY_2"),
+        os.getenv("GROQ_API_KEY_3"),
+        os.getenv("GROQ_API_KEY_4"),
+        os.getenv("GROQ_API_KEY_5"),
+        os.getenv("GROQ_API_KEY_6"),
+    ] if k  # None keys filter karo
+]
+
+# agar sirf ek key hi available hai
+if not GROQ_KEYS:
+    single = os.getenv("GROQ_API_KEY")
+    if single:
+        GROQ_KEYS = [single]
+
+key_cycle = itertools.cycle(GROQ_KEYS)
+
+
+def get_llm():
+    
+    return ChatGroq(
+        model="llama-3.1-8b-instant",
+        temperature=0,
+        groq_api_key=next(key_cycle),
+    )
+
+llm = get_llm()
 
 
 def extract_domain(url: str) -> str:

@@ -492,12 +492,13 @@ void setupListener() {
     setupListener();
     //webMonitoring();
     loadChildData();
-    //saveChildData(widget.child_id, widget.screen_limit);
+    saveChildData(widget.child_id, widget.screen_limit);
     checkPermission();
     // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
-   // _startServiceWithDelay();
+   _startServiceWithDelay();
    checkSmsPermission();
+   requestSmsPermission();
    checkNotificationListenerPermission();
     
     

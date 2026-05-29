@@ -1,3 +1,4 @@
+package com.example.child_app
 
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -36,12 +37,18 @@ class ChatNotificationListener : NotificationListenerService() {
         val text    = extras.getCharSequence("android.text")?.toString() ?: ""
         val bigText = extras.getCharSequence("android.bigText")?.toString() ?: ""
 
+        val messages = extras.getParcelableArray("android.messages")
+        val lastMsg  = messages?.lastOrNull()?.let {
+        val bundle = it as? android.os.Bundle
+        bundle?.getCharSequence("text")?.toString()
+    }
+
         val messageContent = bigText.ifEmpty { text }
 
         if (messageContent.isBlank()) return
         if (messageContent.length < 3) return   // ignore trivial
 
-        Log.d("ChatMonitor", "App: $packageName | From: $title | Msg: $messageContent")
+         Log.d("ChatNotificationListener", " App: $packageName | From: $title | Msg: $messageContent")
 
         // Backend pe send karo
         sendToBackend(
@@ -52,8 +59,7 @@ class ChatNotificationListener : NotificationListenerService() {
     }
 
     private fun sendToBackend(appPackage: String, sender: String, message: String) {
-        val childId = getSharedPreferences("watcher_prefs", MODE_PRIVATE)
-            .getInt("child_id", -1)
+        val childId = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE).getInt("flutter.child_id", -1)
 
         if (childId == -1) return
 
@@ -78,12 +84,12 @@ class ChatNotificationListener : NotificationListenerService() {
 
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val client = OkHttpClient()
+                val client = OkHttpClient.Builder().connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS).readTimeout(15, java.util.concurrent.TimeUnit.SECONDS).build()
                 val body   = json.toString()
                     .toRequestBody("application/json".toMediaType())
 
                 val request = Request.Builder()
-                    .url("http://192.168.18.163:8000/collectchat/")
+                    .url("http://192.168.18.166:8000/collectchat/")
                     .post(body)
                     .build()
 

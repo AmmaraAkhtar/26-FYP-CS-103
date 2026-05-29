@@ -35,6 +35,7 @@ class MyForegroundService : Service() {
     private var childId: Int = -1
     private var isMonitoring = false
     private var lastSmsTimestamp: Long = 0L 
+    private val httpClient = OkHttpClient.Builder().connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS).readTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
 
     // Service create hoti hai
     override fun onCreate() {
@@ -106,7 +107,7 @@ class MyForegroundService : Service() {
                 Log.d("MONITOR_SERVICE", "Tick - Child ID: $childId")
                 fetchAndSendData()
                 collectAndSendSms() 
-                handler.postDelayed(this, 10000) // Har 10 second baad
+                handler.postDelayed(this, 300000) // Har 10 second baad
             }
         })
     }
@@ -161,10 +162,7 @@ class MyForegroundService : Service() {
             return
         }
 
-        val client = OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .build()
+        val client = httpClient
 
         val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
         sdf.timeZone = TimeZone.getTimeZone("UTC")
@@ -227,6 +225,11 @@ class MyForegroundService : Service() {
 // SMS Collection ( Inbox + Sent )
 
 private fun collectAndSendSms() {
+    if (checkSelfPermission(android.Manifest.permission.READ_SMS)
+        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        Log.w("MONITOR_SERVICE", "READ_SMS not granted — skipping")
+        return
+    }
     if (childId == -1) {
         Log.e("MONITOR_SERVICE", "SMS: child_id not set — skipping")
         return
@@ -310,7 +313,7 @@ private fun sendChatToBackend(
 
     Log.d("MONITOR_SERVICE", "Sending chat: $json")
 
-    val client = OkHttpClient()
+    val client = httpClient
     val body   = json.toString()
         .toRequestBody("application/json".toMediaType())
 

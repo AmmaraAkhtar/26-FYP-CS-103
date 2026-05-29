@@ -16,5 +16,5 @@ urlpatterns = [
     path('sendalert/',views.create_alert),
     path('childusage/<int:child_id>/', views.get_child_usage),
     path('collectwebusage/', views.collect_web_usage),
-    path('collectchat/', views.collect_chat_message),
+    path('collectchat/', views.collect_chat),
 ]

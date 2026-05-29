@@ -24,6 +24,12 @@ from .web_agent.graph import web_graph
 import threading
 import traceback
 import uuid
+from .chat_ml_service import ChatMLService
+from .chat_ml_service import chat_ml_service
+from django.utils.timezone import make_aware
+from datetime import datetime
+from .chat_agent.graph import chat_agent
+
 
 
 
@@ -671,7 +677,11 @@ def collect_chat(request):
     app_name  = request.data.get('app_name', '')
     sender    = request.data.get('sender', 'unknown')
     message   = request.data.get('message', '')
-    timestamp = request.data.get('timestamp')
+    timestamp_str = request.data.get('timestamp')
+    try:
+        timestamp = make_aware(datetime.fromisoformat(timestamp_str))
+    except:
+        timestamp = timezone.now()
 
     # Chote msgs ko ignore karne ke liye simple rule — agar message 3 characters se kam ka hai, toh usse process mat karo. Isse unnecessary processing aur false positives dono se bachenge.
     if not message or len(message.strip()) < 3:
@@ -684,6 +694,22 @@ def collect_chat(request):
         return Response({"error": "Child not found"}, status=404)
 
     print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
+
+    # Duplicate message check — agar same message 2 minute ke andar repeat ho raha hai, toh usse ignore kar do. Isse accidental double sends ya app glitches se bachenge.
+    existing = models.ChatMessage.objects.filter(
+    child=child_obj,
+    app_name=app_name,
+    message=message,
+    sender=sender,
+    ).filter(
+        timestamp__gte=timezone.now() - timedelta(minutes=10)
+    ).exists()
+
+    if existing:
+        print("DUPLICATE — skipping")
+        return Response({"status": "duplicate"}, status=200)
+
+   
 
     # DB mein save karo
     chat_obj = models.ChatMessage.objects.create(
@@ -698,5 +724,69 @@ def collect_chat(request):
     )
      
     print(f"Chat saved ID: {chat_obj.id}")
+        # ML prediction
+    try:
+        ml_category = chat_ml_service.predict(message)
+        print(f"CHAT PREDICTION: {ml_category}")
 
-    return Response({"status":"saved","chat_id": chat_obj.id,}, status=200)
+        # DB update karo
+        chat_obj.category = ml_category
+
+        # Gent only for sensitive categories
+        AGENT_CATEGORIES = {"hate", "bullying", "suicide"}
+
+        if ml_category in AGENT_CATEGORIES:
+            print(f"SENSITIVE — invoking chat agent...")
+            try:
+                result = chat_agent.invoke({
+                    "child_id":    int(child_id),
+                    "app_name":    app_name,
+                    "message":     message,
+                    "chat_obj_id": chat_obj.id,
+                    "ml_category": ml_category,
+ 
+                    # Agent ye sab khud fill karega
+                    "child_age":         None,
+                    "screen_limit_mins": None,
+                    "recent_alerts":     None,
+                    "chat_history":      None,
+                    "total_chats_today": None,
+                    "final_category":    None,
+                    "action":            None,
+                    "reasoning":         None,
+                    "risk_level":        None,
+                    "urgency":           None,
+                    "alert_message":     None,
+                    "should_send_alert": None,
+                })
+                print(f"AGENT DONE — action: {result['action']}, risk: {result['risk']}, alert: {result['alert_message']}")
+            except Exception as e:
+                print(f"Chat Agent Error: {e}")
+                # Fallback — ML result use karo
+                if ml_category in ["suicide"]:
+                    chat_obj.risk   = "High"
+                    chat_obj.action = "Alert"
+                else:
+                    chat_obj.risk   = "Medium"
+                    chat_obj.action = "Warn"
+        else:
+            # Normal — agent ki zaroorat nahi
+            chat_obj.risk   = "Low"
+            chat_obj.action = "Allow"
+            #chat_obj.save()
+
+        chat_obj.save()
+
+    except Exception as e:
+        print(f"Chat ML Error: {e}")
+        ml_category = "unknown"
+
+    return Response({
+        "status":   "saved",
+        "chat_id":  chat_obj.id,
+        "category": ml_category,
+
+
+    }, status=200)
+
+    
