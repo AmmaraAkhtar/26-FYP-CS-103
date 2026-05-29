@@ -140,7 +140,7 @@ def clean_text(text):
     
 
 
-__main__.clean_chat_text = clean_text
+__main__.clean_text = clean_text
 
 
 class ChatMLService:
@@ -190,7 +190,7 @@ class ChatMLService:
                             "..",
                             "models",
                             "Chat_Analysis_Data",
-                            "chat_label_encoder.pkl"
+                            "chatAnalysisEncoder.pkl"
                         )
                     )
                     with open(encoder_path, "rb") as f:

@@ -25,6 +25,10 @@ import threading
 import traceback
 import uuid
 from .chat_ml_service import ChatMLService
+from .chat_ml_service import chat_ml_service
+from django.utils.timezone import make_aware
+from datetime import datetime
+
 
 
 
@@ -672,7 +676,11 @@ def collect_chat(request):
     app_name  = request.data.get('app_name', '')
     sender    = request.data.get('sender', 'unknown')
     message   = request.data.get('message', '')
-    timestamp = request.data.get('timestamp')
+    timestamp_str = request.data.get('timestamp')
+    try:
+        timestamp = make_aware(datetime.fromisoformat(timestamp_str))
+    except:
+        timestamp = timezone.now()
 
     # Chote msgs ko ignore karne ke liye simple rule — agar message 3 characters se kam ka hai, toh usse process mat karo. Isse unnecessary processing aur false positives dono se bachenge.
     if not message or len(message.strip()) < 3:
@@ -685,6 +693,22 @@ def collect_chat(request):
         return Response({"error": "Child not found"}, status=404)
 
     print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
+
+    # Duplicate message check — agar same message 2 minute ke andar repeat ho raha hai, toh usse ignore kar do. Isse accidental double sends ya app glitches se bachenge.
+    existing = models.ChatMessage.objects.filter(
+    child=child_obj,
+    app_name=app_name,
+    message=message,
+    sender=sender,
+    ).filter(
+        timestamp__gte=timezone.now() - timedelta(minutes=2)
+    ).exists()
+
+    if existing:
+        print("DUPLICATE — skipping")
+        return Response({"status": "duplicate"}, status=200)
+
+   
 
     # DB mein save karo
     chat_obj = models.ChatMessage.objects.create(
@@ -701,7 +725,7 @@ def collect_chat(request):
     print(f"Chat saved ID: {chat_obj.id}")
         # ML prediction
     try:
-        ml_category = ChatMLService.predict(message)
+        ml_category = chat_ml_service.predict(message)
         print(f"CHAT PREDICTION: {ml_category}")
 
         # DB update karo
