@@ -57,6 +57,39 @@ class MyForegroundService : Service() {
         Log.d("MONITOR_SERVICE", "Service Created")
     }
 
+    private fun checkDeactivateCommand(childId: Int) {
+    Thread {
+        try {
+            val url = "https://yourbackend.com/api/check-command/?child_id=$childId"
+            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = "GET"
+            
+            val response = connection.inputStream.bufferedReader().readText()
+            val json = org.json.JSONObject(response)
+            
+            if (json.getBoolean("deactivate")) {
+                // Device Admin deactivate karo
+                deactivateDeviceAdmin()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }.start()
+}
+ // deactivate admin function 
+        private fun deactivateDeviceAdmin() {
+            val deviceAdminComponent = android.content.ComponentName(
+                this,
+                MyDeviceAdminReceiver::class.java
+            )
+            val dpm = getSystemService(android.content.Context.DEVICE_POLICY_SERVICE)
+                    as android.app.admin.DevicePolicyManager
+            
+            if (dpm.isAdminActive(deviceAdminComponent)) {
+                dpm.removeActiveAdmin(deviceAdminComponent)
+            }
+        }
+
     // childId lo phir monitoring shuru karo
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
 

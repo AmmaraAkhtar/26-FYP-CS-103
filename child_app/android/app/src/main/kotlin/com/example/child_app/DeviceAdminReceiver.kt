@@ -16,7 +16,6 @@ class MyDeviceAdminReceiver : DeviceAdminReceiver() {
     }
 
     override fun onDisableRequested(context: Context, intent: Intent): CharSequence {
-        // Jab koi disable karne ki koshish kare to warning message show ho ga 
         return "Contact parent to disable this protection."
     }
 }
