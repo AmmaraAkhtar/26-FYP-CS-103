@@ -6,6 +6,10 @@ import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.content.Context
+
 
 class MainActivity : FlutterActivity() {
 
@@ -34,6 +38,36 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
 
             when (call.method) {
+
+                "activateDeviceAdmin" -> {
+                    val deviceAdminComponent = ComponentName(
+                        this,
+                        MyDeviceAdminReceiver::class.java
+                    )
+                    
+                    val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) 
+                            as DevicePolicyManager
+                    
+                    if (!dpm.isAdminActive(deviceAdminComponent)) {
+                        // Admin activation screen dikhao
+                        val intent = Intent(
+                            DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN
+                        ).apply {
+                            putExtra(
+                                DevicePolicyManager.EXTRA_DEVICE_ADMIN,
+                                deviceAdminComponent
+                            )
+                            putExtra(
+                                DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                                "This app protects your child. Only parents can remove it."
+                            )
+                        }
+                        startActivityForResult(intent, 1)
+                        result.success("Activation screen opened")
+                    } else {
+                        result.success("Already active")
+                    }
+                }
 
                 // App Monitoring Service Start 
                 "startService" -> {

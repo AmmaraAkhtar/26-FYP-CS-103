@@ -26,7 +26,7 @@ class MyAccessibilityService : AccessibilityService() {
     // Duplicate messages rokne ke liye
     private var lastSentMessage = ""
     private var lastSentTime    = 0L
-    private val COOLDOWN_MS     = 4000L
+    private val COOLDOWN_MS     = 30000L
 
     // child_id same key as ForegroundServices
     private val childId: Int

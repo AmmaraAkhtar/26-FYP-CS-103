@@ -432,6 +432,16 @@ void triggerAlert(String type, String message) async {
     );
   }
 
+Future<void> activateDeviceAdmin() async {
+  const platform = MethodChannel('monitor_channel');
+  try {
+    final result = await platform.invokeMethod('activateDeviceAdmin');
+    print("Device Admin: $result");
+  } catch (e) {
+    print("Device Admin Error: $e");
+  }
+}
+
   Future<void> checkLockState() async {
 
   bool locked = await LockService.isLocked();
@@ -453,6 +463,8 @@ Future<void> _startServiceWithDelay() async {
   
   await MonitorService().startService(childId);
 }
+
+
 
 void setupListener() {
   // Chat reader channel (accessibility)
@@ -489,6 +501,7 @@ void setupListener() {
   void initState() {
     super.initState();
     print("INIT STATE CALLED ");
+    activateDeviceAdmin();
     setupListener();
     //webMonitoring();
     loadChildData();
