@@ -7,9 +7,7 @@ import re
 import __main__
 import os
 
-# ─────────────────────────────────────────────
-# Chat Words Dictionary — training wali same
-# ─────────────────────────────────────────────
+
 chat_words = {
     
     "u": "you",
@@ -217,5 +215,5 @@ class ChatMLService:
             return "unknown"
 
 
-# Instance banao — views.py mein import hoga
+
 chat_ml_service = ChatMLService()

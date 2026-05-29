@@ -24,6 +24,7 @@ from .web_agent.graph import web_graph
 import threading
 import traceback
 import uuid
+from .chat_ml_service import ChatMLService
 
 
 
@@ -698,5 +699,32 @@ def collect_chat(request):
     )
      
     print(f"Chat saved ID: {chat_obj.id}")
+        # ML prediction
+    try:
+        ml_category = ChatMLService.predict(message)
+        print(f"CHAT PREDICTION: {ml_category}")
 
-    return Response({"status":"saved","chat_id": chat_obj.id,}, status=200)
+        # DB update karo
+        chat_obj.category = ml_category
+
+        # Simple risk assign karo
+        if ml_category in ["suicide", "bullying", "hate"]:
+            chat_obj.risk   = "High"
+            chat_obj.action = "Alert"
+        else:
+            chat_obj.risk   = "Low"
+            chat_obj.action = "Allow"
+
+        chat_obj.save()
+
+    except Exception as e:
+        print(f"Chat ML Error: {e}")
+        ml_category = "unknown"
+
+    return Response({
+        "status":   "saved",
+        "chat_id":  chat_obj.id,
+        "category": ml_category,
+    }, status=200)
+
+    
