@@ -6,6 +6,13 @@ import pandas as pd
 import re
 import __main__
 import os
+from dotenv import load_dotenv
+import os
+import requests
+
+load_dotenv()  # .env file load karo
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 
 chat_words = {
@@ -153,6 +160,8 @@ class ChatMLService:
         if cls._instance is None:
             cls._instance = super(ChatMLService, cls).__new__(cls)
         return cls._instance
+    
+
 
     def load_model(self):
         if self._model is None:
@@ -197,18 +206,146 @@ class ChatMLService:
                         self._encoder = pickle.load(f)
                     print("CHAT ENCODER LOADED")
         return self._encoder
+    
+    def translate_to_english(self,text: str) -> str:
+
+        """Roman Urdu / Urdu ko English mein translate karo via Grok API"""
+        has_urdu_script = bool(re.search(r'[\u0600-\u06FF]', text))
+        
+        # Step 2: Roman Urdu words check karo
+        roman_urdu_words = {
+            'hai', 'hain', 'ho', 'tha', 'thi', 'thy', 'ga', 'gi', 'gy',
+            'kya', 'nhi', 'nahi', 'mein', 'tum', 'aur', 'kr', 'hy', 'na',
+            'ko', 'ki', 'ka', 'sy', 'se', 'par', 'bhi', 'ab', 'koi',
+            'kuch', 'acha', 'theek', 'hn', 'hna', 'ap', 'apna', 'apni',
+            'mera', 'meri', 'tera', 'teri', 'woh', 'wo', 'yeh', 'ye',
+            'phir', 'phr', 'agar', 'lekin', 'mgr', 'bas', 'bss', 'yrr',
+            'yaar', 'bhai', 'bhen', 'achi', 'acha', 'sahi', 'thk', 'bilkul'
+        }
+        
+        words = set(text.lower().split())
+        has_roman_urdu = bool(words & roman_urdu_words)  # intersection
+        
+        # Step 3: Sirf tab translate karo jab zaroorat ho
+        if not has_urdu_script and not has_roman_urdu:
+            print(f"SKIPPED (already English): '{text}'")
+            return text  
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {GROQ_API_KEY}"
+                },
+                json={
+                     "model": "llama-3.1-8b-instant",  
+                    "max_tokens": 200,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "You are a translator. Your ONLY job is to output the English translation. Rules: 1) No explanations 2) No notes 3) No extra sentences 4) If already English, return exactly as-is 5) If untranslatable, return exactly as-is"
+                        },
+                        {
+                            "role": "user",
+                            "content": text
+                        }
+                    ]
+                },
+                timeout=10
+            )
+
+            data = response.json()
+            if "choices" not in data:
+                print(f"GROK ERROR RESPONSE: {data}")  
+                return text
+            translated = data["choices"][0]["message"]["content"].strip()
+            print(f"TRANSLATED: '{text}' → '{translated}'")
+            return translated
+
+        except Exception as e:
+            print(f"Translation error: {e}")
+            return text  # fail hone par original return ho ga
+        
+    
+    def classify_with_groq(self, message: str) -> str:
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {GROQ_API_KEY}"
+                },
+                json={
+                    "model": "llama-3.1-8b-instant",
+                    "max_tokens": 10,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": """You are a chat message classifier for a child safety app.
+    Classify the message into exactly ONE of these categories:
+    - normal
+    - bullying  
+    - hate
+    - suicide
+
+    Rules:
+    1. Return ONLY the category word, nothing else
+    2. Be conservative — only classify as dangerous if clearly harmful
+    3. Roman Urdu and Urdu messages should also be classified
+    4. Casual conversation, school talk, family talk = normal"""
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Classify: {message}"
+                        }
+                    ]
+                },
+                timeout=10
+            )
+
+            data = response.json()
+            if "choices" not in data:
+                return "normal"
+            
+            category = data["choices"][0]["message"]["content"].strip().lower()
+            valid = {"normal", "bullying", "hate", "suicide"}
+            return category if category in valid else "normal"
+
+        except Exception as e:
+            print(f"Groq error: {e}")
+        return "normal"
+
+
+
+
+
 
     def predict(self, message: str) -> str:
         try:
             model   = self.load_model()
             encoder = self.load_encoder()
+            print(f"Original Message: {message}")
+            # Making Prediction with ML model
+            translated_message = self.translate_to_english(message)
+            print(f"Translated Message: {translated_message}")
+            prediction = model.predict([ translated_message ])
+            ml_category = encoder.inverse_transform(prediction)[0]
 
-            # Single message list mein wrap karo
-            prediction = model.predict([message])
+            # Checking the confidence level of ML model prediction
+            
+            proba = model.predict_proba([translated_message])
+            confidence = proba.max()  # highest probability
+            print(f"ML Prediction: {prediction[0]}, Confidence: {confidence:.2f}")
 
-            # Label decode karo
-            category = encoder.inverse_transform(prediction)[0]
-            return category
+            if confidence < 0.70:  # 70% se kam confident hai ML
+                print(f"LOW CONFIDENCE — asking Groq...")
+                groq_category = self.classify_with_groq(message)
+                print(f"GROQ OVERRIDE: {prediction[0]} → {groq_category}")
+                return groq_category
+        
+            return ml_category
+
+            
 
         except Exception as e:
             print(f"Chat ML Error: {e}")

