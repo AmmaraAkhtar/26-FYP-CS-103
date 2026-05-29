@@ -5,7 +5,7 @@ from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view,permission_classes
 from django.contrib.auth import authenticate
 import random
 from . import models
@@ -29,6 +29,7 @@ from .chat_ml_service import chat_ml_service
 from django.utils.timezone import make_aware
 from datetime import datetime
 from .chat_agent.graph import chat_agent
+from rest_framework.permissions import IsAuthenticated
 
 
 
@@ -788,5 +789,20 @@ def collect_chat(request):
 
 
     }, status=200)
+
+# Api to deactivate child admin (jab parent chahe ki child agent temporarily deactivate ho jaye, jaise ki jab child ke saath parent khud ho, taki unnecessary alerts na aaye)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated]) # puri tarah sure kre k deactivate krne wala parent wo hi hai jo khud log in hai 
+def deactivate_child_admin(request):
+    child_id = request.data.get('child_id')
+    
+    try:
+        child = models.child.objects.get(id=child_id)
+        # Command save karo database mein
+        child.deactivate_command = True
+        child.save()
+        return Response({'status': 'command_sent'})
+    except models.child.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Child not found'}, status=404)
 
     
