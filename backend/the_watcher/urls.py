@@ -18,4 +18,5 @@ urlpatterns = [
     path('collectwebusage/', views.collect_web_usage),
     path('collectchat/', views.collect_chat),
     path('api/deactivate-admin/', views.deactivate_child_admin),
+    path('api/check-command/', views.check_deactivate_command, '),
 ]
