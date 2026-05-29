@@ -702,7 +702,7 @@ def collect_chat(request):
     message=message,
     sender=sender,
     ).filter(
-        timestamp__gte=timezone.now() - timedelta(minutes=2)
+        timestamp__gte=timezone.now() - timedelta(minutes=10)
     ).exists()
 
     if existing:
@@ -759,7 +759,7 @@ def collect_chat(request):
                     "alert_message":     None,
                     "should_send_alert": None,
                 })
-                print(f"AGENT DONE — action: {result['action']}, risk: {result['risk_level']}")
+                print(f"AGENT DONE — action: {result['action']}, risk: {result['risk']}, alert: {result['alert_message']}")
             except Exception as e:
                 print(f"Chat Agent Error: {e}")
                 # Fallback — ML result use karo
@@ -773,7 +773,7 @@ def collect_chat(request):
             # Normal — agent ki zaroorat nahi
             chat_obj.risk   = "Low"
             chat_obj.action = "Allow"
-            chat_obj.save()
+            #chat_obj.save()
 
         chat_obj.save()
 
@@ -785,6 +785,8 @@ def collect_chat(request):
         "status":   "saved",
         "chat_id":  chat_obj.id,
         "category": ml_category,
+
+
     }, status=200)
 
     
