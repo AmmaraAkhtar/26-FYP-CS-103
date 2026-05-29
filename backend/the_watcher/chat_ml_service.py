@@ -331,17 +331,15 @@ class ChatMLService:
             prediction = model.predict([ translated_message ])
             ml_category = encoder.inverse_transform(prediction)[0]
 
-            # Checking the confidence level of ML model prediction
-            
-            proba = model.predict_proba([translated_message])
-            confidence = proba.max()  # highest probability
-            print(f"ML Prediction: {prediction[0]}, Confidence: {confidence:.2f}")
+      
 
-            if confidence < 0.70:  # 70% se kam confident hai ML
-                print(f"LOW CONFIDENCE — asking Groq...")
+            # Verifying Sensitive Categories with Groq for better accuracy (Groq final decision leta hai)
+            if ml_category in ["hate", "bullying", "suicide"]:
+                print(f"SENSITIVE — verifying with Groq...")
                 groq_category = self.classify_with_groq(message)
-                print(f"GROQ OVERRIDE: {prediction[0]} → {groq_category}")
-                return groq_category
+                print(f"GROQ SAYS: {groq_category}")
+                return groq_category  # Groq final decision leta hai
+
         
             return ml_category
 
