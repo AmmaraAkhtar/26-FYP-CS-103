@@ -5,14 +5,45 @@ from typing import Literal
 from dotenv import load_dotenv
 from .state import AppState
 from .. import models
+import os
+import itertools
 from django.utils import timezone
 from datetime import timedelta
 from ..utils  import send_alert #send_alert function from views.py file
 
 load_dotenv()
-llm = ChatGroq( model="llama-3.3-70b-versatile",temperature= 0)
+# llm = ChatGroq( model="llama-3.3-70b-versatile",temperature= 0)
+
+# Rotate for multiple api keys
+GROQ_KEYS = [
+    k for k in [
+        os.getenv("GROQ_API_KEY_1"),
+        os.getenv("GROQ_API_KEY_2"),
+        os.getenv("GROQ_API_KEY_3"),
+        os.getenv("GROQ_API_KEY_4"),
+        os.getenv("GROQ_API_KEY_5"),
+        os.getenv("GROQ_API_KEY_6"),
+    ] if k  # None keys filter karo
+]
+
+# agar sirf ek key hi available hai
+if not GROQ_KEYS:
+    single = os.getenv("GROQ_API_KEY")
+    if single:
+        GROQ_KEYS = [single]
+
+key_cycle = itertools.cycle(GROQ_KEYS)
 
 
+def get_llm():
+    
+    return ChatGroq(
+        model="llama-3.1-8b-instant",
+        temperature=0,
+        groq_api_key=next(key_cycle),
+    )
+
+llm = get_llm()
 # Defining Context Fetcher Node -- Ye node database se child aur app usage ki history fetch karega, jo baad mein LLM ke reasoning ke liye use hoga.
 
 def context_fetcher_node(state: AppState) -> AppState:
