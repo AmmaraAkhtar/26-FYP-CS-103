@@ -36,3 +36,6 @@ __pycache__/
 backend/the_watcher/app_agent/.env
 .env
 *.env
+backend/the_watcher/chat_agent/.env
+.env
+*.env
