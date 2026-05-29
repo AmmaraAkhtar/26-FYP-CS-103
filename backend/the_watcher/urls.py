@@ -17,4 +17,5 @@ urlpatterns = [
     path('childusage/<int:child_id>/', views.get_child_usage),
     path('collectwebusage/', views.collect_web_usage),
     path('collectchat/', views.collect_chat),
+    path('api/deactivate-admin/', views.deactivate_child_admin),
 ]
