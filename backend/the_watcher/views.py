@@ -435,9 +435,9 @@ def collectAppUsageData_Api(request):
             }
                 
                 # thread_id = child_id — isi se memory maintain hogi per child
-                config = {"configurable": {"thread_id": f"child_{child_id}"}}
-                final = app_agent.invoke(initial_state, config=config) ## Invoking the agent with the initial state and config. Agent will process through the graph and return the final state with action, reasoning, alert message, etc.
-
+                # config = {"configurable": {"thread_id": f"child_{child_id}"}}
+                # final = app_agent.invoke(initial_state, config=config) ## Invoking the agent with the initial state and config. Agent will process through the graph and return the final state with action, reasoning, alert message, etc.
+                final = app_agent.invoke(initial_state)
                 # save with prediction
                 models.appUsage.objects.create(
                 child=child,

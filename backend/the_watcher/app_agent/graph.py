@@ -26,7 +26,8 @@ def build_agent():
     graph.add_edge("action_executor", END)
 
     # Har child ka alag thread — memory maintain hogi
-    checkpointer = MemorySaver()
-    return graph.compile(checkpointer=checkpointer)
+    #checkpointer = MemorySaver()
+    #return graph.compile(checkpointer=checkpointer)
+    return graph.compile()
 
 app_agent = build_agent()
