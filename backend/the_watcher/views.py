@@ -384,6 +384,54 @@ def collectAppUsageData_Api(request):
             for i, app in enumerate(usage_data):
                 category = category_predictions[i]
                 package  = app["package_name"]
+                usage_time = app["usage_time"]
+
+                # ── DUPLICATE CHECK ──
+                # Aaj ka same package already save hai?
+                existing = models.appUsage.objects.filter(
+                    child=child,
+                    package_name=package,
+                    date=today,
+                ).first()
+
+                if existing:
+                    # Agar usage time same hai — bilkul duplicate, skip karo
+                    if existing.usage_time == usage_time:
+                        print(f"DUPLICATE — skipping {package}")
+                        result.append({
+                            "package_name": package,
+                            "usage_time":   usage_time,
+                            "category":     category,
+                            "action":       existing.action,
+                            "reasoning":    "Duplicate — already processed today",
+                            "alert_message": None,
+                        })
+                        continue
+
+                    # Usage time badh gayi — sirf update karo, agent mat chalao
+                    if usage_time <= existing.usage_time:
+                        print(f"SAME OR LESS USAGE — skipping {package}")
+                        continue
+
+                    # Agar usage time significantly badhi hai (10+ minutes) tabhi agent chalao
+                    time_diff_mins = (usage_time - existing.usage_time) / 60
+                    if time_diff_mins < 10:
+                        print(f"MINOR INCREASE ({time_diff_mins:.1f} min) — skipping agent for {package}")
+                        existing.usage_time = usage_time
+                        existing.save()
+                        result.append({
+                            "package_name": package,
+                            "usage_time":   usage_time,
+                            "category":     category,
+                            "action":       existing.action,
+                            "reasoning":    "Minor usage update — no re-analysis",
+                            "alert_message": None,
+                        })
+                        continue
+
+
+
+                
 
                 # System apps aur zero-usage apps skip karne ke liye simple rule — inhe allow kar dete hain bina agent ko involve kiye, taki unnecessary processing na ho.
                 if app["usage_time"] == 0 or package in SKIP_PACKAGES:
