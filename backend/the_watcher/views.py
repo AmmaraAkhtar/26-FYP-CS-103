@@ -828,11 +828,9 @@ def check_deactivate_command(request):
 @api_view(['POST'])
 def collect_chat(request):
     print("Chat API Called")
-    print("request.body:", request.body)
 
     serializer = ChatMessageSerializer(data=request.data)
     if not serializer.is_valid():
-        print("SERIALIZER ERRORS:", serializer.errors)
         return Response(serializer.errors, status=400)
 
     child_id      = request.data.get('child_id')
@@ -841,44 +839,32 @@ def collect_chat(request):
     message       = request.data.get('message', '')
     timestamp_str = request.data.get('timestamp')
 
-    try:
-        timestamp = make_aware(datetime.fromisoformat(timestamp_str))
-    except:
-        timestamp = timezone.now()
-
-    # ─── FILTER 1: Too short ───
+    # ── FILTER 1: Too short ──
     if not message or len(message.strip()) < 5:
         return Response({"status": "ignored"}, status=200)
 
-    # ─── FILTER 2: WhatsApp UI noise ───
+    # ── FILTER 2: UI Noise ──
     UI_NOISE = {
-        # Call related
         "voice call", "video call", "missed voice call",
         "missed video call", "tap to call back", "no answer",
-        "call back", "1 missed call",
-        # Media
-        "photo", "video", "document", "audio", "sticker",
-        "gif", "location", "contact",
-        # System
+        "call back", "photo", "video", "document", "audio",
+        "sticker", "gif", "location", "contact",
         "this message was deleted", "you deleted this message",
         "announcements", "explore", "missed call",
-        # Call durations — regex se handle
     }
-
     msg_lower = message.lower().strip()
 
-    # Exact match
     if msg_lower in UI_NOISE:
         return Response({"status": "ignored_noise"}, status=200)
 
-    # Date pattern — "08/06/2026", "27 March 2026", "8 May 2026"
+    # Date pattern
     if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
         return Response({"status": "ignored_date"}, status=200)
 
     if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
         return Response({"status": "ignored_date"}, status=200)
 
-    # Call duration — "33 secs", "1 min", "2 mins", "32 secs"
+    # Call duration
     if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
         return Response({"status": "ignored_duration"}, status=200)
 
@@ -886,19 +872,31 @@ def collect_chat(request):
     if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
         return Response({"status": "ignored_phone"}, status=200)
 
-    # "CR pinned a message" jaise system messages
-    if "pinned a message" in msg_lower or "added" in msg_lower and "to group" in msg_lower:
+    # System messages
+    if "pinned a message" in msg_lower:
         return Response({"status": "ignored_system"}, status=200)
 
-    # ─── FILTER 3: Child exist check ───
+    # ── FILTER 3: Child exist ──
     try:
         child_obj = models.child.objects.get(id=child_id)
     except models.child.DoesNotExist:
         return Response({"error": "Child not found"}, status=404)
 
-    print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
+    print(f"Chat — Child: {child_id} | App: {app_name} | Msg: {message}")
 
-    # ─── FILTER 4: Duplicate check ───
+    # ── Timestamp parse ──
+    try:
+        msg_time = make_aware(datetime.fromisoformat(timestamp_str))
+    except:
+        msg_time = timezone.now()
+
+    # ── FILTER 4: Purana message — historical ──
+    # WhatsApp app khulne pe poori history load karti hai
+    # Sirf last 5 minute ke messages pe agent chalao
+    time_diff = timezone.now() - msg_time
+    is_historical = time_diff.total_seconds() > 300  # 5 minutes
+
+    # ── FILTER 5: Duplicate ──
     existing = models.ChatMessage.objects.filter(
         child=child_obj,
         app_name=app_name,
@@ -912,20 +910,31 @@ def collect_chat(request):
         print("DUPLICATE — skipping")
         return Response({"status": "duplicate"}, status=200)
 
-    # ─── DB Save ───
-    chat_obj = models.ChatMessage.objects.create(
-        child     = child_obj,
-        app_name  = app_name,
-        sender    = sender,
-        message   = message,
-        timestamp = timestamp,
-        category  = "Pending",
-        risk      = "Pending",
-        action    = "Pending",
-    )
-    print(f"Chat saved ID: {chat_obj.id}")
+    # ── DB Save ──
+    try:
+        chat_obj = models.ChatMessage.objects.create(
+            child     = child_obj,
+            app_name  = app_name,
+            sender    = sender,
+            message   = message,
+            timestamp = msg_time,
+            category  = "historical" if is_historical else "Pending",
+            risk      = "Low"        if is_historical else "Pending",
+            action    = "Allow"      if is_historical else "Pending",
+        )
+        print(f"Chat saved ID: {chat_obj.id}")
+    except Exception as e:
+        print(f"DB Save Error: {e}")
+        return Response({"status": "db_error"}, status=200)
 
-    # ─── Agent Call ───
+    # ── Historical message — agent mat chalao ──
+    if is_historical:
+        return Response({
+            "status":  "historical",
+            "chat_id": chat_obj.id,
+        }, status=200)
+
+    # ── Agent Call — sirf naye messages pe ──
     try:
         result = chat_agent.invoke({
             "child_id":    int(child_id),
@@ -949,7 +958,7 @@ def collect_chat(request):
             "should_send_alert": None,
         })
 
-        print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}, risk: {result.get('risk_level')}")
+        print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}")
 
         return Response({
             "status":    "processed",
@@ -965,3 +974,4 @@ def collect_chat(request):
             "status":  "saved",
             "chat_id": chat_obj.id,
         }, status=200)
+    
