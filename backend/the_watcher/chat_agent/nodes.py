@@ -137,12 +137,13 @@ Reason carefully using ALL context — do NOT follow fixed rules.
 ━━━ CHILD PROFILE ━━━
 Age: {state['child_age']} years old
 App: {state['app_name']}
+
 Total messages today: {state['total_chats_today']}
 
 ━━━ CURRENT MESSAGE ━━━
 "{state['message']}"
 
-ML Initial Category: {state['ml_category']}  ← This is just one input. You decide the actual category.
+
 
 ━━━ RECENT CHAT HISTORY (same app) ━━━
 Total flagged messages before: {flagged_count}
@@ -176,6 +177,7 @@ Step 4 — Consider:
   - Is child's age making this more serious?
   - First time vs repeated pattern?
   - Roman Urdu context — "mar dunga" in anger vs real threat?
+  - Properly analyze mixed language — "hate" words in slang vs actual hate speech?
 
 NOTE: ML only sees the text surface. It does NOT know child's age, 
 history, or patterns. Your job is to use ALL context above to make 

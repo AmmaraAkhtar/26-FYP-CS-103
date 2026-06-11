@@ -663,6 +663,167 @@ def clean_url(url):
     return url               
 
 # Chat Analysis
+# @api_view(['POST'])
+# def collect_chat(request):
+#     print("Chat API Called")
+#     print("request.body:", request.body)
+
+#     serializer = ChatMessageSerializer(data=request.data)
+
+#     if not serializer.is_valid():
+#         print("SERIALIZER ERRORS:", serializer.errors)
+#         return Response(serializer.errors, status=400)
+
+#     child_id  = request.data.get('child_id')
+#     app_name  = request.data.get('app_name', '')
+#     sender    = request.data.get('sender', 'unknown')
+#     message   = request.data.get('message', '')
+#     timestamp_str = request.data.get('timestamp')
+#     try:
+#         timestamp = make_aware(datetime.fromisoformat(timestamp_str))
+#     except:
+#         timestamp = timezone.now()
+
+#     # Chote msgs ko ignore karne ke liye simple rule — agar message 3 characters se kam ka hai, toh usse process mat karo. Isse unnecessary processing aur false positives dono se bachenge.
+#     if not message or len(message.strip()) < 3:
+#         print("IGNORED — message too short")
+#         return Response({"status": "ignored"}, status=200)
+
+#     try:
+#         child_obj = models.child.objects.get(id=child_id)
+#     except models.child.DoesNotExist:
+#         return Response({"error": "Child not found"}, status=404)
+
+#     print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
+
+#     # Duplicate message check — agar same message 2 minute ke andar repeat ho raha hai, toh usse ignore kar do. Isse accidental double sends ya app glitches se bachenge.
+#     existing = models.ChatMessage.objects.filter(
+#     child=child_obj,
+#     app_name=app_name,
+#     message=message,
+#     sender=sender,
+#     ).filter(
+#         timestamp__gte=timezone.now() - timedelta(minutes=10)
+#     ).exists()
+
+#     if existing:
+#         print("DUPLICATE — skipping")
+#         return Response({"status": "duplicate"}, status=200)
+
+   
+
+#     # DB mein save karo
+#     chat_obj = models.ChatMessage.objects.create(
+#         child = child_obj,
+#         app_name= app_name,
+#         sender = sender,
+#         message = message,
+#         timestamp= timestamp,
+#         category = "Pending", 
+#         risk = "Pending",
+#         action= "Pending",
+#     )
+     
+#     print(f"Chat saved ID: {chat_obj.id}")
+#         # ML prediction
+#     try:
+#         ml_category = chat_ml_service.predict(message)
+#         print(f"CHAT PREDICTION: {ml_category}")
+
+#         # DB update karo
+#         chat_obj.category = ml_category
+
+#         # Gent only for sensitive categories
+#         AGENT_CATEGORIES = {"hate", "bullying", "suicide"}
+
+#         if ml_category in AGENT_CATEGORIES:
+#             print(f"SENSITIVE — invoking chat agent...")
+#             try:
+#                 result = chat_agent.invoke({
+#                     "child_id":    int(child_id),
+#                     "app_name":    app_name,
+#                     "message":     message,
+#                     "chat_obj_id": chat_obj.id,
+#                     "ml_category": ml_category,
+ 
+#                     # Agent ye sab khud fill karega
+#                     "child_age":         None,
+#                     "screen_limit_mins": None,
+#                     "recent_alerts":     None,
+#                     "chat_history":      None,
+#                     "total_chats_today": None,
+#                     "final_category":    None,
+#                     "action":            None,
+#                     "reasoning":         None,
+#                     "risk_level":        None,
+#                     "urgency":           None,
+#                     "alert_message":     None,
+#                     "should_send_alert": None,
+#                 })
+#                 print(f"AGENT DONE — action: {result['action']}, risk: {result['risk_level']}, alert: {result['alert_message']}")
+#             except Exception as e:
+#                 print(f"Chat Agent Error: {e}")
+#                 # Fallback — ML result use karo
+#                 if ml_category in ["suicide"]:
+#                     chat_obj.risk   = "High"
+#                     chat_obj.action = "Alert"
+#                 else:
+#                     chat_obj.risk   = "Medium"
+#                     chat_obj.action = "Warn"
+#         else:
+#             # Normal — agent ki zaroorat nahi
+#             chat_obj.risk   = "Low"
+#             chat_obj.action = "Allow"
+#             #chat_obj.save()
+
+#         chat_obj.save()
+
+#     except Exception as e:
+#         print(f"Chat ML Error: {e}")
+#         ml_category = "unknown"
+
+#     return Response({
+#         "status":   "saved",
+#         "chat_id":  chat_obj.id,
+#         "category": ml_category,
+
+
+#     }, status=200)
+
+# # Api to deactivate child admin (jab parent chahe ki child agent temporarily deactivate ho jaye, jaise ki jab child ke saath parent khud ho, taki unnecessary alerts na aaye)
+# @api_view(['POST'])
+# @permission_classes([IsAuthenticated]) # puri tarah sure kre k deactivate krne wala parent wo hi hai jo khud log in hai 
+# def deactivate_child_admin(request):
+#     child_id = request.data.get('child_id')
+    
+#     try:
+#         child = models.child.objects.get(id=child_id)
+#         # Command save karo database mein
+#         child.deactivate_command = True
+#         child.save()
+#         return Response({'status': 'command_sent'})
+#     except models.child.DoesNotExist:
+#         return Response({'status': 'error', 'message': 'Child not found'}, status=404)
+
+
+# # API for child agent to check if deactivate command is given by parent. Child agent is API ko periodically call karega, aur agar command milti hai toh wo apne aap ko deactivate kar dega (jaise ki alerts bhejna band kar dega) taki jab parent ke saath child ho toh unnecessary alerts na aaye.
+# @api_view(['GET'])
+# def check_deactivate_command(request):
+#     child_id = request.query_params.get('child_id')
+    
+#     try:
+#         child = models.child.objects.get(id=child_id)
+#         should_deactivate = child.deactivate_command
+        
+#         # Command mil gayi toh reset karo
+#         if should_deactivate:
+#             child.deactivate_command = False
+#             child.save()
+            
+#         return Response({'deactivate': should_deactivate})
+#     except models.child.DoesNotExist:
+#         return Response({'deactivate': False})
+
 @api_view(['POST'])
 def collect_chat(request):
     print("Chat API Called")
@@ -674,17 +835,18 @@ def collect_chat(request):
         print("SERIALIZER ERRORS:", serializer.errors)
         return Response(serializer.errors, status=400)
 
-    child_id  = request.data.get('child_id')
-    app_name  = request.data.get('app_name', '')
-    sender    = request.data.get('sender', 'unknown')
-    message   = request.data.get('message', '')
+    child_id      = request.data.get('child_id')
+    app_name      = request.data.get('app_name', '')
+    sender        = request.data.get('sender', 'unknown')
+    message       = request.data.get('message', '')
     timestamp_str = request.data.get('timestamp')
+
     try:
         timestamp = make_aware(datetime.fromisoformat(timestamp_str))
     except:
         timestamp = timezone.now()
 
-    # Chote msgs ko ignore karne ke liye simple rule — agar message 3 characters se kam ka hai, toh usse process mat karo. Isse unnecessary processing aur false positives dono se bachenge.
+    # Short messages ignore
     if not message or len(message.strip()) < 3:
         print("IGNORED — message too short")
         return Response({"status": "ignored"}, status=200)
@@ -696,12 +858,12 @@ def collect_chat(request):
 
     print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
 
-    # Duplicate message check — agar same message 2 minute ke andar repeat ho raha hai, toh usse ignore kar do. Isse accidental double sends ya app glitches se bachenge.
+    # Duplicate check
     existing = models.ChatMessage.objects.filter(
-    child=child_obj,
-    app_name=app_name,
-    message=message,
-    sender=sender,
+        child=child_obj,
+        app_name=app_name,
+        message=message,
+        sender=sender,
     ).filter(
         timestamp__gte=timezone.now() - timedelta(minutes=10)
     ).exists()
@@ -710,118 +872,58 @@ def collect_chat(request):
         print("DUPLICATE — skipping")
         return Response({"status": "duplicate"}, status=200)
 
-   
-
-    # DB mein save karo
+    # DB mein save karo — Pending state ke sath
     chat_obj = models.ChatMessage.objects.create(
-        child = child_obj,
-        app_name= app_name,
-        sender = sender,
-        message = message,
-        timestamp= timestamp,
-        category = "Pending", 
-        risk = "Pending",
-        action= "Pending",
+        child     = child_obj,
+        app_name  = app_name,
+        sender    = sender,
+        message   = message,
+        timestamp = timestamp,
+        category  = "Pending",
+        risk      = "Pending",
+        action    = "Pending",
     )
-     
+
     print(f"Chat saved ID: {chat_obj.id}")
-        # ML prediction
+
+    # Direct agent ko bhejo — ML nahi
     try:
-        ml_category = chat_ml_service.predict(message)
-        print(f"CHAT PREDICTION: {ml_category}")
+        result = chat_agent.invoke({
+            "child_id":    int(child_id),
+            "app_name":    app_name,
+            "message":     message,
+           
+            "chat_obj_id": chat_obj.id,
+            "ml_category": "none",   # ML nahi hai — agent khud decide karega
 
-        # DB update karo
-        chat_obj.category = ml_category
+            # Agent ye sab khud fill karega
+            "child_age":         None,
+            "screen_limit_mins": None,
+            "recent_alerts":     None,
+            "chat_history":      None,
+            "total_chats_today": None,
+            "final_category":    None,
+            "action":            None,
+            "reasoning":         None,
+            "risk_level":        None,
+            "urgency":           None,
+            "alert_message":     None,
+            "should_send_alert": None,
+        })
 
-        # Gent only for sensitive categories
-        AGENT_CATEGORIES = {"hate", "bullying", "suicide"}
+        print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}, risk: {result.get('risk_level')}")
 
-        if ml_category in AGENT_CATEGORIES:
-            print(f"SENSITIVE — invoking chat agent...")
-            try:
-                result = chat_agent.invoke({
-                    "child_id":    int(child_id),
-                    "app_name":    app_name,
-                    "message":     message,
-                    "chat_obj_id": chat_obj.id,
-                    "ml_category": ml_category,
- 
-                    # Agent ye sab khud fill karega
-                    "child_age":         None,
-                    "screen_limit_mins": None,
-                    "recent_alerts":     None,
-                    "chat_history":      None,
-                    "total_chats_today": None,
-                    "final_category":    None,
-                    "action":            None,
-                    "reasoning":         None,
-                    "risk_level":        None,
-                    "urgency":           None,
-                    "alert_message":     None,
-                    "should_send_alert": None,
-                })
-                print(f"AGENT DONE — action: {result['action']}, risk: {result['risk']}, alert: {result['alert_message']}")
-            except Exception as e:
-                print(f"Chat Agent Error: {e}")
-                # Fallback — ML result use karo
-                if ml_category in ["suicide"]:
-                    chat_obj.risk   = "High"
-                    chat_obj.action = "Alert"
-                else:
-                    chat_obj.risk   = "Medium"
-                    chat_obj.action = "Warn"
-        else:
-            # Normal — agent ki zaroorat nahi
-            chat_obj.risk   = "Low"
-            chat_obj.action = "Allow"
-            #chat_obj.save()
-
-        chat_obj.save()
+        return Response({
+            "status":    "processed",
+            "chat_id":   chat_obj.id,
+            "category":  result.get("final_category"),
+            "action":    result.get("action"),
+            "risk_level": result.get("risk_level"),
+        }, status=200)
 
     except Exception as e:
-        print(f"Chat ML Error: {e}")
-        ml_category = "unknown"
-
-    return Response({
-        "status":   "saved",
-        "chat_id":  chat_obj.id,
-        "category": ml_category,
-
-
-    }, status=200)
-
-# Api to deactivate child admin (jab parent chahe ki child agent temporarily deactivate ho jaye, jaise ki jab child ke saath parent khud ho, taki unnecessary alerts na aaye)
-@api_view(['POST'])
-@permission_classes([IsAuthenticated]) # puri tarah sure kre k deactivate krne wala parent wo hi hai jo khud log in hai 
-def deactivate_child_admin(request):
-    child_id = request.data.get('child_id')
-    
-    try:
-        child = models.child.objects.get(id=child_id)
-        # Command save karo database mein
-        child.deactivate_command = True
-        child.save()
-        return Response({'status': 'command_sent'})
-    except models.child.DoesNotExist:
-        return Response({'status': 'error', 'message': 'Child not found'}, status=404)
-
-
-# API for child agent to check if deactivate command is given by parent. Child agent is API ko periodically call karega, aur agar command milti hai toh wo apne aap ko deactivate kar dega (jaise ki alerts bhejna band kar dega) taki jab parent ke saath child ho toh unnecessary alerts na aaye.
-@api_view(['GET'])
-def check_deactivate_command(request):
-    child_id = request.query_params.get('child_id')
-    
-    try:
-        child = models.child.objects.get(id=child_id)
-        should_deactivate = child.deactivate_command
-        
-        # Command mil gayi toh reset karo
-        if should_deactivate:
-            child.deactivate_command = False
-            child.save()
-            
-        return Response({'deactivate': should_deactivate})
-    except models.child.DoesNotExist:
-        return Response({'deactivate': False})
-
-    
+        print(f"Chat Agent Error: {traceback.format_exc()}")
+        return Response({
+            "status":  "saved",
+            "chat_id": chat_obj.id,
+        }, status=200)
