@@ -790,47 +790,47 @@ def clean_url(url):
 
 #     }, status=200)
 
-# # Api to deactivate child admin (jab parent chahe ki child agent temporarily deactivate ho jaye, jaise ki jab child ke saath parent khud ho, taki unnecessary alerts na aaye)
-# @api_view(['POST'])
-# @permission_classes([IsAuthenticated]) # puri tarah sure kre k deactivate krne wala parent wo hi hai jo khud log in hai 
-# def deactivate_child_admin(request):
-#     child_id = request.data.get('child_id')
+# Api to deactivate child admin (jab parent chahe ki child agent temporarily deactivate ho jaye, jaise ki jab child ke saath parent khud ho, taki unnecessary alerts na aaye)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated]) # puri tarah sure kre k deactivate krne wala parent wo hi hai jo khud log in hai 
+def deactivate_child_admin(request):
+    child_id = request.data.get('child_id')
     
-#     try:
-#         child = models.child.objects.get(id=child_id)
-#         # Command save karo database mein
-#         child.deactivate_command = True
-#         child.save()
-#         return Response({'status': 'command_sent'})
-#     except models.child.DoesNotExist:
-#         return Response({'status': 'error', 'message': 'Child not found'}, status=404)
+    try:
+        child = models.child.objects.get(id=child_id)
+        # Command save karo database mein
+        child.deactivate_command = True
+        child.save()
+        return Response({'status': 'command_sent'})
+    except models.child.DoesNotExist:
+        return Response({'status': 'error', 'message': 'Child not found'}, status=404)
 
 
-# # API for child agent to check if deactivate command is given by parent. Child agent is API ko periodically call karega, aur agar command milti hai toh wo apne aap ko deactivate kar dega (jaise ki alerts bhejna band kar dega) taki jab parent ke saath child ho toh unnecessary alerts na aaye.
-# @api_view(['GET'])
-# def check_deactivate_command(request):
-#     child_id = request.query_params.get('child_id')
+# API for child agent to check if deactivate command is given by parent. Child agent is API ko periodically call karega, aur agar command milti hai toh wo apne aap ko deactivate kar dega (jaise ki alerts bhejna band kar dega) taki jab parent ke saath child ho toh unnecessary alerts na aaye.
+@api_view(['GET'])
+def check_deactivate_command(request):
+    child_id = request.query_params.get('child_id')
     
-#     try:
-#         child = models.child.objects.get(id=child_id)
-#         should_deactivate = child.deactivate_command
+    try:
+        child = models.child.objects.get(id=child_id)
+        should_deactivate = child.deactivate_command
         
-#         # Command mil gayi toh reset karo
-#         if should_deactivate:
-#             child.deactivate_command = False
-#             child.save()
+        # Command mil gayi toh reset karo
+        if should_deactivate:
+            child.deactivate_command = False
+            child.save()
             
-#         return Response({'deactivate': should_deactivate})
-#     except models.child.DoesNotExist:
-#         return Response({'deactivate': False})
+        return Response({'deactivate': should_deactivate})
+    except models.child.DoesNotExist:
+        return Response({'deactivate': False})
 
+# Chat Analysi Api
 @api_view(['POST'])
 def collect_chat(request):
     print("Chat API Called")
     print("request.body:", request.body)
 
     serializer = ChatMessageSerializer(data=request.data)
-
     if not serializer.is_valid():
         print("SERIALIZER ERRORS:", serializer.errors)
         return Response(serializer.errors, status=400)
@@ -846,11 +846,51 @@ def collect_chat(request):
     except:
         timestamp = timezone.now()
 
-    # Short messages ignore
-    if not message or len(message.strip()) < 3:
-        print("IGNORED — message too short")
+    # ─── FILTER 1: Too short ───
+    if not message or len(message.strip()) < 5:
         return Response({"status": "ignored"}, status=200)
 
+    # ─── FILTER 2: WhatsApp UI noise ───
+    UI_NOISE = {
+        # Call related
+        "voice call", "video call", "missed voice call",
+        "missed video call", "tap to call back", "no answer",
+        "call back", "1 missed call",
+        # Media
+        "photo", "video", "document", "audio", "sticker",
+        "gif", "location", "contact",
+        # System
+        "this message was deleted", "you deleted this message",
+        "announcements", "explore", "missed call",
+        # Call durations — regex se handle
+    }
+
+    msg_lower = message.lower().strip()
+
+    # Exact match
+    if msg_lower in UI_NOISE:
+        return Response({"status": "ignored_noise"}, status=200)
+
+    # Date pattern — "08/06/2026", "27 March 2026", "8 May 2026"
+    if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
+        return Response({"status": "ignored_date"}, status=200)
+
+    if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
+        return Response({"status": "ignored_date"}, status=200)
+
+    # Call duration — "33 secs", "1 min", "2 mins", "32 secs"
+    if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
+        return Response({"status": "ignored_duration"}, status=200)
+
+    # Phone number
+    if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
+        return Response({"status": "ignored_phone"}, status=200)
+
+    # "CR pinned a message" jaise system messages
+    if "pinned a message" in msg_lower or "added" in msg_lower and "to group" in msg_lower:
+        return Response({"status": "ignored_system"}, status=200)
+
+    # ─── FILTER 3: Child exist check ───
     try:
         child_obj = models.child.objects.get(id=child_id)
     except models.child.DoesNotExist:
@@ -858,7 +898,7 @@ def collect_chat(request):
 
     print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
 
-    # Duplicate check
+    # ─── FILTER 4: Duplicate check ───
     existing = models.ChatMessage.objects.filter(
         child=child_obj,
         app_name=app_name,
@@ -872,7 +912,7 @@ def collect_chat(request):
         print("DUPLICATE — skipping")
         return Response({"status": "duplicate"}, status=200)
 
-    # DB mein save karo — Pending state ke sath
+    # ─── DB Save ───
     chat_obj = models.ChatMessage.objects.create(
         child     = child_obj,
         app_name  = app_name,
@@ -883,20 +923,18 @@ def collect_chat(request):
         risk      = "Pending",
         action    = "Pending",
     )
-
     print(f"Chat saved ID: {chat_obj.id}")
 
-    # Direct agent ko bhejo — ML nahi
+    # ─── Agent Call ───
     try:
         result = chat_agent.invoke({
             "child_id":    int(child_id),
             "app_name":    app_name,
             "message":     message,
-           
+            "sender":      sender,
             "chat_obj_id": chat_obj.id,
-            "ml_category": "none",   # ML nahi hai — agent khud decide karega
+            "ml_category": "none",
 
-            # Agent ye sab khud fill karega
             "child_age":         None,
             "screen_limit_mins": None,
             "recent_alerts":     None,
