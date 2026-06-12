@@ -475,6 +475,63 @@ Future<void> _startServiceWithDelay() async {
   await MonitorService().startService(childId);
 }
 
+Future<void> checkAccessibilityPermission() async {
+  const platform = MethodChannel('monitor_channel');
+  try {
+    final bool isEnabled = await platform.invokeMethod('isAccessibilityServiceEnabled');
+    if (!isEnabled) {
+      showAccessibilityPermissionDialog();
+    }
+  } catch (e) {
+    print("Error checking accessibility permission: $e");
+  }
+}
+
+// Accessibility permission dialog
+
+void showAccessibilityPermissionDialog() {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      title: Text(
+        "Accessibility Access Required",
+        style: TextStyle(
+          color: Color(0xFF699886),
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: Text(
+        "Chats aur web browsing monitor karne ke liye Accessibility "
+        "permission zaruri hai. Sirf ek dafa enable karna hoga.",
+        style: TextStyle(color: Colors.grey[700]),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text("Later", style: TextStyle(color: Colors.grey)),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(ctx);
+            const platform = MethodChannel('monitor_channel');
+            await platform.invokeMethod('openAccessibilitySettings');
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFFEB9974),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+          child: Text("Enable Now", style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+}
 
 
 void setupListener() {
@@ -512,6 +569,7 @@ void setupListener() {
   void initState() {
     super.initState();
     print("INIT STATE CALLED ");
+    checkAccessibilityPermission();
     activateDeviceAdmin();
     setupListener();
     //webMonitoring();
