@@ -98,6 +98,22 @@ class MainActivity : FlutterActivity() {
                     result.success("Service Started")
                 }
 
+                "isAccessibilityServiceEnabled" -> {
+                val enabledServices = Settings.Secure.getString(
+                    contentResolver,
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+                )
+                val serviceName = "$packageName/.MyAccessibilityService"
+                val isEnabled = enabledServices?.contains(packageName) == true
+                result.success(isEnabled)
+            }
+
+            "openAccessibilitySettings" -> {
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                startActivity(intent)
+                result.success("Opened")
+            }
+
                 // Notification Listener Check
                 "isNotificationListenerEnabled" -> {
                     val enabledListeners = Settings.Secure.getString(
