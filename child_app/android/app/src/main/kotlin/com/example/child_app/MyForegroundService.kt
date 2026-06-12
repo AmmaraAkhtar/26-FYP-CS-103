@@ -131,6 +131,40 @@ class MyForegroundService : Service() {
         super.onTaskRemoved(rootIntent)
     }
 
+    //  Heartbeat — backend ko batata hai ke device/app abhi tak active hai
+    private fun sendHeartbeat() {
+        if (childId == -1) {
+            Log.e("MONITOR_SERVICE", "Heartbeat: child_id not set — skipping")
+            return
+        }
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+
+        val json = JSONObject().apply {
+            put("child_id", childId)
+            put("timestamp", sdf.format(Date()))
+        }
+
+        val body = json.toString()
+            .toRequestBody("application/json".toMediaType())
+
+        val request = Request.Builder()
+            .url("http://192.168.18.163:8000/heartbeat/")
+            .post(body)
+            .build()
+
+        httpClient.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("MONITOR_SERVICE", "Heartbeat failed: ${e.message}")
+            }
+            override fun onResponse(call: Call, response: Response) {
+                Log.d("MONITOR_SERVICE", "Heartbeat sent | ${response.code}")
+                response.close()
+            }
+        })
+    }
+
     //  Monitoring loop
     private fun startMonitoring() {
         handler.removeCallbacksAndMessages(null) // Purani loop band karo
@@ -140,6 +174,7 @@ class MyForegroundService : Service() {
                 Log.d("MONITOR_SERVICE", "Tick - Child ID: $childId")
                 fetchAndSendData()
                 collectAndSendSms() 
+                sendHeartbeat()
                 handler.postDelayed(this, 300000) // Har 10 second baad
             }
         })

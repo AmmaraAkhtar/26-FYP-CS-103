@@ -371,6 +371,7 @@ def collectAppUsageData_Api(request):
 
             child_id = validated_data["child_id"]
             child = models.child.objects.get(id=child_id)
+            today = validated_data["timestamp"].date()
             SKIP_PACKAGES = {
     'com.android', 'android',
     'com.samsung.android.app.galaxyfinder',
