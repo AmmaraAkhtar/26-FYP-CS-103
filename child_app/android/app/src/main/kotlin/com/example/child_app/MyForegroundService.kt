@@ -28,6 +28,7 @@ import org.json.JSONObject
 
 import java.io.IOException
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.*
 
 class MyForegroundService : Service() {
@@ -246,45 +247,48 @@ handler.post(object : Runnable {
     }
 
     //  Usage data fetch karo
+    
     private fun fetchAndSendData() {
-        try {
-            val endTime = System.currentTimeMillis()
-            val startTime = endTime - (1000L * 60 * 15) // Last 15 minutes ka data
+    try {
+        val endTime = System.currentTimeMillis()
+        
+        // Din ka start (midnight) se ab tak
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startTime = calendar.timeInMillis  // ← sirf ye line replace karo
 
-            val usageStatsManager =
-                getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val usageStatsManager =
+            getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
-            val stats = usageStatsManager.queryAndAggregateUsageStats(
-                startTime,
-                endTime
-            )
+        val stats = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
 
-            if (stats.isNullOrEmpty()) {
-                Log.d("MONITOR_SERVICE", " No usage stats - Permission check karo")
-                return
-            }
-
-            val appsArray = JSONArray()
-
-            for (app in stats) {
-                for ((_, app) in stats) {
-                    val obj = JSONObject()
-                    obj.put("package_name", app.packageName)
-                    obj.put("usage_time", app.totalTimeInForeground / 1000)
-                    appsArray.put(obj)
-                }
-            }
-
-            Log.d("MONITOR_SERVICE", " Apps found: ${appsArray.length()}")
-
-            if (appsArray.length() > 0) {
-                sendToBackend(appsArray)
-            }
-
-        } catch (e: Exception) {
-            Log.e("MONITOR_SERVICE", " Error fetching data: ${e.message}")
+        if (stats.isNullOrEmpty()) {
+            Log.d("MONITOR_SERVICE", "No usage stats")
+            return
         }
+
+        val appsArray = JSONArray()
+
+        for ((_, app) in stats) {
+            if (app.totalTimeInForeground > 30000) { // 30 seconds minimum
+                val obj = JSONObject()
+                obj.put("package_name", app.packageName)
+                obj.put("usage_time", app.totalTimeInForeground / 1000)
+                appsArray.put(obj)
+            }
+        }
+
+        if (appsArray.length() > 0) {
+            sendToBackend(appsArray)
+        }
+
+    } catch (e: Exception) {
+        Log.e("MONITOR_SERVICE", "Error: ${e.message}")
     }
+}
 
     //  Backend ko data bhejo
     private fun sendToBackend(apps: JSONArray) {

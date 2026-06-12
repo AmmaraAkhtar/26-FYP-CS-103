@@ -148,19 +148,123 @@ class MyAccessibilityService : AccessibilityService() {
 
 // sender ko extract kre ga chat se
 
-    private fun extractSender(node: AccessibilityNodeInfo?): String {
+    private fun extractSender(node: AccessibilityNodeInfo?, appName: String): String {
     if (node == null) return "unknown"
-    // WhatsApp/Telegram mein contact name usually
-    // pehle TextView mein hota hai
-    for (i in 0 until (node.childCount.coerceAtMost(3))) {
-        val child = node.getChild(i) ?: continue
-        val text = child.text?.toString()?.trim()
-        if (!text.isNullOrBlank() && text.length in 2..30
-            && !isUiLabel(text) && !isTimestamp(text)) {
-            return text
+
+    return when (appName) {
+        "WhatsApp" -> extractWhatsAppSender(node)
+        "Telegram" -> extractTelegramSender(node)
+        "Instagram" -> extractInstagramSender(node)
+        "SMS" -> extractSmsSender(node)
+        else -> extractGenericSender(node)
+    }
+}
+
+// WhatsApp — contact name top bar mein hota hai
+private fun extractWhatsAppSender(node: AccessibilityNodeInfo): String {
+    // Action bar mein contact name dhundo
+    val actionBarIds = listOf(
+        "com.whatsapp:id/conversation_contact_name",
+        "com.whatsapp:id/contact_name",
+        "com.whatsapp:id/name"
+    )
+    for (id in actionBarIds) {
+        val nodes = node.findAccessibilityNodeInfosByViewId(id)
+        if (!nodes.isNullOrEmpty()) {
+            val text = nodes[0].text?.toString()?.trim()
+            if (!text.isNullOrBlank() && text.length > 1) {
+                Log.d("SenderDetect", "WhatsApp sender: $text")
+                return text
+            }
         }
     }
-    return "unknown"
+    return extractGenericSender(node)
+}
+
+// Telegram — channel/contact name
+private fun extractTelegramSender(node: AccessibilityNodeInfo): String {
+    val ids = listOf(
+        "org.telegram.messenger:id/name_text",
+        "org.telegram.messenger:id/title",
+        "org.telegram.messenger:id/chat_name"
+    )
+    for (id in ids) {
+        val nodes = node.findAccessibilityNodeInfosByViewId(id)
+        if (!nodes.isNullOrEmpty()) {
+            val text = nodes[0].text?.toString()?.trim()
+            if (!text.isNullOrBlank() && text.length > 1) {
+                Log.d("SenderDetect", "Telegram sender: $text")
+                return text
+            }
+        }
+    }
+    return extractGenericSender(node)
+}
+
+// Instagram — username top pe hota hai
+private fun extractInstagramSender(node: AccessibilityNodeInfo): String {
+    val ids = listOf(
+        "com.instagram.android:id/thread_title_username",
+        "com.instagram.android:id/row_header_textview",
+        "com.instagram.android:id/title"
+    )
+    for (id in ids) {
+        val nodes = node.findAccessibilityNodeInfosByViewId(id)
+        if (!nodes.isNullOrEmpty()) {
+            val text = nodes[0].text?.toString()?.trim()
+            if (!text.isNullOrBlank() && text.length > 1) {
+                Log.d("SenderDetect", "Instagram sender: $text")
+                return text
+            }
+        }
+    }
+    return extractGenericSender(node)
+}
+
+// SMS — phone number ya contact name
+private fun extractSmsSender(node: AccessibilityNodeInfo): String {
+    val ids = listOf(
+        "com.samsung.android.messaging:id/contact_name",
+        "com.android.mms:id/contact_name",
+        "com.google.android.apps.messaging:id/conversation_title"
+    )
+    for (id in ids) {
+        val nodes = node.findAccessibilityNodeInfosByViewId(id)
+        if (!nodes.isNullOrEmpty()) {
+            val text = nodes[0].text?.toString()?.trim()
+            if (!text.isNullOrBlank() && text.length > 1) {
+                Log.d("SenderDetect", "SMS sender: $text")
+                return text
+            }
+        }
+    }
+    return extractGenericSender(node)
+}
+
+// Generic fallback — pehle text node jo naam jaisa lage
+private fun extractGenericSender(node: AccessibilityNodeInfo): String {
+    return findSenderRecursive(node, 0) ?: "unknown"
+}
+
+private fun findSenderRecursive(node: AccessibilityNodeInfo?, depth: Int): String? {
+    if (node == null || depth > 5) return null
+
+    val text = node.text?.toString()?.trim()
+    if (!text.isNullOrBlank()
+        && text.length in 2..40
+        && !isUiLabel(text)
+        && !isTimestamp(text)
+        && !isUrl(text)
+        && !text.matches(Regex("\\d+"))  // sirf numbers nahi
+    ) {
+        return text
+    }
+
+    for (i in 0 until node.childCount) {
+        val result = findSenderRecursive(node.getChild(i), depth + 1)
+        if (result != null) return result
+    }
+    return null
 }
 
     // Sending Chat to Backend
