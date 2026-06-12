@@ -1023,4 +1023,15 @@ def collect_chat(request):
             "status":  "saved",
             "chat_id": chat_obj.id,
         }, status=200)
-    
+
+# Heart beat api ----- to chech whether the app is active or not
+@api_view(['POST'])
+def heartbeat_api(request):
+    child_id = request.data.get('child_id')
+    try:
+        child_obj = models.child.objects.get(id=child_id)
+        child_obj.last_seen = timezone.now()
+        child_obj.save()
+        return Response({"status": "ok"}, status=200)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
