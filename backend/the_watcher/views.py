@@ -613,11 +613,14 @@ def collect_web_usage(request):
         
         child_id = request.data.get('child_id')
         url = request.data.get('url')
+
+        # Removing Junk keyword 
         JUNK_KEYWORDS = ["verifying", "loading", "connecting", "about:blank", "chrome://", "..."]
         raw_url = request.data.get("url", "").lower()
         if any(kw in raw_url for kw in JUNK_KEYWORDS):
             print(f"JUNK URL rejected: {raw_url}")
             return Response({"status": "ignored"}, status=200)
+        
         url = clean_url(request.data.get("url"))
         print("Cleaned URL:", url)
 
@@ -636,7 +639,7 @@ def collect_web_usage(request):
             child=child_obj,
             url=url,
             date=timezone.now().date(),
-            timestamp__gte=timezone.now() - timedelta(minutes=2)
+            created_at__gte=timezone.now() - timedelta(minutes=2)
         ).exists()
 
         if recent_duplicate:

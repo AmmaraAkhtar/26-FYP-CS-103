@@ -170,15 +170,18 @@ Respond in JSON format with keys: action, reasoning, urgency."""
         decision = llm_with_structure.invoke([HumanMessage(content=prompt)])
         action   = decision.action
         reasoning = decision.reasoning
+        urgency   = decision.urgency
     except Exception as e:
         # Agar LLM se kuch galat response aata hai ya error hota hai, toh default action "alert" rakhte hain with a simple message.
         action = "alert"
+        urgency   = "medium" 
         reasoning = f"LLM Error: {str(e)}. Defaulting to alert to be safe."
 
     return {
         **state,
         "action":   action,
         "reasoning": reasoning,
+        "urgency":  urgency,  
     }
 
 
@@ -231,7 +234,7 @@ def action_executor_node(state: AppState) -> AppState:
         child.is_locked = True
         child.save()
 
-    if state["should_send_alert"] and state["alert_message"]:
+    if state.get("should_send_alert") and state.get("alert_message"):
         alert_obj = models.Alert.objects.create(
             child=child,
             alert_type=state["action"].capitalize(),
