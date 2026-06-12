@@ -186,9 +186,14 @@ class MyAccessibilityService : AccessibilityService() {
 
     // Web Monitoring Code 
     private fun sendUrl(url: String) {
-        Log.d("MyAccessibilityService", "SENDING URL: $url")
-        channel?.invokeMethod("onUrlDetected", "UI:$url")
-    }
+    Log.d("MyAccessibilityService", "SENDING URL: $url")
+    
+    // Flutter channel pe bhi bhejo (jab app open ho)
+    channel?.invokeMethod("onUrlDetected", "UI:$url")
+    
+    // Background mein bhi directly backend pe bhejo
+    sendUrlToBackend(url)
+}
 
     private fun isUrl(text: String): Boolean {
         val t = text.trim()
@@ -226,6 +231,48 @@ class MyAccessibilityService : AccessibilityService() {
         }
         return null
     }
+    private fun sendUrlToBackend(rawUrl: String) {
+    var cleanUrl = rawUrl.trim()
+    if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+        cleanUrl = "https://$cleanUrl"
+    }
+    
+    val id = childId
+    if (id == -1) {
+        Log.e("MyAccessibilityService", "child_id not set — skipping URL")
+        return
+    }
+
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val sdf = java.text.SimpleDateFormat(
+                "yyyy-MM-dd'T'HH:mm:ss", 
+                java.util.Locale.getDefault()
+            )
+            
+            val json = JSONObject().apply {
+                put("child_id", id)
+                put("url", cleanUrl)
+                put("usage_time", 0)
+                put("timestamp", sdf.format(java.util.Date()))
+            }
+
+            val body = json.toString()
+                .toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url("http://192.168.18.163:8000/collectwebusage/")
+                .post(body)
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                Log.d("MyAccessibilityService", "URL sent | ${response.code}")
+            }
+        } catch (e: Exception) {
+            Log.e("MyAccessibilityService", "URL send failed: ${e.message}")
+        }
+    }
+}
 
     override fun onInterrupt() {}
 }

