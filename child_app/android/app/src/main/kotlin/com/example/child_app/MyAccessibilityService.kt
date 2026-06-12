@@ -280,7 +280,7 @@ private fun findSenderRecursive(node: AccessibilityNodeInfo?, depth: Int): Strin
                 val json = JSONObject().apply {
                     put("child_id",  id)
                     put("app_name",  appName)
-                    put("sender", extractSender(node))
+                    put("sender", extractSender(node,appName))
                     put("message",   message)
                     put("timestamp", SimpleDateFormat(
                         "yyyy-MM-dd'T'HH:mm:ss",
