@@ -20,7 +20,7 @@ class _EditprofileState extends State<profile> {
 
   
   Future<void> registerChild() async {
-    String link = 'http://192.168.18.166:8000/createChild/';
+    String link = 'http://192.168.18.163:8000/createChild/';
     final url = Uri.parse(link);
 
     final response = await http.post(

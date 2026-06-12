@@ -206,11 +206,13 @@ Reason step by step before giving your final answer."""
         decision  = llm_with_structure.invoke([HumanMessage(content=prompt)])
         action     = decision.action
         reasoning  = decision.reasoning
-        risk_level = decision.risk_level       
+        risk_level = decision.risk_level 
+        urgency    = decision.urgency      
     except Exception as e:
         action     = "alert"
         reasoning  = f"LLM Error: {str(e)}. Defaulting to alert."
         risk_level = "medium"
+        urgency    = "medium"  
 
     return {
         # explicitly sab return karo
@@ -226,7 +228,7 @@ Reason step by step before giving your final answer."""
         "action":            action,
         "reasoning":         reasoning,
         "risk_level":        risk_level,
-        "urgency":           decision.urgency if hasattr(decision, 'urgency') else "medium",
+        "urgency":           urgency,
     }
 
 # Node3 - Alert Composer Node

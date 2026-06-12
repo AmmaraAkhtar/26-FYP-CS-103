@@ -21,3 +21,4 @@ class AppState(TypedDict):
     reasoning: Optional[str]        # LLM ka sochne ka process
     alert_message: Optional[str]    # parent ko bheja jane wala alert
     should_send_alert: Optional[bool]
+    urgency: Optional[str] 

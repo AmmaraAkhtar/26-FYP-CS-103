@@ -19,4 +19,5 @@ urlpatterns = [
     path('collectchat/', views.collect_chat),
     path('api/deactivate-admin/', views.deactivate_child_admin),
     path('api/check-command/', views.check_deactivate_command ),
+    path('heartbeat/', views.heartbeat_api, ),
 ]

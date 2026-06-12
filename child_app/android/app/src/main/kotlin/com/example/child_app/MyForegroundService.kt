@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 
 import okhttp3.Call
@@ -27,6 +28,7 @@ import org.json.JSONObject
 
 import java.io.IOException
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.*
 
 class MyForegroundService : Service() {
@@ -34,6 +36,7 @@ class MyForegroundService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var childId: Int = -1
     private var isMonitoring = false
+    private var tickCount = 0  
     private var lastSmsTimestamp: Long = 0L 
     private val httpClient = OkHttpClient.Builder().connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS).readTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
 
@@ -101,7 +104,7 @@ class MyForegroundService : Service() {
             childId = intentChildId
         } else {
             val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-            childId = prefs.getInt("flutter.child_id", -1)
+            childId = prefs.getLong("flutter.child_id", -1L).toInt()
         }
 
         Log.d("MONITOR_SERVICE", "Child ID set: $childId")
@@ -130,62 +133,162 @@ class MyForegroundService : Service() {
 
         super.onTaskRemoved(rootIntent)
     }
+// Function to check whether accessibility service enabled or not
+    private fun isAccessibilityServiceEnabled(): Boolean {
+    val enabledServices = Settings.Secure.getString(
+        contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    )
+    return enabledServices?.contains(packageName) == true
+}
+
+private fun checkAccessibilityStatus() {
+    if (!isAccessibilityServiceEnabled()) {
+        Log.w("MONITOR_SERVICE", "Accessibility service is DISABLED!")
+        sendAccessibilityAlert()
+    }
+}
+
+private fun sendAccessibilityAlert() {
+    if (childId == -1) return
+
+    val json = JSONObject().apply {
+        put("child_id", childId)
+        put("alert_type", "High")
+        put("message", "Chat/Web monitoring disabled - Accessibility permission off")
+    }
+
+    val body = json.toString()
+        .toRequestBody("application/json".toMediaType())
+
+    val request = Request.Builder()
+        .url("http://192.168.18.163:8000/sendalert/")
+        .post(body)
+        .build()
+
+    httpClient.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Log.e("MONITOR_SERVICE", "Accessibility alert failed: ${e.message}")
+        }
+        override fun onResponse(call: Call, response: Response) {
+            Log.d("MONITOR_SERVICE", "Accessibility alert sent | ${response.code}")
+        }
+    })
+}
+
+    //  Heartbeat — backend ko batata hai ke device/app abhi tak active hai
+    private fun sendHeartbeat() {
+        if (childId == -1) {
+            Log.e("MONITOR_SERVICE", "Heartbeat: child_id not set — skipping")
+            return
+        }
+
+        val sdf = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.getDefault())
+        sdf.timeZone = TimeZone.getTimeZone("UTC")
+
+        val json = JSONObject().apply {
+            put("child_id", childId)
+            put("timestamp", sdf.format(Date()))
+        }
+
+        val body = json.toString()
+            .toRequestBody("application/json".toMediaType())
+
+        val request = Request.Builder()
+            .url("http://192.168.18.163:8000/heartbeat/")
+            .post(body)
+            .build()
+
+        httpClient.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("MONITOR_SERVICE", "Heartbeat failed: ${e.message}")
+            }
+            override fun onResponse(call: Call, response: Response) {
+                Log.d("MONITOR_SERVICE", "Heartbeat sent | ${response.code}")
+                response.close()
+            }
+        })
+    }
 
     //  Monitoring loop
     private fun startMonitoring() {
         handler.removeCallbacksAndMessages(null) // Purani loop band karo
 
-        handler.post(object : Runnable {
-            override fun run() {
-                Log.d("MONITOR_SERVICE", "Tick - Child ID: $childId")
-                fetchAndSendData()
-                collectAndSendSms() 
-                handler.postDelayed(this, 300000) // Har 10 second baad
-            }
-        })
+        
+
+       
+handler.post(object : Runnable {
+    override fun run() {
+        tickCount++
+        Log.d("MONITOR_SERVICE", "Tick #$tickCount - Child ID: $childId")
+
+        // Har 5 minute — SMS (har 5th tick)
+        if (tickCount % 5 == 0) {
+            collectAndSendSms()
+        }
+
+        // Har 15 minute — App usage (har 15th tick)
+        if (tickCount % 15 == 0) {
+            fetchAndSendData()
+        }
+
+        // Har 10 minute — Heartbeat + Accessibility check
+        if (tickCount % 10 == 0) {
+            sendHeartbeat()
+            checkAccessibilityStatus()
+        }
+
+        // Overflow rokne ke liye reset karo
+        if (tickCount >= 1440) tickCount = 0 // 1440 = 24 hours worth of 1-min ticks
+
+        handler.postDelayed(this, 60_000) // Base tick: 1 minute (but calls are spaced out)
+    }
+})
     }
 
     //  Usage data fetch karo
+    
     private fun fetchAndSendData() {
-        try {
-            val endTime = System.currentTimeMillis()
-            val startTime = endTime - (1000 * 60) // Last 1 minute
+    try {
+        val endTime = System.currentTimeMillis()
+        
+        // Din ka start (midnight) se ab tak
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val startTime = calendar.timeInMillis  // ← sirf ye line replace karo
 
-            val usageStatsManager =
-                getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val usageStatsManager =
+            getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
-            val stats = usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY,
-                startTime,
-                endTime
-            )
+        val stats = usageStatsManager.queryAndAggregateUsageStats(startTime, endTime)
 
-            if (stats.isNullOrEmpty()) {
-                Log.d("MONITOR_SERVICE", " No usage stats - Permission check karo")
-                return
-            }
-
-            val appsArray = JSONArray()
-
-            for (app in stats) {
-                if (app.totalTimeInForeground > 0) {
-                    val obj = JSONObject()
-                    obj.put("package_name", app.packageName)
-                    obj.put("usage_time", app.totalTimeInForeground / 1000)
-                    appsArray.put(obj)
-                }
-            }
-
-            Log.d("MONITOR_SERVICE", " Apps found: ${appsArray.length()}")
-
-            if (appsArray.length() > 0) {
-                sendToBackend(appsArray)
-            }
-
-        } catch (e: Exception) {
-            Log.e("MONITOR_SERVICE", " Error fetching data: ${e.message}")
+        if (stats.isNullOrEmpty()) {
+            Log.d("MONITOR_SERVICE", "No usage stats")
+            return
         }
+
+        val appsArray = JSONArray()
+
+        for ((_, app) in stats) {
+            if (app.totalTimeInForeground > 30000) { // 30 seconds minimum
+                val obj = JSONObject()
+                obj.put("package_name", app.packageName)
+                obj.put("usage_time", app.totalTimeInForeground / 1000)
+                appsArray.put(obj)
+            }
+        }
+
+        if (appsArray.length() > 0) {
+            sendToBackend(appsArray)
+        }
+
+    } catch (e: Exception) {
+        Log.e("MONITOR_SERVICE", "Error: ${e.message}")
     }
+}
 
     //  Backend ko data bhejo
     private fun sendToBackend(apps: JSONArray) {
@@ -211,7 +314,7 @@ class MyForegroundService : Service() {
             .toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
-            .url("http://192.168.18.166:8000/appdata/")
+            .url("http://192.168.18.163:8000/appdata/")
             .post(body)
             .build()
 
@@ -245,11 +348,12 @@ class MyForegroundService : Service() {
                                 }
                             }
                         }
+                        
 
                     } catch (e: Exception) {
                         Log.e("MONITOR_SERVICE", " Parse error: ${e.message}")
                     }
-                }
+                } //response.close()
             }
         })
     }
@@ -351,7 +455,7 @@ private fun sendChatToBackend(
         .toRequestBody("application/json".toMediaType())
 
     val request = Request.Builder()
-        .url("http://192.168.18.166:8000/collectchat/")
+        .url("http://192.168.18.163:8000/collectchat/")
         .post(body)
         .build()
 

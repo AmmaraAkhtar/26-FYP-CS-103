@@ -22,7 +22,7 @@ class _loginState extends State<login> {
 
   Future<void> loginRequest(String email, String password) async {
     //String link = 'http://127.0.0.1:8000/login/';
-    String link = 'http://192.168.18.166:8000/login/';
+    String link = 'http://192.168.18.163:8000/login/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(

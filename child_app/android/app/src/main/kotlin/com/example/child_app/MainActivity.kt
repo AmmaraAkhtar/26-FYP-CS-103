@@ -69,6 +69,20 @@ class MainActivity : FlutterActivity() {
                     }
                 }
 
+                // Battery optimization case
+                 "requestIgnoreBatteryOptimizations" -> {
+                val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+                if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+                    intent.data = android.net.Uri.parse("package:$packageName")
+                    startActivity(intent)
+                } else {
+                    result.success("Already ignoring")
+                    return@setMethodCallHandler
+                }
+                result.success("Requested")
+            }
+
                 // App Monitoring Service Start 
                 "startService" -> {
                     val childId = call.argument<Int>("child_id") ?: -1
@@ -83,6 +97,22 @@ class MainActivity : FlutterActivity() {
 
                     result.success("Service Started")
                 }
+
+                "isAccessibilityServiceEnabled" -> {
+                val enabledServices = Settings.Secure.getString(
+                    contentResolver,
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+                )
+                val serviceName = "$packageName/.MyAccessibilityService"
+                val isEnabled = enabledServices?.contains(packageName) == true
+                result.success(isEnabled)
+            }
+
+            "openAccessibilitySettings" -> {
+                val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                startActivity(intent)
+                result.success("Opened")
+            }
 
                 // Notification Listener Check
                 "isNotificationListenerEnabled" -> {

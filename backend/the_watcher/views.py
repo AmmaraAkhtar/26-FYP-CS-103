@@ -371,6 +371,7 @@ def collectAppUsageData_Api(request):
 
             child_id = validated_data["child_id"]
             child = models.child.objects.get(id=child_id)
+            today = validated_data["timestamp"].date()
             SKIP_PACKAGES = {
     'com.android', 'android',
     'com.samsung.android.app.galaxyfinder',
@@ -384,6 +385,54 @@ def collectAppUsageData_Api(request):
             for i, app in enumerate(usage_data):
                 category = category_predictions[i]
                 package  = app["package_name"]
+                usage_time = app["usage_time"]
+
+                # ── DUPLICATE CHECK ──
+                # Aaj ka same package already save hai?
+                existing = models.appUsage.objects.filter(
+                    child=child,
+                    package_name=package,
+                    date=today,
+                ).first()
+
+                if existing:
+                    # Agar usage time same hai — bilkul duplicate, skip karo
+                    if existing.usage_time == usage_time:
+                        print(f"DUPLICATE — skipping {package}")
+                        result.append({
+                            "package_name": package,
+                            "usage_time":   usage_time,
+                            "category":     category,
+                            "action":       existing.action,
+                            "reasoning":    "Duplicate — already processed today",
+                            "alert_message": None,
+                        })
+                        continue
+
+                    # Usage time badh gayi — sirf update karo, agent mat chalao
+                    if usage_time <= existing.usage_time:
+                        print(f"SAME OR LESS USAGE — skipping {package}")
+                        continue
+
+                    # Agar usage time significantly badhi hai (10+ minutes) tabhi agent chalao
+                    time_diff_mins = (usage_time - existing.usage_time) / 60
+                    if time_diff_mins < 10:
+                        print(f"MINOR INCREASE ({time_diff_mins:.1f} min) — skipping agent for {package}")
+                        existing.usage_time = usage_time
+                        existing.save()
+                        result.append({
+                            "package_name": package,
+                            "usage_time":   usage_time,
+                            "category":     category,
+                            "action":       existing.action,
+                            "reasoning":    "Minor usage update — no re-analysis",
+                            "alert_message": None,
+                        })
+                        continue
+
+
+
+                
 
                 # System apps aur zero-usage apps skip karne ke liye simple rule — inhe allow kar dete hain bina agent ko involve kiye, taki unnecessary processing na ho.
                 if app["usage_time"] == 0 or package in SKIP_PACKAGES:
@@ -435,9 +484,9 @@ def collectAppUsageData_Api(request):
             }
                 
                 # thread_id = child_id — isi se memory maintain hogi per child
-                config = {"configurable": {"thread_id": f"child_{child_id}"}}
-                final = app_agent.invoke(initial_state, config=config) ## Invoking the agent with the initial state and config. Agent will process through the graph and return the final state with action, reasoning, alert message, etc.
-
+                # config = {"configurable": {"thread_id": f"child_{child_id}"}}
+                # final = app_agent.invoke(initial_state, config=config) ## Invoking the agent with the initial state and config. Agent will process through the graph and return the final state with action, reasoning, alert message, etc.
+                final = app_agent.invoke(initial_state)
                 # save with prediction
                 models.appUsage.objects.create(
                 child=child,
@@ -564,6 +613,14 @@ def collect_web_usage(request):
         
         child_id = request.data.get('child_id')
         url = request.data.get('url')
+
+        # Removing Junk keyword 
+        JUNK_KEYWORDS = ["verifying", "loading", "connecting", "about:blank", "chrome://", "..."]
+        raw_url = request.data.get("url", "").lower()
+        if any(kw in raw_url for kw in JUNK_KEYWORDS):
+            print(f"JUNK URL rejected: {raw_url}")
+            return Response({"status": "ignored"}, status=200)
+        
         url = clean_url(request.data.get("url"))
         print("Cleaned URL:", url)
 
@@ -575,6 +632,19 @@ def collect_web_usage(request):
             child_obj = models.child.objects.get(id=child_id)
         except models.child.DoesNotExist:
             return Response({"error": "Child not found"}, status=404)
+
+        #  DUPLICATE CHECK (same URL last 2 minute mein already save hai?)
+
+        recent_duplicate = models.webUsage.objects.filter(
+            child=child_obj,
+            url=url,
+            date=timezone.now().date(),
+            created_at__gte=timezone.now() - timedelta(minutes=2)
+        ).exists()
+
+        if recent_duplicate:
+            print(f"DUPLICATE URL — skipping: {url}")
+            return Response({"status": "duplicate"}, status=200)
 
         print(f"Saving - Child ID: {child_id}, URL: {url}")
         prediction = web_ml_service.predict(url)
@@ -624,6 +694,13 @@ def clean_url(url):
 
     url = url.strip()
 
+    # www. se shuru ho toh https add karo
+    if url.startswith("www."):
+        url = "https://" + url
+
+    if not url.startswith(("http://", "https://")):
+        return None
+
     if not url.startswith(("http://", "https://")):
         return None          
     try:
@@ -663,132 +740,132 @@ def clean_url(url):
     return url               
 
 # Chat Analysis
-@api_view(['POST'])
-def collect_chat(request):
-    print("Chat API Called")
-    print("request.body:", request.body)
+# @api_view(['POST'])
+# def collect_chat(request):
+#     print("Chat API Called")
+#     print("request.body:", request.body)
 
-    serializer = ChatMessageSerializer(data=request.data)
+#     serializer = ChatMessageSerializer(data=request.data)
 
-    if not serializer.is_valid():
-        print("SERIALIZER ERRORS:", serializer.errors)
-        return Response(serializer.errors, status=400)
+#     if not serializer.is_valid():
+#         print("SERIALIZER ERRORS:", serializer.errors)
+#         return Response(serializer.errors, status=400)
 
-    child_id  = request.data.get('child_id')
-    app_name  = request.data.get('app_name', '')
-    sender    = request.data.get('sender', 'unknown')
-    message   = request.data.get('message', '')
-    timestamp_str = request.data.get('timestamp')
-    try:
-        timestamp = make_aware(datetime.fromisoformat(timestamp_str))
-    except:
-        timestamp = timezone.now()
+#     child_id  = request.data.get('child_id')
+#     app_name  = request.data.get('app_name', '')
+#     sender    = request.data.get('sender', 'unknown')
+#     message   = request.data.get('message', '')
+#     timestamp_str = request.data.get('timestamp')
+#     try:
+#         timestamp = make_aware(datetime.fromisoformat(timestamp_str))
+#     except:
+#         timestamp = timezone.now()
 
-    # Chote msgs ko ignore karne ke liye simple rule — agar message 3 characters se kam ka hai, toh usse process mat karo. Isse unnecessary processing aur false positives dono se bachenge.
-    if not message or len(message.strip()) < 3:
-        print("IGNORED — message too short")
-        return Response({"status": "ignored"}, status=200)
+#     # Chote msgs ko ignore karne ke liye simple rule — agar message 3 characters se kam ka hai, toh usse process mat karo. Isse unnecessary processing aur false positives dono se bachenge.
+#     if not message or len(message.strip()) < 3:
+#         print("IGNORED — message too short")
+#         return Response({"status": "ignored"}, status=200)
 
-    try:
-        child_obj = models.child.objects.get(id=child_id)
-    except models.child.DoesNotExist:
-        return Response({"error": "Child not found"}, status=404)
+#     try:
+#         child_obj = models.child.objects.get(id=child_id)
+#     except models.child.DoesNotExist:
+#         return Response({"error": "Child not found"}, status=404)
 
-    print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
+#     print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
 
-    # Duplicate message check — agar same message 2 minute ke andar repeat ho raha hai, toh usse ignore kar do. Isse accidental double sends ya app glitches se bachenge.
-    existing = models.ChatMessage.objects.filter(
-    child=child_obj,
-    app_name=app_name,
-    message=message,
-    sender=sender,
-    ).filter(
-        timestamp__gte=timezone.now() - timedelta(minutes=10)
-    ).exists()
+#     # Duplicate message check — agar same message 2 minute ke andar repeat ho raha hai, toh usse ignore kar do. Isse accidental double sends ya app glitches se bachenge.
+#     existing = models.ChatMessage.objects.filter(
+#     child=child_obj,
+#     app_name=app_name,
+#     message=message,
+#     sender=sender,
+#     ).filter(
+#         timestamp__gte=timezone.now() - timedelta(minutes=10)
+#     ).exists()
 
-    if existing:
-        print("DUPLICATE — skipping")
-        return Response({"status": "duplicate"}, status=200)
+#     if existing:
+#         print("DUPLICATE — skipping")
+#         return Response({"status": "duplicate"}, status=200)
 
    
 
-    # DB mein save karo
-    chat_obj = models.ChatMessage.objects.create(
-        child = child_obj,
-        app_name= app_name,
-        sender = sender,
-        message = message,
-        timestamp= timestamp,
-        category = "Pending", 
-        risk = "Pending",
-        action= "Pending",
-    )
+#     # DB mein save karo
+#     chat_obj = models.ChatMessage.objects.create(
+#         child = child_obj,
+#         app_name= app_name,
+#         sender = sender,
+#         message = message,
+#         timestamp= timestamp,
+#         category = "Pending", 
+#         risk = "Pending",
+#         action= "Pending",
+#     )
      
-    print(f"Chat saved ID: {chat_obj.id}")
-        # ML prediction
-    try:
-        ml_category = chat_ml_service.predict(message)
-        print(f"CHAT PREDICTION: {ml_category}")
+#     print(f"Chat saved ID: {chat_obj.id}")
+#         # ML prediction
+#     try:
+#         ml_category = chat_ml_service.predict(message)
+#         print(f"CHAT PREDICTION: {ml_category}")
 
-        # DB update karo
-        chat_obj.category = ml_category
+#         # DB update karo
+#         chat_obj.category = ml_category
 
-        # Gent only for sensitive categories
-        AGENT_CATEGORIES = {"hate", "bullying", "suicide"}
+#         # Gent only for sensitive categories
+#         AGENT_CATEGORIES = {"hate", "bullying", "suicide"}
 
-        if ml_category in AGENT_CATEGORIES:
-            print(f"SENSITIVE — invoking chat agent...")
-            try:
-                result = chat_agent.invoke({
-                    "child_id":    int(child_id),
-                    "app_name":    app_name,
-                    "message":     message,
-                    "chat_obj_id": chat_obj.id,
-                    "ml_category": ml_category,
+#         if ml_category in AGENT_CATEGORIES:
+#             print(f"SENSITIVE — invoking chat agent...")
+#             try:
+#                 result = chat_agent.invoke({
+#                     "child_id":    int(child_id),
+#                     "app_name":    app_name,
+#                     "message":     message,
+#                     "chat_obj_id": chat_obj.id,
+#                     "ml_category": ml_category,
  
-                    # Agent ye sab khud fill karega
-                    "child_age":         None,
-                    "screen_limit_mins": None,
-                    "recent_alerts":     None,
-                    "chat_history":      None,
-                    "total_chats_today": None,
-                    "final_category":    None,
-                    "action":            None,
-                    "reasoning":         None,
-                    "risk_level":        None,
-                    "urgency":           None,
-                    "alert_message":     None,
-                    "should_send_alert": None,
-                })
-                print(f"AGENT DONE — action: {result['action']}, risk: {result['risk']}, alert: {result['alert_message']}")
-            except Exception as e:
-                print(f"Chat Agent Error: {e}")
-                # Fallback — ML result use karo
-                if ml_category in ["suicide"]:
-                    chat_obj.risk   = "High"
-                    chat_obj.action = "Alert"
-                else:
-                    chat_obj.risk   = "Medium"
-                    chat_obj.action = "Warn"
-        else:
-            # Normal — agent ki zaroorat nahi
-            chat_obj.risk   = "Low"
-            chat_obj.action = "Allow"
-            #chat_obj.save()
+#                     # Agent ye sab khud fill karega
+#                     "child_age":         None,
+#                     "screen_limit_mins": None,
+#                     "recent_alerts":     None,
+#                     "chat_history":      None,
+#                     "total_chats_today": None,
+#                     "final_category":    None,
+#                     "action":            None,
+#                     "reasoning":         None,
+#                     "risk_level":        None,
+#                     "urgency":           None,
+#                     "alert_message":     None,
+#                     "should_send_alert": None,
+#                 })
+#                 print(f"AGENT DONE — action: {result['action']}, risk: {result['risk_level']}, alert: {result['alert_message']}")
+#             except Exception as e:
+#                 print(f"Chat Agent Error: {e}")
+#                 # Fallback — ML result use karo
+#                 if ml_category in ["suicide"]:
+#                     chat_obj.risk   = "High"
+#                     chat_obj.action = "Alert"
+#                 else:
+#                     chat_obj.risk   = "Medium"
+#                     chat_obj.action = "Warn"
+#         else:
+#             # Normal — agent ki zaroorat nahi
+#             chat_obj.risk   = "Low"
+#             chat_obj.action = "Allow"
+#             #chat_obj.save()
 
-        chat_obj.save()
+#         chat_obj.save()
 
-    except Exception as e:
-        print(f"Chat ML Error: {e}")
-        ml_category = "unknown"
+#     except Exception as e:
+#         print(f"Chat ML Error: {e}")
+#         ml_category = "unknown"
 
-    return Response({
-        "status":   "saved",
-        "chat_id":  chat_obj.id,
-        "category": ml_category,
+#     return Response({
+#         "status":   "saved",
+#         "chat_id":  chat_obj.id,
+#         "category": ml_category,
 
 
-    }, status=200)
+#     }, status=200)
 
 # Api to deactivate child admin (jab parent chahe ki child agent temporarily deactivate ho jaye, jaise ki jab child ke saath parent khud ho, taki unnecessary alerts na aaye)
 @api_view(['POST'])
@@ -824,4 +901,165 @@ def check_deactivate_command(request):
     except models.child.DoesNotExist:
         return Response({'deactivate': False})
 
-    
+# Chat Analysi Api
+@api_view(['POST'])
+def collect_chat(request):
+    print("Chat API Called")
+
+    serializer = ChatMessageSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=400)
+
+    child_id      = request.data.get('child_id')
+    app_name      = request.data.get('app_name', '')
+    sender        = request.data.get('sender', 'unknown')
+    message       = request.data.get('message', '')
+    timestamp_str = request.data.get('timestamp')
+
+    # ── FILTER 1: Too short ──
+    if not message or len(message.strip()) < 5:
+        return Response({"status": "ignored"}, status=200)
+
+    # ── FILTER 2: UI Noise ──
+    UI_NOISE = {
+        "voice call", "video call", "missed voice call",
+        "missed video call", "tap to call back", "no answer",
+        "call back", "photo", "video", "document", "audio",
+        "sticker", "gif", "location", "contact",
+        "this message was deleted", "you deleted this message",
+        "announcements", "explore", "missed call",
+    }
+    msg_lower = message.lower().strip()
+
+    if msg_lower in UI_NOISE:
+        return Response({"status": "ignored_noise"}, status=200)
+
+    # Date pattern
+    if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
+        return Response({"status": "ignored_date"}, status=200)
+
+    if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
+        return Response({"status": "ignored_date"}, status=200)
+
+    # Call duration
+    if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
+        return Response({"status": "ignored_duration"}, status=200)
+
+    # Phone number
+    if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
+        return Response({"status": "ignored_phone"}, status=200)
+
+    # System messages
+    if "pinned a message" in msg_lower:
+        return Response({"status": "ignored_system"}, status=200)
+
+    # ── FILTER 3: Child exist ──
+    try:
+        child_obj = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    print(f"Chat — Child: {child_id} | App: {app_name} | Msg: {message}")
+
+    # ── Timestamp parse ──
+    try:
+        msg_time = make_aware(datetime.fromisoformat(timestamp_str))
+    except:
+        msg_time = timezone.now()
+
+    # ── FILTER 4: Purana message — historical ──
+    # WhatsApp app khulne pe poori history load karti hai
+    # Sirf last 5 minute ke messages pe agent chalao
+    time_diff = timezone.now() - msg_time
+    is_historical = time_diff.total_seconds() > 300  # 5 minutes
+
+    # ── FILTER 5: Duplicate ──
+    existing = models.ChatMessage.objects.filter(
+        child=child_obj,
+        app_name=app_name,
+        message=message,
+        sender=sender,
+    ).filter(
+        timestamp__gte=timezone.now() - timedelta(minutes=10)
+    ).exists()
+
+    if existing:
+        print("DUPLICATE — skipping")
+        return Response({"status": "duplicate"}, status=200)
+
+    # ── DB Save ──
+    try:
+        chat_obj = models.ChatMessage.objects.create(
+            child     = child_obj,
+            app_name  = app_name,
+            sender    = sender,
+            message   = message,
+            timestamp = msg_time,
+            category  = "historical" if is_historical else "Pending",
+            risk      = "Low"        if is_historical else "Pending",
+            action    = "Allow"      if is_historical else "Pending",
+        )
+        print(f"Chat saved ID: {chat_obj.id}")
+    except Exception as e:
+        print(f"DB Save Error: {e}")
+        return Response({"status": "db_error"}, status=200)
+
+    # ── Historical message — agent mat chalao ──
+    if is_historical:
+        return Response({
+            "status":  "historical",
+            "chat_id": chat_obj.id,
+        }, status=200)
+
+    # ── Agent Call — sirf naye messages pe ──
+    try:
+        result = chat_agent.invoke({
+            "child_id":    int(child_id),
+            "app_name":    app_name,
+            "message":     message,
+            "sender":      sender,
+            "chat_obj_id": chat_obj.id,
+            "ml_category": "none",
+
+            "child_age":         None,
+            "screen_limit_mins": None,
+            "recent_alerts":     None,
+            "chat_history":      None,
+            "total_chats_today": None,
+            "final_category":    None,
+            "action":            None,
+            "reasoning":         None,
+            "risk_level":        None,
+            "urgency":           None,
+            "alert_message":     None,
+            "should_send_alert": None,
+        })
+
+        print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}")
+
+        return Response({
+            "status":    "processed",
+            "chat_id":   chat_obj.id,
+            "category":  result.get("final_category"),
+            "action":    result.get("action"),
+            "risk_level": result.get("risk_level"),
+        }, status=200)
+
+    except Exception as e:
+        print(f"Chat Agent Error: {traceback.format_exc()}")
+        return Response({
+            "status":  "saved",
+            "chat_id": chat_obj.id,
+        }, status=200)
+
+# Heart beat api ----- to chech whether the app is active or not, aur last seen update karne ke liye. Child agent is API ko periodically call karega, jaise ki har 5 minute mein, taki backend ko pata rahe ki child app active hai ya nahi, aur agar child app active hai toh uska last seen timestamp update ho jaye, taki parent ko accurate information milti rahe.
+@api_view(['POST'])
+def heartbeat_api(request):
+    child_id = request.data.get('child_id')
+    try:
+        child_obj = models.child.objects.get(id=child_id)
+        child_obj.last_seen = timezone.now()
+        child_obj.save()
+        return Response({"status": "ok"}, status=200)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)

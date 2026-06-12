@@ -27,6 +27,9 @@ class MyAccessibilityService : AccessibilityService() {
     private var lastSentMessage = ""
     private var lastSentTime    = 0L
     private val COOLDOWN_MS     = 30000L
+    private var lastSentUrl = ""
+    private var lastUrlTime = 0L
+    private val URL_COOLDOWN_MS = 10000L
 
     // child_id same key as ForegroundServices
     private val childId: Int
@@ -93,7 +96,7 @@ class MyAccessibilityService : AccessibilityService() {
                         Log.d("ChatMonitor", "App: $chatAppName | Msg: $message")
 
                         // Sending  to backend
-                        sendChatToBackend(appName = chatAppName, message = message)
+                        sendChatToBackend(appName = chatAppName, message = message, node = source)
 
                         // Sending chats to flutter
                         channel?.invokeMethod("onChatText", message)
@@ -143,8 +146,129 @@ class MyAccessibilityService : AccessibilityService() {
         return text.matches(Regex("\\d{1,2}:\\d{2}(\\s?[APap][Mm])?"))
     }
 
+// sender ko extract kre ga chat se
+
+    private fun extractSender(node: AccessibilityNodeInfo?, appName: String): String {
+    if (node == null) return "unknown"
+
+    return when (appName) {
+        "WhatsApp" -> extractWhatsAppSender(node)
+        "Telegram" -> extractTelegramSender(node)
+        "Instagram" -> extractInstagramSender(node)
+        "SMS" -> extractSmsSender(node)
+        else -> extractGenericSender(node)
+    }
+}
+
+// WhatsApp — contact name top bar mein hota hai
+private fun extractWhatsAppSender(node: AccessibilityNodeInfo): String {
+    // Action bar mein contact name dhundo
+    val actionBarIds = listOf(
+        "com.whatsapp:id/conversation_contact_name",
+        "com.whatsapp:id/contact_name",
+        "com.whatsapp:id/name"
+    )
+    for (id in actionBarIds) {
+        val nodes = node.findAccessibilityNodeInfosByViewId(id)
+        if (!nodes.isNullOrEmpty()) {
+            val text = nodes[0].text?.toString()?.trim()
+            if (!text.isNullOrBlank() && text.length > 1) {
+                Log.d("SenderDetect", "WhatsApp sender: $text")
+                return text
+            }
+        }
+    }
+    return extractGenericSender(node)
+}
+
+// Telegram — channel/contact name
+private fun extractTelegramSender(node: AccessibilityNodeInfo): String {
+    val ids = listOf(
+        "org.telegram.messenger:id/name_text",
+        "org.telegram.messenger:id/title",
+        "org.telegram.messenger:id/chat_name"
+    )
+    for (id in ids) {
+        val nodes = node.findAccessibilityNodeInfosByViewId(id)
+        if (!nodes.isNullOrEmpty()) {
+            val text = nodes[0].text?.toString()?.trim()
+            if (!text.isNullOrBlank() && text.length > 1) {
+                Log.d("SenderDetect", "Telegram sender: $text")
+                return text
+            }
+        }
+    }
+    return extractGenericSender(node)
+}
+
+// Instagram — username top pe hota hai
+private fun extractInstagramSender(node: AccessibilityNodeInfo): String {
+    val ids = listOf(
+        "com.instagram.android:id/thread_title_username",
+        "com.instagram.android:id/row_header_textview",
+        "com.instagram.android:id/title"
+    )
+    for (id in ids) {
+        val nodes = node.findAccessibilityNodeInfosByViewId(id)
+        if (!nodes.isNullOrEmpty()) {
+            val text = nodes[0].text?.toString()?.trim()
+            if (!text.isNullOrBlank() && text.length > 1) {
+                Log.d("SenderDetect", "Instagram sender: $text")
+                return text
+            }
+        }
+    }
+    return extractGenericSender(node)
+}
+
+// SMS — phone number ya contact name
+private fun extractSmsSender(node: AccessibilityNodeInfo): String {
+    val ids = listOf(
+        "com.samsung.android.messaging:id/contact_name",
+        "com.android.mms:id/contact_name",
+        "com.google.android.apps.messaging:id/conversation_title"
+    )
+    for (id in ids) {
+        val nodes = node.findAccessibilityNodeInfosByViewId(id)
+        if (!nodes.isNullOrEmpty()) {
+            val text = nodes[0].text?.toString()?.trim()
+            if (!text.isNullOrBlank() && text.length > 1) {
+                Log.d("SenderDetect", "SMS sender: $text")
+                return text
+            }
+        }
+    }
+    return extractGenericSender(node)
+}
+
+// Generic fallback — pehle text node jo naam jaisa lage
+private fun extractGenericSender(node: AccessibilityNodeInfo): String {
+    return findSenderRecursive(node, 0) ?: "unknown"
+}
+
+private fun findSenderRecursive(node: AccessibilityNodeInfo?, depth: Int): String? {
+    if (node == null || depth > 5) return null
+
+    val text = node.text?.toString()?.trim()
+    if (!text.isNullOrBlank()
+        && text.length in 2..40
+        && !isUiLabel(text)
+        && !isTimestamp(text)
+        && !isUrl(text)
+        && !text.matches(Regex("\\d+"))  // sirf numbers nahi
+    ) {
+        return text
+    }
+
+    for (i in 0 until node.childCount) {
+        val result = findSenderRecursive(node.getChild(i), depth + 1)
+        if (result != null) return result
+    }
+    return null
+}
+
     // Sending Chat to Backend
-    private fun sendChatToBackend(appName: String, message: String) {
+    private fun sendChatToBackend(appName: String, message: String, node: AccessibilityNodeInfo? = null) {
         val id = childId
         if (id == -1) {
             Log.e("ChatMonitor", "child_id not set — skipping")
@@ -156,7 +280,7 @@ class MyAccessibilityService : AccessibilityService() {
                 val json = JSONObject().apply {
                     put("child_id",  id)
                     put("app_name",  appName)
-                    put("sender",    "unknown")
+                    put("sender", extractSender(node,appName))
                     put("message",   message)
                     put("timestamp", SimpleDateFormat(
                         "yyyy-MM-dd'T'HH:mm:ss",
@@ -169,7 +293,7 @@ class MyAccessibilityService : AccessibilityService() {
                     .toRequestBody("application/json".toMediaType())
 
                 val request = Request.Builder()
-                    .url("http://192.168.18.166:8000/collectchat/")
+                    .url("http://192.168.18.163:8000/collectchat/")
                     .post(body)
                     .build()
 
@@ -180,23 +304,55 @@ class MyAccessibilityService : AccessibilityService() {
 
             } catch (e: Exception) {
                 Log.e("ChatMonitor", "Send failed: ${e.message}")
-            }
+            } //response.close() 
         }
     }
 
     // Web Monitoring Code 
     private fun sendUrl(url: String) {
-        Log.d("MyAccessibilityService", "SENDING URL: $url")
-        channel?.invokeMethod("onUrlDetected", "UI:$url")
+    val now = System.currentTimeMillis()
+    
+    // www. normalize karo comparison ke liye
+    val normalizedUrl = url.trim()
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .removePrefix("www.")
+        .trimEnd('/')
+
+    val normalizedLast = lastSentUrl
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .removePrefix("www.")
+        .trimEnd('/')
+
+    // Duplicate check normalized URL pe
+    if (normalizedUrl == normalizedLast && now - lastUrlTime < URL_COOLDOWN_MS) {
+        Log.d("MyAccessibilityService", "Duplicate URL skip: $url")
+        return
     }
 
+    lastSentUrl = url.trim()
+    lastUrlTime = now
+
+    channel?.invokeMethod("onUrlDetected", "UI:$url")
+    sendUrlToBackend(url)
+}
+
     private fun isUrl(text: String): Boolean {
-        val t = text.trim()
-        return t.startsWith("http://") ||
-                t.startsWith("https://") ||
-                t.startsWith("www.") ||
-                (t.contains(".") && !t.contains(" ") && t.length > 4)
-    }
+    val t = text.trim()
+    // Sirf proper URLs accept karo
+    if (t.startsWith("http://") || t.startsWith("https://")) return true
+    if (t.startsWith("www.") && t.length > 8) return true
+    
+    // "Verifying...", "Loading..." jaise text reject karo
+    if (t.contains(" ")) return false
+    if (t.contains("...")) return false
+    if (t.length < 6) return false
+    
+    // Must have valid TLD pattern (e.g. .com, .pk, .ag)
+    val domainRegex = Regex("^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(/.*)?$")
+    return domainRegex.matches(t)
+}
 
     private fun findUrlInNode(node: AccessibilityNodeInfo): String? {
         val addressBarIds = listOf(
@@ -226,6 +382,48 @@ class MyAccessibilityService : AccessibilityService() {
         }
         return null
     }
+    private fun sendUrlToBackend(rawUrl: String) {
+    var cleanUrl = rawUrl.trim()
+    if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+        cleanUrl = "https://$cleanUrl"
+    }
+    
+    val id = childId
+    if (id == -1) {
+        Log.e("MyAccessibilityService", "child_id not set — skipping URL")
+        return
+    }
+
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val sdf = java.text.SimpleDateFormat(
+                "yyyy-MM-dd'T'HH:mm:ss", 
+                java.util.Locale.getDefault()
+            )
+            
+            val json = JSONObject().apply {
+                put("child_id", id)
+                put("url", cleanUrl)
+                put("usage_time", 0)
+                put("timestamp", sdf.format(java.util.Date()))
+            }
+
+            val body = json.toString()
+                .toRequestBody("application/json".toMediaType())
+
+            val request = Request.Builder()
+                .url("http://192.168.18.163:8000/collectwebusage/")
+                .post(body)
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                Log.d("MyAccessibilityService", "URL sent | ${response.code}")
+            }
+        } catch (e: Exception) {
+            Log.e("MyAccessibilityService", "URL send failed: ${e.message}")
+        }
+    }
+}
 
     override fun onInterrupt() {}
 }
