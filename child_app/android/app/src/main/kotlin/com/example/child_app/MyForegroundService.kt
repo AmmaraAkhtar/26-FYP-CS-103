@@ -102,7 +102,7 @@ class MyForegroundService : Service() {
             childId = intentChildId
         } else {
             val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-            childId = prefs.getInt("flutter.child_id", -1)
+            childId = prefs.getLong("flutter.child_id", -1L).toInt()
         }
 
         Log.d("MONITOR_SERVICE", "Child ID set: $childId")
@@ -219,6 +219,7 @@ private fun sendAccessibilityAlert() {
                 collectAndSendSms() 
                 sendHeartbeat()
                 checkAccessibilityStatus() 
+                //processPendingUrls()  
                 handler.postDelayed(this, 60000) // Har 1 minute baad
             }
         })
@@ -233,8 +234,7 @@ private fun sendAccessibilityAlert() {
             val usageStatsManager =
                 getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
-            val stats = usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY,
+            val stats = usageStatsManager.queryAndAggregateUsageStats(
                 startTime,
                 endTime
             )
@@ -324,11 +324,12 @@ private fun sendAccessibilityAlert() {
                                 }
                             }
                         }
+                        
 
                     } catch (e: Exception) {
                         Log.e("MONITOR_SERVICE", " Parse error: ${e.message}")
                     }
-                }
+                } response.close()
             }
         })
     }

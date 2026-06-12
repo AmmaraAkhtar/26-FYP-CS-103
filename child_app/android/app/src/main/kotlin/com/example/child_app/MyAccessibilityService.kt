@@ -27,6 +27,9 @@ class MyAccessibilityService : AccessibilityService() {
     private var lastSentMessage = ""
     private var lastSentTime    = 0L
     private val COOLDOWN_MS     = 30000L
+    private var lastSentUrl = ""
+    private var lastUrlTime = 0L
+    private val URL_COOLDOWN_MS = 10000L
 
     // child_id same key as ForegroundServices
     private val childId: Int
@@ -93,7 +96,7 @@ class MyAccessibilityService : AccessibilityService() {
                         Log.d("ChatMonitor", "App: $chatAppName | Msg: $message")
 
                         // Sending  to backend
-                        sendChatToBackend(appName = chatAppName, message = message)
+                        sendChatToBackend(appName = chatAppName, message = message, node = source)
 
                         // Sending chats to flutter
                         channel?.invokeMethod("onChatText", message)
@@ -143,8 +146,25 @@ class MyAccessibilityService : AccessibilityService() {
         return text.matches(Regex("\\d{1,2}:\\d{2}(\\s?[APap][Mm])?"))
     }
 
+// sender ko extract kre ga chat se
+
+    private fun extractSender(node: AccessibilityNodeInfo?): String {
+    if (node == null) return "unknown"
+    // WhatsApp/Telegram mein contact name usually
+    // pehle TextView mein hota hai
+    for (i in 0 until (node.childCount.coerceAtMost(3))) {
+        val child = node.getChild(i) ?: continue
+        val text = child.text?.toString()?.trim()
+        if (!text.isNullOrBlank() && text.length in 2..30
+            && !isUiLabel(text) && !isTimestamp(text)) {
+            return text
+        }
+    }
+    return "unknown"
+}
+
     // Sending Chat to Backend
-    private fun sendChatToBackend(appName: String, message: String) {
+    private fun sendChatToBackend(appName: String, message: String, node: AccessibilityNodeInfo? = null) {
         val id = childId
         if (id == -1) {
             Log.e("ChatMonitor", "child_id not set — skipping")
@@ -156,7 +176,7 @@ class MyAccessibilityService : AccessibilityService() {
                 val json = JSONObject().apply {
                     put("child_id",  id)
                     put("app_name",  appName)
-                    put("sender",    "unknown")
+                    put("sender", extractSender(node))
                     put("message",   message)
                     put("timestamp", SimpleDateFormat(
                         "yyyy-MM-dd'T'HH:mm:ss",
@@ -180,18 +200,24 @@ class MyAccessibilityService : AccessibilityService() {
 
             } catch (e: Exception) {
                 Log.e("ChatMonitor", "Send failed: ${e.message}")
-            }
+            } response.close() 
         }
     }
 
     // Web Monitoring Code 
     private fun sendUrl(url: String) {
-    Log.d("MyAccessibilityService", "SENDING URL: $url")
+    val now = System.currentTimeMillis()
     
-    // Flutter channel pe bhi bhejo (jab app open ho)
+    // Duplicate check
+    if (url == lastSentUrl && now - lastUrlTime < URL_COOLDOWN_MS) {
+        Log.d("MyAccessibilityService", "Duplicate URL skip: $url")
+        return
+    }
+    
+    lastSentUrl = url
+    lastUrlTime = now
+    
     channel?.invokeMethod("onUrlDetected", "UI:$url")
-    
-    // Background mein bhi directly backend pe bhejo
     sendUrlToBackend(url)
 }
 

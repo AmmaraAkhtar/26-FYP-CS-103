@@ -23,7 +23,7 @@ class BootReceiver : BroadcastReceiver() {
             )
             
             // Flutter shared_preferences "flutter." prefix lagate hain
-            val childId = prefs.getInt("flutter.child_id", -1)
+            val childId = prefs.getLong("flutter.child_id", -1L).toInt()
 
             Log.d("BOOT_RECEIVER", "Child ID from prefs: $childId")
 
