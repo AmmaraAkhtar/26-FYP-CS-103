@@ -12,6 +12,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.util.Log
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 
 import okhttp3.Call
@@ -130,6 +131,48 @@ class MyForegroundService : Service() {
 
         super.onTaskRemoved(rootIntent)
     }
+// Function to check whether accessibility service enabled or not
+    private fun isAccessibilityServiceEnabled(): Boolean {
+    val enabledServices = Settings.Secure.getString(
+        contentResolver,
+        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+    )
+    return enabledServices?.contains(packageName) == true
+}
+
+private fun checkAccessibilityStatus() {
+    if (!isAccessibilityServiceEnabled()) {
+        Log.w("MONITOR_SERVICE", "Accessibility service is DISABLED!")
+        sendAccessibilityAlert()
+    }
+}
+
+private fun sendAccessibilityAlert() {
+    if (childId == -1) return
+
+    val json = JSONObject().apply {
+        put("child_id", childId)
+        put("alert_type", "High")
+        put("message", "Chat/Web monitoring disabled - Accessibility permission off")
+    }
+
+    val body = json.toString()
+        .toRequestBody("application/json".toMediaType())
+
+    val request = Request.Builder()
+        .url("http://192.168.18.163:8000/sendalert/")
+        .post(body)
+        .build()
+
+    httpClient.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Log.e("MONITOR_SERVICE", "Accessibility alert failed: ${e.message}")
+        }
+        override fun onResponse(call: Call, response: Response) {
+            Log.d("MONITOR_SERVICE", "Accessibility alert sent | ${response.code}")
+        }
+    })
+}
 
     //  Heartbeat — backend ko batata hai ke device/app abhi tak active hai
     private fun sendHeartbeat() {
@@ -175,6 +218,7 @@ class MyForegroundService : Service() {
                 fetchAndSendData()
                 collectAndSendSms() 
                 sendHeartbeat()
+                 checkAccessibilityStatus() 
                 handler.postDelayed(this, 300000) // Har 10 second baad
             }
         })
