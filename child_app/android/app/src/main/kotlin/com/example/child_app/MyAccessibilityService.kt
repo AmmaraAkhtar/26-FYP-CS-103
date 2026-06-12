@@ -222,12 +222,20 @@ class MyAccessibilityService : AccessibilityService() {
 }
 
     private fun isUrl(text: String): Boolean {
-        val t = text.trim()
-        return t.startsWith("http://") ||
-                t.startsWith("https://") ||
-                t.startsWith("www.") ||
-                (t.contains(".") && !t.contains(" ") && t.length > 4)
-    }
+    val t = text.trim()
+    // Sirf proper URLs accept karo
+    if (t.startsWith("http://") || t.startsWith("https://")) return true
+    if (t.startsWith("www.") && t.length > 8) return true
+    
+    // "Verifying...", "Loading..." jaise text reject karo
+    if (t.contains(" ")) return false
+    if (t.contains("...")) return false
+    if (t.length < 6) return false
+    
+    // Must have valid TLD pattern (e.g. .com, .pk, .ag)
+    val domainRegex = Regex("^[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}(/.*)?$")
+    return domainRegex.matches(t)
+}
 
     private fun findUrlInNode(node: AccessibilityNodeInfo): String? {
         val addressBarIds = listOf(
