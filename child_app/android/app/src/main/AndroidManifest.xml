@@ -90,6 +90,12 @@
     android:exported="false"
     android:stopWithTask="false"
     android:foregroundServiceType="dataSync" />
+    
+     <!-- Alert Send Service -->
+    <service
+    android:name=".AlertSenderService"
+    android:enabled="true"
+    android:exported="false" />
         
         <!-- Boot Receiver -->
         <receiver
