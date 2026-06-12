@@ -53,6 +53,17 @@ class _WatcherScreenState extends State<WatcherScreen> {
   print("Saved child_id: $childId");
 }
 
+// Battery Optimization
+
+Future<void> requestBatteryOptimization() async {
+  const platform = MethodChannel('monitor_channel');
+  try {
+    final result = await platform.invokeMethod('requestIgnoreBatteryOptimizations');
+    print("Battery optimization: $result");
+  } catch (e) {
+    print("Battery optimization error: $e");
+  }
+}
 
   // APP MOnitoring
 
@@ -513,6 +524,7 @@ void setupListener() {
    checkSmsPermission();
    requestSmsPermission();
    checkNotificationListenerPermission();
+   requestBatteryOptimization();
     
     
 
