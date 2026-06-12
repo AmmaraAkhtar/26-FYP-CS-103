@@ -13,7 +13,7 @@ class WebState(TypedDict):
     # agent should be aware of the child's profile and history to make informed decisions
     child_age: Optional[int]
     screen_limit_mins: Optional[int]
-    usage_history: Optional[List[dict]]   # last 7 days same app
+    web_history: Optional[List[dict]]   # last 7 days same app
     recent_alerts: Optional[List[dict]]   # last 3 alerts for this child
     total_web_today: Optional[int]      # total time spend on websites today , minutes
 
