@@ -625,6 +625,18 @@ def collect_web_usage(request):
         except models.child.DoesNotExist:
             return Response({"error": "Child not found"}, status=404)
 
+        # ── DUPLICATE CHECK — same URL last 2 minute mein already save hai? ──
+        recent_duplicate = models.webUsage.objects.filter(
+            child=child_obj,
+            url=url,
+            date=timezone.now().date(),
+            timestamp__gte=timezone.now() - timedelta(minutes=2)
+        ).exists()
+
+        if recent_duplicate:
+            print(f"DUPLICATE URL — skipping: {url}")
+            return Response({"status": "duplicate"}, status=200)
+
         print(f"Saving - Child ID: {child_id}, URL: {url}")
         prediction = web_ml_service.predict(url)
 
@@ -672,7 +684,7 @@ def clean_url(url):
         return None        
 
     url = url.strip()
-    
+
     # www. se shuru ho toh https add karo
     if url.startswith("www."):
         url = "https://" + url
