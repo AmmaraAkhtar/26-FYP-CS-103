@@ -200,7 +200,7 @@ class MyAccessibilityService : AccessibilityService() {
 
             } catch (e: Exception) {
                 Log.e("ChatMonitor", "Send failed: ${e.message}")
-            } response.close() 
+            } //response.close() 
         }
     }
 

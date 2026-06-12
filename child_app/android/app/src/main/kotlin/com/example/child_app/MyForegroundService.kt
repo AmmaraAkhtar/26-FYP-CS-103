@@ -35,6 +35,7 @@ class MyForegroundService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private var childId: Int = -1
     private var isMonitoring = false
+    private var tickCount = 0  
     private var lastSmsTimestamp: Long = 0L 
     private val httpClient = OkHttpClient.Builder().connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS).readTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
 
@@ -212,24 +213,43 @@ private fun sendAccessibilityAlert() {
     private fun startMonitoring() {
         handler.removeCallbacksAndMessages(null) // Purani loop band karo
 
-        handler.post(object : Runnable {
-            override fun run() {
-                Log.d("MONITOR_SERVICE", "Tick - Child ID: $childId")
-                fetchAndSendData()
-                collectAndSendSms() 
-                sendHeartbeat()
-                checkAccessibilityStatus() 
-                //processPendingUrls()  
-                handler.postDelayed(this, 60000) // Har 1 minute baad
-            }
-        })
+        
+
+       
+handler.post(object : Runnable {
+    override fun run() {
+        tickCount++
+        Log.d("MONITOR_SERVICE", "Tick #$tickCount - Child ID: $childId")
+
+        // Har 5 minute — SMS (har 5th tick)
+        if (tickCount % 5 == 0) {
+            collectAndSendSms()
+        }
+
+        // Har 15 minute — App usage (har 15th tick)
+        if (tickCount % 15 == 0) {
+            fetchAndSendData()
+        }
+
+        // Har 10 minute — Heartbeat + Accessibility check
+        if (tickCount % 10 == 0) {
+            sendHeartbeat()
+            checkAccessibilityStatus()
+        }
+
+        // Overflow rokne ke liye reset karo
+        if (tickCount >= 1440) tickCount = 0 // 1440 = 24 hours worth of 1-min ticks
+
+        handler.postDelayed(this, 60_000) // Base tick: 1 minute (but calls are spaced out)
+    }
+})
     }
 
     //  Usage data fetch karo
     private fun fetchAndSendData() {
         try {
             val endTime = System.currentTimeMillis()
-            val startTime = endTime - (1000 * 60) // Last 1 minute
+            val startTime = endTime - (1000L * 60 * 15) // Last 15 minutes ka data
 
             val usageStatsManager =
                 getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
@@ -247,7 +267,7 @@ private fun sendAccessibilityAlert() {
             val appsArray = JSONArray()
 
             for (app in stats) {
-                if (app.totalTimeInForeground > 0) {
+                for ((_, app) in stats) {
                     val obj = JSONObject()
                     obj.put("package_name", app.packageName)
                     obj.put("usage_time", app.totalTimeInForeground / 1000)
@@ -329,7 +349,7 @@ private fun sendAccessibilityAlert() {
                     } catch (e: Exception) {
                         Log.e("MONITOR_SERVICE", " Parse error: ${e.message}")
                     }
-                } response.close()
+                } //response.close()
             }
         })
     }
