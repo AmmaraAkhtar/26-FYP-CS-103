@@ -208,15 +208,28 @@ class MyAccessibilityService : AccessibilityService() {
     private fun sendUrl(url: String) {
     val now = System.currentTimeMillis()
     
-    // Duplicate check
-    if (url == lastSentUrl && now - lastUrlTime < URL_COOLDOWN_MS) {
+    // www. normalize karo comparison ke liye
+    val normalizedUrl = url.trim()
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .removePrefix("www.")
+        .trimEnd('/')
+
+    val normalizedLast = lastSentUrl
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .removePrefix("www.")
+        .trimEnd('/')
+
+    // Duplicate check normalized URL pe
+    if (normalizedUrl == normalizedLast && now - lastUrlTime < URL_COOLDOWN_MS) {
         Log.d("MyAccessibilityService", "Duplicate URL skip: $url")
         return
     }
-    
-    lastSentUrl = url
+
+    lastSentUrl = url.trim()
     lastUrlTime = now
-    
+
     channel?.invokeMethod("onUrlDetected", "UI:$url")
     sendUrlToBackend(url)
 }
