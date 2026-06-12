@@ -1024,7 +1024,7 @@ def collect_chat(request):
             "chat_id": chat_obj.id,
         }, status=200)
 
-# Heart beat api ----- to chech whether the app is active or not
+# Heart beat api ----- to chech whether the app is active or not, aur last seen update karne ke liye. Child agent is API ko periodically call karega, jaise ki har 5 minute mein, taki backend ko pata rahe ki child app active hai ya nahi, aur agar child app active hai toh uska last seen timestamp update ho jaye, taki parent ko accurate information milti rahe.
 @api_view(['POST'])
 def heartbeat_api(request):
     child_id = request.data.get('child_id')
