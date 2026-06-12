@@ -613,6 +613,11 @@ def collect_web_usage(request):
         
         child_id = request.data.get('child_id')
         url = request.data.get('url')
+        JUNK_KEYWORDS = ["verifying", "loading", "connecting", "about:blank", "chrome://", "..."]
+        raw_url = request.data.get("url", "").lower()
+        if any(kw in raw_url for kw in JUNK_KEYWORDS):
+            print(f"JUNK URL rejected: {raw_url}")
+            return Response({"status": "ignored"}, status=200)
         url = clean_url(request.data.get("url"))
         print("Cleaned URL:", url)
 
@@ -625,7 +630,8 @@ def collect_web_usage(request):
         except models.child.DoesNotExist:
             return Response({"error": "Child not found"}, status=404)
 
-        # ── DUPLICATE CHECK — same URL last 2 minute mein already save hai? ──
+        #  DUPLICATE CHECK (same URL last 2 minute mein already save hai?)
+
         recent_duplicate = models.webUsage.objects.filter(
             child=child_obj,
             url=url,
