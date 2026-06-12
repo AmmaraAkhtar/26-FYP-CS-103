@@ -672,6 +672,13 @@ def clean_url(url):
         return None        
 
     url = url.strip()
+    
+    # www. se shuru ho toh https add karo
+    if url.startswith("www."):
+        url = "https://" + url
+
+    if not url.startswith(("http://", "https://")):
+        return None
 
     if not url.startswith(("http://", "https://")):
         return None          
