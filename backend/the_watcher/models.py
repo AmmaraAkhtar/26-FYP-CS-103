@@ -27,6 +27,8 @@ class child(models.Model):
     is_paired = models.BooleanField(default=False)
     is_locked = models.BooleanField(default=False)
     deactivate_command = models.BooleanField(default=False)
+    last_seen = models.DateTimeField(null=True, blank=True)
+    admin_disabled = models.BooleanField(default=False)
 
 
 # Pairing Code Model
