@@ -16,6 +16,13 @@ class MainActivity : FlutterActivity() {
     private val CHANNEL = "monitor_channel"
     override fun onResume() {
     super.onResume()
+
+    if (MyForegroundService.isDeviceLocked) {
+        val intent = Intent(this, LockActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(intent)
+    }
+    
     MyAccessibilityService.channel = MethodChannel(
         flutterEngine!!.dartExecutor.binaryMessenger,
         "chat_reader_channel"
