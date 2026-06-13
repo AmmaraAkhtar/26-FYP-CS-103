@@ -46,6 +46,15 @@ class MainActivity : FlutterActivity() {
 
             when (call.method) {
 
+                "openAutoStartSettings" -> {
+                    openAutoStartSettings()
+                    result.success("Opened")
+                }
+
+                "getManufacturer" -> {
+                    result.success(Build.MANUFACTURER)
+                }
+
                 "activateDeviceAdmin" -> {
                     val deviceAdminComponent = ComponentName(
                         this,
@@ -136,6 +145,87 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // auto start settings on restart of mobile phones
+
+        private fun openAutoStartSettings() {
+    val manufacturer = Build.MANUFACTURER.lowercase()
+    val intent = Intent()
+
+    try {
+        when {
+            manufacturer.contains("xiaomi") -> {
+                intent.component = ComponentName(
+                    "com.miui.securitycenter",
+                    "com.miui.permcenter.autostart.AutoStartManagementActivity"
+                )
+            }
+            manufacturer.contains("oppo") -> {
+                intent.component = ComponentName(
+                    "com.coloros.safecenter",
+                    "com.coloros.safecenter.permission.startup.StartupAppListActivity"
+                )
+            }
+            manufacturer.contains("vivo") -> {
+                intent.component = ComponentName(
+                    "com.vivo.permissionmanager",
+                    "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"
+                )
+            }
+            manufacturer.contains("samsung") -> {
+                intent.component = ComponentName(
+                    "com.samsung.android.lool",
+                    "com.samsung.android.sm.ui.battery.BatteryActivity"
+                )
+            }
+            manufacturer.contains("huawei") -> {
+                intent.component = ComponentName(
+                    "com.huawei.systemmanager",
+                    "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"
+                )
+            }
+            manufacturer.contains("oneplus") -> {
+                intent.component = ComponentName(
+                    "com.oneplus.security",
+                    "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity"
+                )
+            }
+            manufacturer.contains("asus") -> {
+                intent.component = ComponentName(
+                    "com.asus.mobilemanager",
+                    "com.asus.mobilemanager.entry.FunctionActivity"
+                ).apply {
+                    putExtra("pkg", packageName)
+                    putExtra("package", packageName)
+                    action = "com.asus.mobilemanager.AUTOSTART_TARGET"
+                }
+            }
+            else -> {
+                // Generic fallback - app info / battery settings
+                openAppDetailsSettings()
+                return
+            }
+        }
+
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(intent)
+
+    } catch (e: Exception) {
+        Log.e("AUTOSTART", "Specific intent failed, falling back: ${e.message}")
+        openAppDetailsSettings()
+    }
+}
+
+private fun openAppDetailsSettings() {
+    try {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+        intent.data = android.net.Uri.parse("package:$packageName")
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        startActivity(intent)
+    } catch (e: Exception) {
+        Log.e("AUTOSTART", "Fallback also failed: ${e.message}")
+    }
+}
 
         // VPN channel
         val vpnChannel = MethodChannel(
