@@ -23,6 +23,6 @@ urlpatterns = [
     path('check-lock-status/', views.check_lock_status),
     path('unlock-device/', views.unlock_device),
     path('lock-device/', views.lock_device),
-    path('dashboard-summary/', dashboard_summary_api),
-    path('browsing-monitoring/', browsing_monitoring_api)
+    path('dashboard-summary/', views.dashboard_summary_api),
+    path('browsing-monitoring/', views.browsing_monitoring_api)
 ]
