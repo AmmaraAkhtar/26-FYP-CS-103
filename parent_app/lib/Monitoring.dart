@@ -9,6 +9,8 @@ import 'browsering1.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'dashboard_service.dart';
+import 'dashborad_model.dart';
 
 class Monitoring extends StatefulWidget {
   final Map<String, dynamic>? childData;
@@ -75,6 +77,25 @@ Future<void> _fetchLockStatus() async {
       }
     }
   }
+
+// Helper function to format duration in seconds to a more readable format
+  String formatDuration(int seconds) {
+  final hours = seconds ~/ 3600;
+  final minutes = (seconds % 3600) ~/ 60;
+  if (hours > 0) return "${hours}h ${minutes}m";
+  return "${minutes}m";
+}
+
+// function to fetch dashboard data 
+  Future<void> _fetchDashboardData() async {
+  final data = await DashboardService.getSummary(childId);
+  if (mounted && data != null) {
+    setState(() {
+      dashboardData = data;
+      isDashboardLoading = false;
+    });
+  }
+}
 
 // Function to shoew confirmation dialog before deactivating the child admin
 void _showDeactivateConfirmation(int childId) {
