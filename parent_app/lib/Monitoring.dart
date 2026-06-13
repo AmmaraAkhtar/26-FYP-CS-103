@@ -390,8 +390,12 @@ Future<void> _deactivateChildAdmin(int childId) async {
                         headerColor: const Color(0xFFE8FADC),
                         iconPath: "assets/watch.png",
                         iconColor: Colors.green,
-                        mainValue: "2h 30m",
-                        subValue: "+1h 30m used",
+                        mainValue: dashboardData != null
+            ? formatDuration(dashboardData!.screenTimeSeconds)
+            : "Loading...",
+                        subValue: dashboardData != null
+            ? "Limit: ${dashboardData!.screenTimeLimit}m"
+            : "",
                         buttonText: "Set Limit",
                         buttonColor: const Color(0xFF8BC34A),
                         onTap: () {
@@ -409,8 +413,10 @@ Future<void> _deactivateChildAdmin(int childId) async {
                         headerColor: const Color(0xFFFFD1A4),
                         iconPath: "assets/app.png",
                         iconColor: Colors.orange,
-                        mainValue: "2h 30m",
-                        subValue: "+1h 30m used",
+                        mainValue: dashboardData != null
+            ? formatDuration(dashboardData!.appUsageSeconds)
+            : "Loading...",
+                        subValue:  "Today",
                         buttonText: "View All »",
                         buttonColor: const Color(0xFFFB8C00),
                         onTap: () {
@@ -434,8 +440,12 @@ Future<void> _deactivateChildAdmin(int childId) async {
                         headerColor: const Color(0xFFFFEBEE),
                         iconPath: "assets/youtube1.png",
                         iconColor: Colors.red,
-                        mainValue: "2 videos watch",
-                        subValue: "Last watched:\nCompusx ML",
+                        mainValue: dashboardData != null
+                            ? "${dashboardData!.youtubeCount} videos watched"
+                            : "Loading...",
+                        subValue: dashboardData != null
+                            ? "Last watched:\n${dashboardData!.lastYoutube ?? 'N/A'}"
+                            : "Loading...",
                         buttonText: "View All »",
                         buttonColor: const Color(0xFFF44336),
                         onTap: () {
@@ -453,8 +463,12 @@ Future<void> _deactivateChildAdmin(int childId) async {
                         headerColor: const Color(0xFFE3F2FD),
                         iconPath: "assets/web.png",
                         iconColor: Colors.blue,
-                        mainValue: "6 blocked sites",
-                        subValue: "Most Recent:\nfreev.com",
+                        mainValue: dashboardData != null
+                            ? "${dashboardData!.blockedSitesCount} blocked sites"
+                            : "Loading...",
+                        subValue: dashboardData != null
+                            ? "Most Recent:\n${dashboardData!.lastBlockedUrl ?? 'N/A'}"
+                            : "Loading...",
                         buttonText: "View All »",
                         buttonColor: const Color(0xFF03A9F4),
                         onTap: () {
@@ -510,51 +524,82 @@ Future<void> _deactivateChildAdmin(int childId) async {
                         ),
                         Divider(thickness: 1.h),
                         SizedBox(height: 10.h),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.warning_rounded,
-                                color: Colors.orange, size: 30.r),
-                            SizedBox(width: 15.w),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        // Row(
+                        //   crossAxisAlignment: CrossAxisAlignment.start,
+                        //   children: [
+                        //     Icon(Icons.warning_rounded,
+                        //         color: Colors.orange, size: 30.r),
+                        //     SizedBox(width: 15.w),
+                        //     Expanded(
+                        //       child: Column(
+                        //         crossAxisAlignment: CrossAxisAlignment.start,
+                        //         children: [
+                        //           Row(
+                        //             mainAxisAlignment:
+                        //                 MainAxisAlignment.spaceBetween,
+                        //             children: [
+                        //               Text(
+                        //                 "Suspicious Chat Detected",
+                        //                 style: TextStyle(
+                        //                     fontWeight: FontWeight.bold,
+                        //                     fontSize: 14.sp),
+                        //               ),
+                        //               Text(
+                        //                 "Today At 5:30pm",
+                        //                 style: TextStyle(
+                        //                     color: Colors.grey[600],
+                        //                     fontSize: 10.sp),
+                        //               ),
+                        //             ],
+                        //           ),
+                        //           SizedBox(height: 5.h),
+                        //           Text(
+                        //             "There's potentially inappropriate language in the chat with Abdullah",
+                        //             style: TextStyle(
+                        //                 color: Colors.black87, fontSize: 14.sp),
+                        //           ),
+                        //         ],
+                        //       ),
+                        //     ),
+                        //   ],
+                        // ),
+                        if (dashboardData?.latestChatAlert != null) ...[
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.warning_rounded, color: Colors.orange, size: 30.r),
+                        SizedBox(width: 15.w),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        "Suspicious Chat Detected",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14.sp),
-                                      ),
-                                      Text(
-                                        "Today At 5:30pm",
-                                        style: TextStyle(
-                                            color: Colors.grey[600],
-                                            fontSize: 10.sp),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 5.h),
-                                  Text(
-                                    "There's potentially inappropriate language in the chat with Abdullah",
-                                    style: TextStyle(
-                                        color: Colors.black87, fontSize: 14.sp),
-                                  ),
+                                  Text(dashboardData!.latestChatAlert!.title,
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                                  Text(dashboardData!.latestChatAlert!.time,
+                                      style: TextStyle(color: Colors.grey[600], fontSize: 10.sp)),
                                 ],
                               ),
-                            ),
-                          ],
+                              SizedBox(height: 5.h),
+                              Text(
+                                "There's potentially inappropriate language in the chat with ${dashboardData!.latestChatAlert!.sender}",
+                                style: TextStyle(color: Colors.black87, fontSize: 14.sp),
+                              ),
+                            ],
+                          ),
                         ),
-                        SizedBox(height: 10.h),
-                        Divider(thickness: 2.h, color: Colors.grey),
                       ],
                     ),
-                  ),
-                ),
+                  ] else
+                    Text("No recent chat alerts", style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
+                                          SizedBox(height: 10.h),
+                                          Divider(thickness: 2.h, color: Colors.grey),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                 SizedBox(height: 20.h),
 
                 // Bottom Button
