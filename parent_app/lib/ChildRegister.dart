@@ -5,7 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart'; // added for respon
 
 class profile extends StatefulWidget {
   String email;
-  profile({super.key, required this.email});
+  String token;
+  profile({super.key, required this.email, required this.token});
 
   @override
   State<profile> createState() => _EditprofileState();
@@ -27,6 +28,7 @@ class _EditprofileState extends State<profile> {
       url,
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer ${widget.token}',
       },
       body: jsonEncode({
         'firstname': firstNameController.text,

@@ -7,7 +7,7 @@ import 'dart:convert';
 
 class home extends StatefulWidget {
   String email;
-  String token;
+  final String token;
   home({super.key, required this.email, required this.token});
 
   @override
@@ -201,6 +201,7 @@ Widget build(BuildContext context) {
                           MaterialPageRoute(
                             builder: (context) => profile(
                               email: widget.email,
+                              token: widget.token,
                             ),
                           ));
                     },
@@ -241,6 +242,7 @@ Widget build(BuildContext context) {
                     MaterialPageRoute(
                       builder: (context) => Monitoring(
                         childData: child,
+                        token: widget.token,
                       ),
                     ),
                   );

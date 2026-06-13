@@ -12,7 +12,8 @@ import 'dart:async';
 
 class Monitoring extends StatefulWidget {
   final Map<String, dynamic>? childData;
-  const Monitoring({super.key, this.childData});
+  final String token ;
+  const Monitoring({super.key, this.childData,  required this.token});
 
   @override
   State<Monitoring> createState() => _MonitoringState();
@@ -115,7 +116,11 @@ Future<void> _deactivateChildAdmin(int childId) async {
       final response = await http.post(
         Uri.parse('http://192.168.18.163:8000/deactivate-admin/'),
         headers: {
-          'Content-Type': 'application/json',
+            
+  'Authorization': 'Bearer ${widget.token}',
+  'Content-Type': 'application/json',
+
+          
         },
         body: jsonEncode({'child_id': childId}),
       );
