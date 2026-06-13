@@ -9,6 +9,7 @@ from rest_framework.decorators import api_view,permission_classes
 from django.contrib.auth import authenticate
 import random
 from . import models
+from django.db.models import Sum
 from .app_agent.graph import app_agent
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
@@ -1289,3 +1290,63 @@ def collect_chat(request):
             "category": ml_category,
             "action":   chat_obj.action,
         }, status=200)
+
+
+
+# Api to send data on dashboard home page, jaha parent ko child ki summary dikhani hai, jaise ki total screen time, app usage summary, YouTube usage, blocked websites, suspicious chats, etc. Taaki parent ko ek quick overview mil jaye child ki activities ka, bina alag alag APIs call kiye.
+
+@api_view(['GET'])
+def dashboard_summary_api(request):
+    child_id = request.query_params.get('child_id')
+    try:
+        child = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    today = timezone.now().date()
+
+    # Screen time = total app usage time today (seconds)
+    total_app_time = models.appUsage.objects.filter(
+        child=child, date=today
+    ).aggregate(total=Sum('usage_time'))['total'] or 0
+
+    # App usage card 
+    app_usage_time = total_app_time
+
+    # YouTube activities count (agar package_name mein youtube ho)
+    youtube_count = models.appUsage.objects.filter(
+        child=child, date=today, package_name__icontains='youtube'
+    ).count()
+
+    last_youtube = models.appUsage.objects.filter(
+        child=child, package_name__icontains='youtube'
+    ).order_by('-created_at').first()
+
+    # Blocked web sites count
+    blocked_sites = models.webUsage.objects.filter(
+        child=child, date=today, action='Block'
+    )
+    blocked_count = blocked_sites.count()
+    last_blocked = blocked_sites.order_by('-created_at').first()
+
+    # Latest suspicious chat
+    latest_chat_alert = models.ChatMessage.objects.filter(
+        child=child
+    ).exclude(action='Allow').order_by('-created_at').first()
+
+    return Response({
+        "screen_time_seconds": total_app_time,
+        "screen_time_limit": child.screen_time_limit,
+        "app_usage_seconds": app_usage_time,
+        "youtube_count": youtube_count,
+        "last_youtube": last_youtube.package_name if last_youtube else None,
+        "blocked_sites_count": blocked_count,
+        "last_blocked_url": last_blocked.url if last_blocked else None,
+        "latest_chat_alert": {
+            "title": "Suspicious Chat Detected",
+            "sender": latest_chat_alert.sender,
+            "message": latest_chat_alert.message,
+            "category": latest_chat_alert.category,
+            "time": latest_chat_alert.created_at,
+        } if latest_chat_alert else None,
+    }, status=200)
