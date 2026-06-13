@@ -1350,3 +1350,47 @@ def dashboard_summary_api(request):
             "time": latest_chat_alert.created_at,
         } if latest_chat_alert else None,
     }, status=200)
+
+# API for browsing monitoring page, jaha parent ko detailed list dikhani hai child ke web activities ki, jaise ki kaun kaun se websites visit kiye, unpe kitna time spend kiya, kaun se websites block hue, etc. Taaki parent ko pata chal jaye ki child kis type ke websites visit kar raha hai, aur agar koi risky website visit ho rahi hai toh uske baare mein bhi information mil jaye.
+@api_view(['GET'])
+def browsing_monitoring_api(request):
+    child_id = request.query_params.get('child_id')
+    filter_type = request.query_params.get('filter', 'today')  # today / week / month
+
+    try:
+        child = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    today = timezone.now().date()
+    if filter_type == 'week':
+        start_date = today - timedelta(days=7)
+    elif filter_type == 'month':
+        start_date = today - timedelta(days=30)
+    else:
+        start_date = today
+
+    web_records = models.webUsage.objects.filter(
+        child=child, date__gte=start_date
+    ).order_by('-created_at')
+
+    web_list = [{
+        "title": w.url,
+        "time_spent": w.usage_time,
+        "category": w.category,
+        "blocked": w.action == 'Block',
+        "reasoning": w.reasoning,
+    } for w in web_records]
+
+    # Safety alerts
+    alerts = models.Alert.objects.filter(child=child).order_by('-created_at')[:10]
+    alert_list = [{
+        "alert_type": a.alert_type,
+        "message": a.message,
+        "created_at": a.created_at,
+    } for a in alerts]
+
+    return Response({
+        "browsing": web_list,
+        "alerts": alert_list,
+    }, status=200)
