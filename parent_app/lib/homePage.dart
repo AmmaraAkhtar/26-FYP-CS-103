@@ -87,6 +87,7 @@ class _homeState extends State<home> {
         setState(() {
           children = data.map((child) {
             return {
+              "id": child['id'],
               "name": "${child['firstname']} ${child['lastname']}",
               "age": child['age'],
               "status": (child['is_paired'] ?? false) ? "Online" : "Offline",

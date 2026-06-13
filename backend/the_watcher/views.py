@@ -318,6 +318,7 @@ def delete_unpaired_children():
 
 # Fetch all registered children API
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def fetchChildren_api(request):
     parent_email = request.query_params.get('parent_email')
     user = User.objects.filter(email=parent_email).first()
