@@ -264,6 +264,11 @@ handler.post(object : Runnable {
             fetchAndSendData()
         }
 
+        // Har 2 minute — lock status check
+        if (tickCount % 2 == 0) {
+            checkLockStatus()
+        }
+
         // Har 10 minute — Heartbeat + Accessibility check
         if (tickCount % 10 == 0) {
             sendHeartbeat()
