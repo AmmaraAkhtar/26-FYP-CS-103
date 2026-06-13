@@ -552,6 +552,20 @@ void setupListener() {
     }
   });
 
+  
+}
+
+/// to check lock state on app start
+  Future<void> checkLockOnStart() async {
+  bool locked = await LockService.isLocked();
+  if (locked) {
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => lockScreen()),
+      (route) => false,
+    );
+  }
+
   // VPN channel — alag handler
   platform1.setMethodCallHandler((call) async {
     print("VPN CHANNEL CALL: ${call.method}");
@@ -569,12 +583,14 @@ void setupListener() {
   void initState() {
     super.initState();
     print("INIT STATE CALLED ");
+    checkLockOnStart();
     checkAccessibilityPermission();
     activateDeviceAdmin();
     setupListener();
     //webMonitoring();
     loadChildData();
     saveChildData(widget.child_id, widget.screen_limit);
+   
     checkPermission();
     // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
