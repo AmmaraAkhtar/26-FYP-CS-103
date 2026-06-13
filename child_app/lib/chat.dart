@@ -64,6 +64,66 @@ Future<void> requestBatteryOptimization() async {
     print("Battery optimization error: $e");
   }
 }
+/// checking of auto start permissions
+
+Future<void> checkAutoStartPermission() async {
+  const platform = MethodChannel('monitor_channel');
+
+  try {
+    final String manufacturer = await platform.invokeMethod('getManufacturer');
+    final m = manufacturer.toLowerCase();
+
+    final restrictedOems = [
+      'xiaomi', 'oppo', 'vivo', 'samsung', 'huawei', 'oneplus', 'asus', 'redmi', 'poco'
+    ];
+
+    if (restrictedOems.any((oem) => m.contains(oem))) {
+      showAutoStartDialog();
+    }
+  } catch (e) {
+    print("Manufacturer check error: $e");
+  }
+}
+
+
+
+void showAutoStartDialog() {
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (ctx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        "Autostart Permission Required",
+        style: TextStyle(color: Color(0xFF699886), fontWeight: FontWeight.bold),
+      ),
+      content: Text(
+        "Aapke phone mein 'Autostart' permission enable karna zaruri hai, "
+        "warna restart ke baad monitoring service automatically start nahi hogi.\n\n"
+        "Settings mein '${widget.toString()}' app ko ON karein.",
+        style: TextStyle(color: Colors.grey[700]),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: Text("Later", style: TextStyle(color: Colors.grey)),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(ctx);
+            const platform = MethodChannel('monitor_channel');
+            await platform.invokeMethod('openAutoStartSettings');
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(0xFFEB9974),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ),
+          child: Text("Enable Now", style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+}
 
   // APP MOnitoring
 
@@ -585,12 +645,13 @@ void setupListener() {
     print("INIT STATE CALLED ");
     checkLockOnStart();
     checkAccessibilityPermission();
+    checkAutoStartPermission();
     activateDeviceAdmin();
     setupListener();
     //webMonitoring();
     loadChildData();
     saveChildData(widget.child_id, widget.screen_limit);
-   
+    
     checkPermission();
     // startAppMonitoring();
     // START BACKGROUND SERVICE HERE
