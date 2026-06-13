@@ -21,4 +21,5 @@ urlpatterns = [
     path('api/check-command/', views.check_deactivate_command ),
     path('heartbeat/', views.heartbeat_api, ),
     path('check-lock-status/', views.check_lock_status),
+    path('unlock-device/', views.unlock_device),
 ]
