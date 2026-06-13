@@ -37,10 +37,12 @@
 
         <!-- LOCK ACTIVITY (SEPARATE) -->
         <activity
-            android:name=".LockActivity"
-            android:exported="false"
-            android:launchMode="singleTask"
-            android:taskAffinity="" />
+    android:name=".LockActivity"
+    android:exported="false"
+    android:excludeFromRecents="true"
+    android:taskAffinity=""
+    android:launchMode="singleTask"
+    android:theme="@style/LaunchTheme" />
 
         <meta-data
             android:name="flutterEmbedding"
