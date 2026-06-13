@@ -23,6 +23,8 @@ class _MonitoringState extends State<Monitoring> {
   bool isDeviceLocked = false;
   bool isStatusLoading = true;
   Timer? _statusTimer;
+  DashboardSummary? dashboardData;  
+  bool isDashboardLoading = true; 
 
   late int childId;
 
