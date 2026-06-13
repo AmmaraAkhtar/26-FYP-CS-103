@@ -1063,3 +1063,14 @@ def heartbeat_api(request):
         return Response({"status": "ok"}, status=200)
     except models.child.DoesNotExist:
         return Response({"error": "Child not found"}, status=404)
+
+
+# API for child agent to check if device is locked by parent. Child agent is API ko periodically call karega, jaise ki har 5 minute mein, taki agar parent ne device lock kar diya hai toh child app ko pata chal jaye aur wo apne aap ko lock kar le.
+@api_view(['GET'])
+def check_lock_status(request):
+    child_id = request.query_params.get('child_id')
+    try:
+        child = models.child.objects.get(id=child_id)
+        return Response({"is_locked": child.is_locked})
+    except models.child.DoesNotExist:
+        return Response({"is_locked": False})
