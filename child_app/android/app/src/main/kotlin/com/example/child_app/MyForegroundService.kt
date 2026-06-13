@@ -39,6 +39,38 @@ class MyForegroundService : Service() {
     private var tickCount = 0  
     private var lastSmsTimestamp: Long = 0L 
     private val httpClient = OkHttpClient.Builder().connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS).readTimeout(30, java.util.concurrent.TimeUnit.SECONDS).build()
+    private var deviceLocked = false
+
+// Lock Status Check Function 
+private fun checkLockStatus() {
+    if (childId == -1) return
+
+    Thread {
+        try {
+            val url = "http://192.168.18.163:8000/check-lock-status/?child_id=$childId"
+            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 10000
+
+            val response = connection.inputStream.bufferedReader().readText()
+            val json = JSONObject(response)
+            val shouldLock = json.getBoolean("is_locked")
+
+            if (shouldLock && !deviceLocked) {
+                deviceLocked = true
+                lockDevice()
+            } else if (!shouldLock && deviceLocked) {
+                deviceLocked = false
+                // unlock - LockActivity ko band karne ka signal bhejo
+                val unlockIntent = Intent("com.example.child_app.UNLOCK")
+                sendBroadcast(unlockIntent)
+            }
+
+        } catch (e: Exception) {
+            Log.e("MONITOR_SERVICE", "Lock check failed: ${e.message}")
+        }
+    }.start()
+}
 
     // Service create hoti hai
     override fun onCreate() {
