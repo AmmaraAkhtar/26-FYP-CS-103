@@ -169,6 +169,7 @@ class _MonitoringState extends State<Monitoring> {
   void initState() {
     super.initState();
     childId = widget.childData?['id'] ?? 0;
+    print("CHILD DATA: ${widget.childData}");
     _fetchLockStatus();
     _fetchDashboardData();
 
@@ -248,8 +249,7 @@ class _MonitoringState extends State<Monitoring> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "${widget.childData?['firstname'] ?? ''} ${widget.childData?['lastname'] ?? ''}"
-                              .trim(),
+                          widget.childData?['name'] ?? 'Unknown',
                           style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
                         ),
                         Text(
@@ -487,8 +487,8 @@ class _MonitoringState extends State<Monitoring> {
                             context,
                             MaterialPageRoute(
                               builder: (context) => BrowsingMonitoringScreen(
-                                //childId: childId,
-                                //childData: widget.childData,
+                                childId: childId,
+                                childData: widget.childData,
                               ),
                             ),
                           );
