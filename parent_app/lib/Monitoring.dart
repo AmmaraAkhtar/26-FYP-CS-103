@@ -8,6 +8,7 @@ import 'screenTimeLimit.dart';
 import 'browsering1.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async';
 
 class Monitoring extends StatefulWidget {
   final Map<String, dynamic>? childData;
@@ -18,53 +19,103 @@ class Monitoring extends StatefulWidget {
 }
 
 class _MonitoringState extends State<Monitoring> {
+  bool isDeviceLocked = false;
+  bool isStatusLoading = true;
+  Timer? _statusTimer;
+
+  late int childId;
 
 // To unlock the child device remotely
   Future<void> unlockChildDevice(int childId) async {
-  try {
-    final response = await http.post(
-      Uri.parse("http://192.168.18.163:8000/unlock-device/"),
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"child_id": childId}),
-    );
+    try {
+      final response = await http.post(
+        Uri.parse("http://192.168.18.163:8000/unlock-device/"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"child_id": childId}),
+      );
 
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Device unlocked successfully")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to unlock device")),
-      );
+      if (response.statusCode == 200) {
+        setState(() => isDeviceLocked = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Device unlocked successfully")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to unlock device")),
+        );
+      }
+    } catch (e) {
+      print("Unlock error: $e");
     }
-  } catch (e) {
-    print("Unlock error: $e");
   }
-}
+
+// Function to fetch the lock satus of the child device
+Future<void> _fetchLockStatus() async {
+    try {
+      final response = await http.get(
+        Uri.parse("http://192.168.18.163:8000/check-lock-status/?child_id=$childId"),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            isDeviceLocked = data["is_locked"] ?? false;
+            isStatusLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print("Status fetch error: $e");
+      if (mounted) {
+        setState(() => isStatusLoading = false);
+      }
+    }
+  }
 
 // to deactivate the child admin remotely
-  Future<void> _deactivateChildAdmin(int childId) async {
-  try {
-    final response = await http.post(
-      Uri.parse('http://192.168.18.163:8000/deactivate-admin/'),
-      headers: {
-        'Authorization': 'Bearer $widget.token', //  auth token
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'child_id': childId}),
-    );
-    
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Command sent! Child app will deactivate soon.')),
+Future<void> _deactivateChildAdmin(int childId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://192.168.18.163:8000/deactivate-admin/'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'child_id': childId}),
       );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Command sent! Child app will deactivate soon.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send command')),
+        );
+      }
+    } catch (e) {
+      print('Error: $e');
     }
-  } catch (e) {
-    print('Error: $e');
   }
-}
 
   @override
+ 
+  void initState() {
+    super.initState();
+    childId = widget.childData?['id'] ?? 0;
+    _fetchLockStatus();
+
+    // Har 15 sec status refresh karo
+    _statusTimer = Timer.periodic(Duration(seconds: 15), (_) {
+      _fetchLockStatus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    super.dispose();
+  }
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFC),
