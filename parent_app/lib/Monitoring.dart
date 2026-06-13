@@ -187,6 +187,136 @@ Future<void> _deactivateChildAdmin(int childId) async {
               ),
                 SizedBox(height: 25.h),
 
+                SizedBox(height: 25.h),
+
+                // Device Status & Controls Card
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25.r),
+                  ),
+                  child: Container(
+                    padding: EdgeInsets.all(20.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25.r),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Device Controls",
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Divider(thickness: 1.h),
+                        SizedBox(height: 10.h),
+
+                        // Lock Status Indicator
+                        Row(
+                          children: [
+                            Icon(
+                              isDeviceLocked ? Icons.lock : Icons.lock_open,
+                              color: isDeviceLocked ? Colors.red : Colors.green,
+                              size: 28.r,
+                            ),
+                            SizedBox(width: 10.w),
+                            Expanded(
+                              child: isStatusLoading
+                                  ? Text(
+                                      "Checking status...",
+                                      style: TextStyle(
+                                          fontSize: 14.sp, color: Colors.grey),
+                                    )
+                                  : Text(
+                                      isDeviceLocked
+                                          ? "Device is currently LOCKED"
+                                          : "Device is Unlocked",
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDeviceLocked
+                                            ? Colors.red
+                                            : Colors.green,
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16.h),
+
+                        // Buttons Row
+                        Row(
+                          children: [
+                            // Unlock Device Button
+                            Expanded(
+                              child: SizedBox(
+                                height: 42.h,
+                                child: ElevatedButton.icon(
+                                  onPressed: isDeviceLocked
+                                      ? () => unlockChildDevice(childId)
+                                      : null,
+                                  icon: Icon(Icons.lock_open,
+                                      size: 18.r, color: Colors.white),
+                                  label: Text(
+                                    "Unlock Device",
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isDeviceLocked
+                                        ? const Color(0xFFEB9974)
+                                        : Colors.grey[300],
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20.r),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 12.w),
+
+                            // Deactivate Admin Button
+                            Expanded(
+                              child: SizedBox(
+                                height: 42.h,
+                                child: ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _showDeactivateConfirmation(childId),
+                                  icon: Icon(Icons.admin_panel_settings,
+                                      size: 18.r, color: Colors.white),
+                                  label: Text(
+                                    "Deactivate Admin",
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF699886),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20.r),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20.h),
+
                 // First Row
                 Row(
                   children: [
