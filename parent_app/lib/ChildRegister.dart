@@ -42,7 +42,7 @@ class _EditprofileState extends State<profile> {
     if (response.statusCode == 201) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Pairing Code is sent to your email")),
-      );
+      );Navigator.pop(context); // home pe wapas jao
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to register child")),

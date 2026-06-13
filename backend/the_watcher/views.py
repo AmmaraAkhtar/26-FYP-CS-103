@@ -351,7 +351,7 @@ def collectAppUsageData_Api(request):
 
         serializer = AppUsageSerializer(data=request.data)
         print(request.data)
-
+        
         if serializer.is_valid():
             validated_data = serializer.validated_data
             # usage_data = validated_data["usage_data"]
@@ -361,6 +361,7 @@ def collectAppUsageData_Api(request):
                 return Response({"message": "Empty usage data"}, status=200)
             
             #app_names = [app["package_name"] for app in usage_data]
+            
             app_names = [preprocess_app_name(app["package_name"]) for app in usage_data]
 
             # ML prediction
@@ -498,6 +499,9 @@ def collectAppUsageData_Api(request):
                 action=final["action"],
                 date=validated_data["timestamp"].date()
             )
+                if final["action"] == "Block" or final["action"] == "Escalate":
+                    child.is_locked = True
+                    child.save()
 
                 result.append({
                     "package_name":  app["package_name"],
@@ -508,7 +512,7 @@ def collectAppUsageData_Api(request):
                     "alert_message": final["alert_message"],
                 })
                 print(f"App: {app['package_name']}, Category: {category_predictions[i]}, Risk: {final['action']}, Action: {final['action']},reasoning: {final['reasoning']}, Alert: {final['alert_message']}")
-
+                
             return Response({
                 "message": "Data saved successfully",
                 "predictions": result
@@ -677,6 +681,9 @@ def collect_web_usage(request):
         try:
             result= web_graph.invoke({"child_id":int(child_id),"url":url,"ml_prediction": prediction,"web_usage_id":  web_obj.id,})
             print(f"Agent completed for child {child_id}, url {url}, prediction {prediction},risk {risk}, action {action}")
+            if result.get("action", "").lower() in ["block", "escalate"]:
+                child_obj.is_locked = True
+                child_obj.save()
             return Response({"status":"completed", "ml_prediction": prediction,"action":result.get("action"),"risk_level":result.get("risk_level"),"reasoning":result.get("reasoning"), }, status=200)
         except Exception as e:
             print(f"Agent Error: {traceback.format_exc()}")
@@ -917,6 +924,8 @@ def collect_chat(request):
     message       = request.data.get('message', '')
     timestamp_str = request.data.get('timestamp')
 
+    
+
     # ── FILTER 1: Too short ──
     if not message or len(message.strip()) < 5:
         return Response({"status": "ignored"}, status=200)
@@ -1037,7 +1046,9 @@ def collect_chat(request):
         })
 
         print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}")
-
+        if result.get("action", "").lower() in ["block", "escalate"]:
+                child_obj.is_locked = True
+                child_obj.save()
         return Response({
             "status":    "processed",
             "chat_id":   chat_obj.id,
@@ -1072,6 +1083,27 @@ def check_lock_status(request):
     child_id = request.query_params.get('child_id')
     try:
         child = models.child.objects.get(id=child_id)
+        print(f"Lock status check for child {child_id}: is_locked={child.is_locked}")
         return Response({"is_locked": child.is_locked})
     except models.child.DoesNotExist:
         return Response({"is_locked": False})
+
+
+# api to lock the device from child side, jab ML model ya agent detect kare ki risky activity ho rahi hai, toh wo device ko lock karne ke liye is API ko call karega, taki parent ko pata chal jaye ki risky activity detect hui hai, aur device lock bhi ho jaye taki child uss activity ko continue na kar sake. Is API ko call karne se DB mein is_locked=True save hoga, taki checkLockStatus() API reboot ke baad bhi correct status return kare.
+
+@api_view(['POST'])
+def lock_device(request):
+    """
+    Called by the child app's lockDevice() whenever the app/ML triggers a lock.
+    Persists is_locked=True to DB so checkLockStatus() restores it after reboot.
+    """
+    child_id = request.data.get('child_id')
+    if not child_id:
+        return Response({"error": "child_id required"}, status=400)
+    try:
+        child = models.child.objects.get(id=child_id)
+        child.is_locked = True
+        child.save()
+        return Response({"status": "locked"}, status=200)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)

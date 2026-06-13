@@ -27,10 +27,12 @@ class WatcherScreen extends StatefulWidget {
   _WatcherScreenState createState() => _WatcherScreenState();
 }
 
-class _WatcherScreenState extends State<WatcherScreen> {
+class _WatcherScreenState extends State<WatcherScreen>with WidgetsBindingObserver {
   int? storedChildId;
   int? storedScreenLimit;
   bool _smsPermissionGranted = false;
+  int _permissionStep = 0;
+  bool _flowRunning = false; 
 
   
   // Load Child Data
@@ -66,29 +68,98 @@ Future<void> requestBatteryOptimization() async {
 }
 /// checking of auto start permissions
 
-Future<void> checkAutoStartPermission() async {
+Future<bool> checkAutoStartPermission() async {
   const platform = MethodChannel('monitor_channel');
-
   try {
     final String manufacturer = await platform.invokeMethod('getManufacturer');
     final m = manufacturer.toLowerCase();
-
     final restrictedOems = [
       'xiaomi', 'oppo', 'vivo', 'samsung', 'huawei', 'oneplus', 'asus', 'redmi', 'poco'
     ];
-
     if (restrictedOems.any((oem) => m.contains(oem))) {
-      showAutoStartDialog();
+      await showAutoStartDialog();
+      return true;
     }
+    return false;
   } catch (e) {
     print("Manufacturer check error: $e");
+    return false;
   }
 }
 
+// Future<void> _runPermissionFlow() async {
+//   await checkLockOnStart();
+
+//   await checkAccessibilityPermission();
+//   await checkAutoStartPermission();
+
+//   await checkSmsPermission();
+//   await requestSmsPermission();
+
+//   await checkNotificationListenerPermission();
+//   await requestBatteryOptimization();
+
+//   await activateDeviceAdmin();
+// }
 
 
-void showAutoStartDialog() {
-  showDialog(
+
+
+
+
+Future<void> _runPermissionFlow() async {
+  if (_flowRunning) return;
+  _flowRunning = true;
+
+  try {
+    await checkLockOnStart();
+
+    while (_permissionStep < 6) {
+      print("PERMISSION FLOW — current step: $_permissionStep");
+
+      if (_permissionStep == 0) {
+        bool opened = await checkAccessibilityPermission();
+        _permissionStep = 1;
+        if (opened) break; // settings khuli — yahan ruk jao, resume pe continue hoga
+      }
+
+      else if (_permissionStep == 1) {
+        bool opened = await checkAutoStartPermission();
+        _permissionStep = 2;
+        if (opened) break;
+      }
+
+      else if (_permissionStep == 2) {
+        await checkSmsPermission();
+        await requestSmsPermission();
+        _permissionStep = 3;
+        // SMS dialog system popup hai, settings nahi khulti — continue
+      }
+
+      else if (_permissionStep == 3) {
+        bool opened = await checkNotificationListenerPermission();
+        _permissionStep = 4;
+        if (opened) break;
+      }
+
+      else if (_permissionStep == 4) {
+        await requestBatteryOptimization();
+        _permissionStep = 5;
+        // ye bhi system dialog hai — continue
+      }
+
+      else if (_permissionStep == 5) {
+        await activateDeviceAdmin();
+        _permissionStep = 6;
+      }
+    }
+  } finally {
+    _flowRunning = false;
+  }
+}
+
+Future<void> showAutoStartDialog() async {
+  return showDialog(
     context: context,
     barrierDismissible: false,
     builder: (ctx) => AlertDialog(
@@ -166,25 +237,23 @@ Future<void> requestSmsPermission() async {
   }
 }
 // Notification Listener permission check
-Future<void> checkNotificationListenerPermission() async {
+Future<bool> checkNotificationListenerPermission() async {
   const platform = MethodChannel('monitor_channel');
-  
   try {
-    final bool isEnabled = await platform.invokeMethod(
-      'isNotificationListenerEnabled'
-    );
-    
+    final bool isEnabled = await platform.invokeMethod('isNotificationListenerEnabled');
     if (!isEnabled) {
-      // Settings pe le jao
-      showNotificationPermissionDialog();
+      await showNotificationPermissionDialog();
+      return true;
     }
+    return false;
   } catch (e) {
     print("Error checking notification permission: $e");
+    return false;
   }
 }
 // Notification Listener permission 
-void showNotificationPermissionDialog() {
-  showDialog(
+Future<void> showNotificationPermissionDialog() async {
+  return showDialog(
     context: context,
     barrierDismissible: false,
     builder: (ctx) => AlertDialog(
@@ -535,22 +604,25 @@ Future<void> _startServiceWithDelay() async {
   await MonitorService().startService(childId);
 }
 
-Future<void> checkAccessibilityPermission() async {
+Future<bool> checkAccessibilityPermission() async {
   const platform = MethodChannel('monitor_channel');
   try {
     final bool isEnabled = await platform.invokeMethod('isAccessibilityServiceEnabled');
     if (!isEnabled) {
-      showAccessibilityPermissionDialog();
+      await showAccessibilityPermissionDialog();
+      return true;  // settings khuli (ya dialog dikha)
     }
+    return false; // already enabled, kuch nahi hua
   } catch (e) {
     print("Error checking accessibility permission: $e");
+    return false;
   }
 }
 
 // Accessibility permission dialog
 
-void showAccessibilityPermissionDialog() {
-  showDialog(
+Future<void> showAccessibilityPermissionDialog() async{
+  return showDialog(
     context: context,
     barrierDismissible: false,
     builder: (ctx) => AlertDialog(
@@ -639,32 +711,62 @@ void setupListener() {
   });
 }
 
-  @override
-  void initState() {
-    super.initState();
-    print("INIT STATE CALLED ");
-    checkLockOnStart();
-    checkAccessibilityPermission();
-    checkAutoStartPermission();
-    activateDeviceAdmin();
-    setupListener();
-    //webMonitoring();
-    loadChildData();
-    saveChildData(widget.child_id, widget.screen_limit);
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   print("INIT STATE CALLED ");
+  //   _runPermissionFlow();
+
+  //   //checkLockOnStart();
+  //   //checkAccessibilityPermission();
+  //   //checkAutoStartPermission();
+  //   //activateDeviceAdmin();
+  //   setupListener();
+  //   //webMonitoring();
+  //   loadChildData();
+  //   saveChildData(widget.child_id, widget.screen_limit);
     
-    checkPermission();
-    // startAppMonitoring();
-    // START BACKGROUND SERVICE HERE
-   _startServiceWithDelay();
-   checkSmsPermission();
-   requestSmsPermission();
-   checkNotificationListenerPermission();
-   requestBatteryOptimization();
+  //    checkPermission();
+  //   // startAppMonitoring();
+  //   // START BACKGROUND SERVICE HERE
+  //  _startServiceWithDelay();
+  
+  //  //checkSmsPermission();
+  //  //requestSmsPermission();
+  //  //checkNotificationListenerPermission();
+  //  //requestBatteryOptimization();
     
     
 
-    //checkLockState();
+  //   //checkLockState();
+  // }
+@override
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addObserver(this);   
+  print("INIT STATE CALLED ");
+
+  setupListener();
+  loadChildData();
+  saveChildData(widget.child_id, widget.screen_limit);
+  checkPermission();
+  _startServiceWithDelay();
+
+  _runPermissionFlow();
+}
+
+@override
+void didChangeAppLifecycleState(AppLifecycleState state) {
+  if (state == AppLifecycleState.resumed) {
+    _runPermissionFlow();
   }
+}
+
+@override
+void dispose() {
+  WidgetsBinding.instance.removeObserver(this);
+  super.dispose();
+}
 
   @override
   Widget build(BuildContext context) {

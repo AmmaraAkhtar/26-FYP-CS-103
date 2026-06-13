@@ -77,9 +77,12 @@ class _homeState extends State<home> {
     //'http://127.0.0.1:8000/fetchChildren/?parent_email=${widget.email}');
     final url = Uri.parse(
       'http://192.168.18.163:8000/fetchChildren/?parent_email=${widget.email}',
+      
     );
     try {
-      final response = await http.get(url);
+      final response = await http.get(url,headers: {
+    'Authorization': 'Bearer ${widget.token}',
+  },);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         print("Fetched data: $data");
@@ -205,6 +208,7 @@ Widget build(BuildContext context) {
                               token: widget.token,
                             ),
                           ));
+                          fetchChildren(); // wapas aane par list refresh
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFEB9974),
