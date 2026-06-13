@@ -33,6 +33,10 @@ import java.util.*
 
 class MyForegroundService : Service() {
 
+    companion object {
+        var isDeviceLocked = false
+    }
+
     private val handler = Handler(Looper.getMainLooper())
     private var childId: Int = -1
     private var isMonitoring = false
