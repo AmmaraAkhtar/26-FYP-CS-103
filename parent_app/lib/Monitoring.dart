@@ -73,6 +73,42 @@ Future<void> _fetchLockStatus() async {
     }
   }
 
+// Function to shoew confirmation dialog before deactivating the child admin
+void _showDeactivateConfirmation(int childId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          "Deactivate Device Admin?",
+          style: TextStyle(color: Color(0xFF699886), fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          "Yeh action child device se monitoring admin access hata dega. "
+          "Kya aap confirm karte hain?",
+          style: TextStyle(color: Colors.grey[700]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deactivateChildAdmin(childId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+            child: Text("Deactivate", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
 // to deactivate the child admin remotely
 Future<void> _deactivateChildAdmin(int childId) async {
     try {
