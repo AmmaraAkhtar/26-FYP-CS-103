@@ -910,159 +910,159 @@ def check_deactivate_command(request):
         return Response({'deactivate': False})
 
 # Chat Analysi Api
-@api_view(['POST'])
-def collect_chat(request):
-    print("Chat API Called")
+# @api_view(['POST'])
+# def collect_chat(request):
+#     print("Chat API Called")
 
-    serializer = ChatMessageSerializer(data=request.data)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=400)
+#     serializer = ChatMessageSerializer(data=request.data)
+#     if not serializer.is_valid():
+#         return Response(serializer.errors, status=400)
 
-    child_id      = request.data.get('child_id')
-    app_name      = request.data.get('app_name', '')
-    sender        = request.data.get('sender', 'unknown')
-    message       = request.data.get('message', '')
-    timestamp_str = request.data.get('timestamp')
+#     child_id      = request.data.get('child_id')
+#     app_name      = request.data.get('app_name', '')
+#     sender        = request.data.get('sender', 'unknown')
+#     message       = request.data.get('message', '')
+#     timestamp_str = request.data.get('timestamp')
 
     
 
-    # ── FILTER 1: Too short ──
-    if not message or len(message.strip()) < 5:
-        return Response({"status": "ignored"}, status=200)
+#     # ── FILTER 1: Too short ──
+#     if not message or len(message.strip()) < 5:
+#         return Response({"status": "ignored"}, status=200)
 
-    # ── FILTER 2: UI Noise ──
-    UI_NOISE = {
-        "voice call", "video call", "missed voice call",
-        "missed video call", "tap to call back", "no answer",
-        "call back", "photo", "video", "document", "audio",
-        "sticker", "gif", "location", "contact",
-        "this message was deleted", "you deleted this message",
-        "announcements", "explore", "missed call",
-    }
-    msg_lower = message.lower().strip()
+#     # ── FILTER 2: UI Noise ──
+#     UI_NOISE = {
+#         "voice call", "video call", "missed voice call",
+#         "missed video call", "tap to call back", "no answer",
+#         "call back", "photo", "video", "document", "audio",
+#         "sticker", "gif", "location", "contact",
+#         "this message was deleted", "you deleted this message",
+#         "announcements", "explore", "missed call",
+#     }
+#     msg_lower = message.lower().strip()
 
-    if msg_lower in UI_NOISE:
-        return Response({"status": "ignored_noise"}, status=200)
+#     if msg_lower in UI_NOISE:
+#         return Response({"status": "ignored_noise"}, status=200)
 
-    # Date pattern
-    if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
-        return Response({"status": "ignored_date"}, status=200)
+#     # Date pattern
+#     if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
+#         return Response({"status": "ignored_date"}, status=200)
 
-    if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
-        return Response({"status": "ignored_date"}, status=200)
+#     if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
+#         return Response({"status": "ignored_date"}, status=200)
 
-    # Call duration
-    if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
-        return Response({"status": "ignored_duration"}, status=200)
+#     # Call duration
+#     if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
+#         return Response({"status": "ignored_duration"}, status=200)
 
-    # Phone number
-    if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
-        return Response({"status": "ignored_phone"}, status=200)
+#     # Phone number
+#     if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
+#         return Response({"status": "ignored_phone"}, status=200)
 
-    # System messages
-    if "pinned a message" in msg_lower:
-        return Response({"status": "ignored_system"}, status=200)
+#     # System messages
+#     if "pinned a message" in msg_lower:
+#         return Response({"status": "ignored_system"}, status=200)
 
-    # ── FILTER 3: Child exist ──
-    try:
-        child_obj = models.child.objects.get(id=child_id)
-    except models.child.DoesNotExist:
-        return Response({"error": "Child not found"}, status=404)
+#     # ── FILTER 3: Child exist ──
+#     try:
+#         child_obj = models.child.objects.get(id=child_id)
+#     except models.child.DoesNotExist:
+#         return Response({"error": "Child not found"}, status=404)
 
-    print(f"Chat — Child: {child_id} | App: {app_name} | Msg: {message}")
+#     print(f"Chat — Child: {child_id} | App: {app_name} | Msg: {message}")
 
-    # ── Timestamp parse ──
-    try:
-        msg_time = make_aware(datetime.fromisoformat(timestamp_str))
-    except:
-        msg_time = timezone.now()
+#     # ── Timestamp parse ──
+#     try:
+#         msg_time = make_aware(datetime.fromisoformat(timestamp_str))
+#     except:
+#         msg_time = timezone.now()
 
-    # ── FILTER 4: Purana message — historical ──
-    # WhatsApp app khulne pe poori history load karti hai
-    # Sirf last 5 minute ke messages pe agent chalao
-    time_diff = timezone.now() - msg_time
-    is_historical = time_diff.total_seconds() > 300  # 5 minutes
+#     # ── FILTER 4: Purana message — historical ──
+#     # WhatsApp app khulne pe poori history load karti hai
+#     # Sirf last 5 minute ke messages pe agent chalao
+#     time_diff = timezone.now() - msg_time
+#     is_historical = time_diff.total_seconds() > 300  # 5 minutes
 
-    # ── FILTER 5: Duplicate ──
-    existing = models.ChatMessage.objects.filter(
-        child=child_obj,
-        app_name=app_name,
-        message=message,
-        sender=sender,
-    ).filter(
-        timestamp__gte=timezone.now() - timedelta(minutes=10)
-    ).exists()
+#     # ── FILTER 5: Duplicate ──
+#     existing = models.ChatMessage.objects.filter(
+#         child=child_obj,
+#         app_name=app_name,
+#         message=message,
+#         sender=sender,
+#     ).filter(
+#         timestamp__gte=timezone.now() - timedelta(minutes=10)
+#     ).exists()
 
-    if existing:
-        print("DUPLICATE — skipping")
-        return Response({"status": "duplicate"}, status=200)
+#     if existing:
+#         print("DUPLICATE — skipping")
+#         return Response({"status": "duplicate"}, status=200)
 
-    # ── DB Save ──
-    try:
-        chat_obj = models.ChatMessage.objects.create(
-            child     = child_obj,
-            app_name  = app_name,
-            sender    = sender,
-            message   = message,
-            timestamp = msg_time,
-            category  = "historical" if is_historical else "Pending",
-            risk      = "Low"        if is_historical else "Pending",
-            action    = "Allow"      if is_historical else "Pending",
-        )
-        print(f"Chat saved ID: {chat_obj.id}")
-    except Exception as e:
-        print(f"DB Save Error: {e}")
-        return Response({"status": "db_error"}, status=200)
+#     # ── DB Save ──
+#     try:
+#         chat_obj = models.ChatMessage.objects.create(
+#             child     = child_obj,
+#             app_name  = app_name,
+#             sender    = sender,
+#             message   = message,
+#             timestamp = msg_time,
+#             category  = "historical" if is_historical else "Pending",
+#             risk      = "Low"        if is_historical else "Pending",
+#             action    = "Allow"      if is_historical else "Pending",
+#         )
+#         print(f"Chat saved ID: {chat_obj.id}")
+#     except Exception as e:
+#         print(f"DB Save Error: {e}")
+#         return Response({"status": "db_error"}, status=200)
 
-    # ── Historical message — agent mat chalao ──
-    if is_historical:
-        return Response({
-            "status":  "historical",
-            "chat_id": chat_obj.id,
-        }, status=200)
+#     # ── Historical message — agent mat chalao ──
+#     if is_historical:
+#         return Response({
+#             "status":  "historical",
+#             "chat_id": chat_obj.id,
+#         }, status=200)
 
-    # ── Agent Call — sirf naye messages pe ──
-    try:
-        result = chat_agent.invoke({
-            "child_id":    int(child_id),
-            "app_name":    app_name,
-            "message":     message,
-            "sender":      sender,
-            "chat_obj_id": chat_obj.id,
-            "ml_category": "none",
+#     # ── Agent Call — sirf naye messages pe ──
+#     try:
+#         result = chat_agent.invoke({
+#             "child_id":    int(child_id),
+#             "app_name":    app_name,
+#             "message":     message,
+#             "sender":      sender,
+#             "chat_obj_id": chat_obj.id,
+#             "ml_category": "none",
 
-            "child_age":         None,
-            "screen_limit_mins": None,
-            "recent_alerts":     None,
-            "chat_history":      None,
-            "total_chats_today": None,
-            "final_category":    None,
-            "action":            None,
-            "reasoning":         None,
-            "risk_level":        None,
-            "urgency":           None,
-            "alert_message":     None,
-            "should_send_alert": None,
-        })
+#             "child_age":         None,
+#             "screen_limit_mins": None,
+#             "recent_alerts":     None,
+#             "chat_history":      None,
+#             "total_chats_today": None,
+#             "final_category":    None,
+#             "action":            None,
+#             "reasoning":         None,
+#             "risk_level":        None,
+#             "urgency":           None,
+#             "alert_message":     None,
+#             "should_send_alert": None,
+#         })
 
-        print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}")
-        if result.get("action", "").lower() in ["block", "escalate"]:
-                child_obj.is_locked = True
-                child_obj.save()
-        return Response({
-            "status":    "processed",
-            "chat_id":   chat_obj.id,
-            "category":  result.get("final_category"),
-            "action":    result.get("action"),
-            "risk_level": result.get("risk_level"),
-        }, status=200)
+#         print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}")
+#         if result.get("action", "").lower() in ["block", "escalate"]:
+#                 child_obj.is_locked = True
+#                 child_obj.save()
+#         return Response({
+#             "status":    "processed",
+#             "chat_id":   chat_obj.id,
+#             "category":  result.get("final_category"),
+#             "action":    result.get("action"),
+#             "risk_level": result.get("risk_level"),
+#         }, status=200)
 
-    except Exception as e:
-        print(f"Chat Agent Error: {traceback.format_exc()}")
-        return Response({
-            "status":  "saved",
-            "chat_id": chat_obj.id,
-        }, status=200)
+#     except Exception as e:
+#         print(f"Chat Agent Error: {traceback.format_exc()}")
+#         return Response({
+#             "status":  "saved",
+#             "chat_id": chat_obj.id,
+#         }, status=200)
 
 # Heart beat api ----- to chech whether the app is active or not, aur last seen update karne ke liye. Child agent is API ko periodically call karega, jaise ki har 5 minute mein, taki backend ko pata rahe ki child app active hai ya nahi, aur agar child app active hai toh uska last seen timestamp update ho jaye, taki parent ko accurate information milti rahe.
 @api_view(['POST'])
@@ -1107,3 +1107,185 @@ def lock_device(request):
         return Response({"status": "locked"}, status=200)
     except models.child.DoesNotExist:
         return Response({"error": "Child not found"}, status=404)
+
+
+# APi to collect chat messages from child app. Jab bhi child app mein koi naya chat message detect hota hai, chahe wo WhatsApp ho, Messenger ho, ya koi aur chat app, toh wo is API ko call karega message details ke saath, taki backend us message ko analyze kar sake risk ke liye, aur agar zarurat pade toh parent ko alert bhej sake. Is API mein hum kuch basic filters bhi laga sakte hain jaise ki chote messages ko ignore karna, ya system messages ko ignore karna, taki unnecessary processing na ho.
+@api_view(['POST'])
+def collect_chat(request):
+    print("Chat API Called")
+
+    serializer = ChatMessageSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=400)
+
+    child_id      = request.data.get('child_id')
+    app_name      = request.data.get('app_name', '')
+    sender        = request.data.get('sender', 'unknown')
+    message       = request.data.get('message', '')
+    timestamp_str = request.data.get('timestamp')
+
+    # ── FILTER 1: Too short ──
+    if not message or len(message.strip()) < 5:
+        return Response({"status": "ignored"}, status=200)
+
+    # ── FILTER 2: UI Noise ──
+    UI_NOISE = {
+        "voice call", "video call", "missed voice call",
+        "missed video call", "tap to call back", "no answer",
+        "call back", "photo", "video", "document", "audio",
+        "sticker", "gif", "location", "contact",
+        "this message was deleted", "you deleted this message",
+        "announcements", "explore", "missed call",
+    }
+    msg_lower = message.lower().strip()
+
+    if msg_lower in UI_NOISE:
+        return Response({"status": "ignored_noise"}, status=200)
+
+    if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
+        return Response({"status": "ignored_date"}, status=200)
+
+    if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
+        return Response({"status": "ignored_date"}, status=200)
+
+    if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
+        return Response({"status": "ignored_duration"}, status=200)
+
+    if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
+        return Response({"status": "ignored_phone"}, status=200)
+
+    if "pinned a message" in msg_lower:
+        return Response({"status": "ignored_system"}, status=200)
+
+    # ── FILTER 3: Child exist ──
+    try:
+        child_obj = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    print(f"Chat — Child: {child_id} | App: {app_name} | Msg: {message}")
+
+    # ── Timestamp parse ──
+    try:
+        msg_time = make_aware(datetime.fromisoformat(timestamp_str))
+    except:
+        msg_time = timezone.now()
+
+    # ── FILTER 4: Historical ──
+    time_diff = timezone.now() - msg_time
+    is_historical = time_diff.total_seconds() > 300
+
+    # ── FILTER 5: Duplicate ──
+    existing = models.ChatMessage.objects.filter(
+        child=child_obj,
+        app_name=app_name,
+        message=message,
+        sender=sender,
+    ).filter(
+        timestamp__gte=timezone.now() - timedelta(minutes=10)
+    ).exists()
+
+    if existing:
+        print("DUPLICATE — skipping")
+        return Response({"status": "duplicate"}, status=200)
+
+    # ── DB Save ──
+    try:
+        chat_obj = models.ChatMessage.objects.create(
+            child     = child_obj,
+            app_name  = app_name,
+            sender    = sender,
+            message   = message,
+            timestamp = msg_time,
+            category  = "historical" if is_historical else "Pending",
+            risk      = "Low"        if is_historical else "Pending",
+            action    = "Allow"      if is_historical else "Pending",
+        )
+        print(f"Chat saved ID: {chat_obj.id}")
+    except Exception as e:
+        print(f"DB Save Error: {e}")
+        return Response({"status": "db_error"}, status=200)
+
+    # ── Historical message — agent mat chalao ──
+    if is_historical:
+        return Response({
+            "status":  "historical",
+            "chat_id": chat_obj.id,
+        }, status=200)
+
+    # ── ML Prediction (ML + Groq verification for sensitive) ──
+    try:
+        ml_category = chat_ml_service.predict(message)
+    except Exception as e:
+        print(f"Chat ML Error: {e}")
+        ml_category = "normal"
+
+    print(f"FINAL ML CATEGORY: {ml_category}")
+
+    # ── Fast-path: normal messages ──
+    if ml_category == "normal":
+        chat_obj.category = "normal"
+        chat_obj.risk     = "Low"
+        chat_obj.action   = "Allow"
+        chat_obj.save()
+        return Response({
+            "status":   "processed",
+            "chat_id":  chat_obj.id,
+            "category": "normal",
+            "action":   "Allow"
+        }, status=200)
+
+    # ── Sensitive (hate/bullying/suicide) → LLM agent for nuanced action ──
+    try:
+        result = chat_agent.invoke({
+            "child_id":    int(child_id),
+            "app_name":    app_name,
+            "message":     message,
+            "sender":      sender,
+            "chat_obj_id": chat_obj.id,
+            "ml_category": ml_category,
+
+            "child_age":         None,
+            "screen_limit_mins": None,
+            "recent_alerts":     None,
+            "chat_history":      None,
+            "total_chats_today": None,
+            "final_category":    None,
+            "action":            None,
+            "reasoning":         None,
+            "risk_level":        None,
+            "urgency":           None,
+            "alert_message":     None,
+            "should_send_alert": None,
+        })
+
+        print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}")
+        if result.get("action", "").lower() in ["block", "escalate"]:
+            child_obj.is_locked = True
+            child_obj.save()
+
+        return Response({
+            "status":     "processed",
+            "chat_id":    chat_obj.id,
+            "category":   result.get("final_category", ml_category),
+            "action":     result.get("action"),
+            "risk_level": result.get("risk_level"),
+        }, status=200)
+
+    except Exception as e:
+        print(f"Chat Agent Error: {traceback.format_exc()}")
+        # Fallback agar agent fail ho jaye
+        if ml_category == "suicide":
+            chat_obj.risk, chat_obj.action = "High", "Escalate"
+            child_obj.is_locked = True
+            child_obj.save()
+        else:
+            chat_obj.risk, chat_obj.action = "Medium", "Warn"
+        chat_obj.category = ml_category
+        chat_obj.save()
+        return Response({
+            "status":   "saved",
+            "chat_id":  chat_obj.id,
+            "category": ml_category,
+            "action":   chat_obj.action,
+        }, status=200)
