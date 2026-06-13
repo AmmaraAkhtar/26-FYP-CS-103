@@ -6,17 +6,157 @@ import 'chat1.dart';
 import 'appUsage.dart';
 import 'screenTimeLimit.dart';
 import 'browsering1.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:async';
 
 class Monitoring extends StatefulWidget {
   final Map<String, dynamic>? childData;
-  const Monitoring({super.key, this.childData});
+  final String token ;
+  const Monitoring({super.key, this.childData,  required this.token});
 
   @override
   State<Monitoring> createState() => _MonitoringState();
 }
 
 class _MonitoringState extends State<Monitoring> {
+  bool isDeviceLocked = false;
+  bool isStatusLoading = true;
+  Timer? _statusTimer;
+
+  late int childId;
+
+// To unlock the child device remotely
+  Future<void> unlockChildDevice(int childId) async {
+    try {
+      final response = await http.post(
+        Uri.parse("http://192.168.18.163:8000/unlock-device/"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"child_id": childId}),
+      );
+
+      if (response.statusCode == 200) {
+        setState(() => isDeviceLocked = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Device unlocked successfully")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to unlock device")),
+        );
+      }
+    } catch (e) {
+      print("Unlock error: $e");
+    }
+  }
+
+// Function to fetch the lock satus of the child device
+Future<void> _fetchLockStatus() async {
+    try {
+      final response = await http.get(
+        Uri.parse("http://192.168.18.163:8000/check-lock-status/?child_id=$childId"),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() {
+            isDeviceLocked = data["is_locked"] ?? false;
+            isStatusLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      print("Status fetch error: $e");
+      if (mounted) {
+        setState(() => isStatusLoading = false);
+      }
+    }
+  }
+
+// Function to shoew confirmation dialog before deactivating the child admin
+void _showDeactivateConfirmation(int childId) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          "Deactivate Device Admin?",
+          style: TextStyle(color: Color(0xFF699886), fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          "Yeh action child device se monitoring admin access hata dega. "
+          "Kya aap confirm karte hain?",
+          style: TextStyle(color: Colors.grey[700]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text("Cancel", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deactivateChildAdmin(childId);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+            child: Text("Deactivate", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+// to deactivate the child admin remotely
+Future<void> _deactivateChildAdmin(int childId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://192.168.18.163:8000/deactivate-admin/'),
+        headers: {
+            
+  'Authorization': 'Bearer ${widget.token}',
+  'Content-Type': 'application/json',
+
+          
+        },
+        body: jsonEncode({'child_id': childId}),
+      );
+
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Command sent! Child app will deactivate soon.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send command')),
+        );
+      }
+    } catch (e) {
+      print('Error: $e');
+    }
+  }
+
   @override
+ 
+  void initState() {
+    super.initState();
+    childId = widget.childData?['id'] ?? 0;
+    _fetchLockStatus();
+
+    // Har 15 sec status refresh karo
+    _statusTimer = Timer.periodic(Duration(seconds: 15), (_) {
+      _fetchLockStatus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _statusTimer?.cancel();
+    super.dispose();
+  }
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFC),
@@ -87,6 +227,136 @@ class _MonitoringState extends State<Monitoring> {
                 ],
               ),
                 SizedBox(height: 25.h),
+
+                SizedBox(height: 25.h),
+
+                // Device Status & Controls Card
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(25.r),
+                  ),
+                  child: Container(
+                    padding: EdgeInsets.all(20.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(25.r),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "Device Controls",
+                          style: TextStyle(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Divider(thickness: 1.h),
+                        SizedBox(height: 10.h),
+
+                        // Lock Status Indicator
+                        Row(
+                          children: [
+                            Icon(
+                              isDeviceLocked ? Icons.lock : Icons.lock_open,
+                              color: isDeviceLocked ? Colors.red : Colors.green,
+                              size: 28.r,
+                            ),
+                            SizedBox(width: 10.w),
+                            Expanded(
+                              child: isStatusLoading
+                                  ? Text(
+                                      "Checking status...",
+                                      style: TextStyle(
+                                          fontSize: 14.sp, color: Colors.grey),
+                                    )
+                                  : Text(
+                                      isDeviceLocked
+                                          ? "Device is currently LOCKED"
+                                          : "Device is Unlocked",
+                                      style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.bold,
+                                        color: isDeviceLocked
+                                            ? Colors.red
+                                            : Colors.green,
+                                      ),
+                                    ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: 16.h),
+
+                        // Buttons Row
+                        Row(
+                          children: [
+                            // Unlock Device Button
+                            Expanded(
+                              child: SizedBox(
+                                height: 42.h,
+                                child: ElevatedButton.icon(
+                                  onPressed: isDeviceLocked
+                                      ? () => unlockChildDevice(childId)
+                                      : null,
+                                  icon: Icon(Icons.lock_open,
+                                      size: 18.r, color: Colors.white),
+                                  label: Text(
+                                    "Unlock Device",
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: isDeviceLocked
+                                        ? const Color(0xFFEB9974)
+                                        : Colors.grey[300],
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20.r),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 12.w),
+
+                            // Deactivate Admin Button
+                            Expanded(
+                              child: SizedBox(
+                                height: 42.h,
+                                child: ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _showDeactivateConfirmation(childId),
+                                  icon: Icon(Icons.admin_panel_settings,
+                                      size: 18.r, color: Colors.white),
+                                  label: Text(
+                                    "Deactivate Admin",
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF699886),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20.r),
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20.h),
 
                 // First Row
                 Row(

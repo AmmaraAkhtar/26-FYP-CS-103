@@ -7,7 +7,7 @@ import 'dart:convert';
 
 class home extends StatefulWidget {
   String email;
-  String token;
+  final String token;
   home({super.key, required this.email, required this.token});
 
   @override
@@ -20,26 +20,8 @@ class _homeState extends State<home> {
   List<Map<String, dynamic>> children = []; // empty initially
   bool isLoading = true;
 
-  Future<void> _deactivateChildAdmin(int childId) async {
-  try {
-    final response = await http.post(
-      Uri.parse('http://192.168.18.163:8000/deactivate-admin/'),
-      headers: {
-        'Authorization': 'Bearer $widget.token', //  auth token
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'child_id': childId}),
-    );
-    
-    if (response.statusCode == 200) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Command sent! Child app will deactivate soon.')),
-      );
-    }
-  } catch (e) {
-    print('Error: $e');
-  }
-}
+
+
 
   //final List<Map<String, dynamic>> children = [
   /* {
@@ -95,9 +77,12 @@ class _homeState extends State<home> {
     //'http://127.0.0.1:8000/fetchChildren/?parent_email=${widget.email}');
     final url = Uri.parse(
       'http://192.168.18.163:8000/fetchChildren/?parent_email=${widget.email}',
+      
     );
     try {
-      final response = await http.get(url);
+      final response = await http.get(url,headers: {
+    'Authorization': 'Bearer ${widget.token}',
+  },);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         print("Fetched data: $data");
@@ -105,6 +90,7 @@ class _homeState extends State<home> {
         setState(() {
           children = data.map((child) {
             return {
+              "id": child['id'],
               "name": "${child['firstname']} ${child['lastname']}",
               "age": child['age'],
               "status": (child['is_paired'] ?? false) ? "Online" : "Offline",
@@ -219,8 +205,10 @@ Widget build(BuildContext context) {
                           MaterialPageRoute(
                             builder: (context) => profile(
                               email: widget.email,
+                              token: widget.token,
                             ),
                           ));
+                          fetchChildren(); // wapas aane par list refresh
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFEB9974),
@@ -259,6 +247,7 @@ Widget build(BuildContext context) {
                     MaterialPageRoute(
                       builder: (context) => Monitoring(
                         childData: child,
+                        token: widget.token,
                       ),
                     ),
                   );

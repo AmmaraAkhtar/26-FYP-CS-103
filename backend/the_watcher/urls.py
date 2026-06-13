@@ -20,4 +20,7 @@ urlpatterns = [
     path('api/deactivate-admin/', views.deactivate_child_admin),
     path('api/check-command/', views.check_deactivate_command ),
     path('heartbeat/', views.heartbeat_api, ),
+    path('check-lock-status/', views.check_lock_status),
+    path('unlock-device/', views.unlock_device),
+    path('lock-device/', views.lock_device),
 ]

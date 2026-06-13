@@ -78,10 +78,10 @@ class PairingCodeSerializer(serializers.Serializer):
         return data
 
 # ChildSerializer for paired children
-class PairedChildSerializer(serializers.Serializer):
+class PairedChildSerializer(serializers.ModelSerializer):
     class Meta:
         model =  models.child
-        fields = ['firstname', 'lastname', 'age', 'screen_time_limit']
+        fields = ['id','firstname', 'lastname', 'age', 'screen_time_limit','is_locked']
 
 # Usage Data Serializer
 class UsageDataSerializer(serializers.Serializer):

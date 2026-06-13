@@ -5,7 +5,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart'; // added for respon
 
 class profile extends StatefulWidget {
   String email;
-  profile({super.key, required this.email});
+  String token;
+  profile({super.key, required this.email, required this.token});
 
   @override
   State<profile> createState() => _EditprofileState();
@@ -27,6 +28,7 @@ class _EditprofileState extends State<profile> {
       url,
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Bearer ${widget.token}',
       },
       body: jsonEncode({
         'firstname': firstNameController.text,
@@ -40,7 +42,7 @@ class _EditprofileState extends State<profile> {
     if (response.statusCode == 201) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Pairing Code is sent to your email")),
-      );
+      );Navigator.pop(context); // home pe wapas jao
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Failed to register child")),
