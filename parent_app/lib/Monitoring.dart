@@ -6,6 +6,8 @@ import 'chat1.dart';
 import 'appUsage.dart';
 import 'screenTimeLimit.dart';
 import 'browsering1.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class Monitoring extends StatefulWidget {
   final Map<String, dynamic>? childData;
@@ -16,6 +18,52 @@ class Monitoring extends StatefulWidget {
 }
 
 class _MonitoringState extends State<Monitoring> {
+
+// To unlock the child device remotely
+  Future<void> unlockChildDevice(int childId) async {
+  try {
+    final response = await http.post(
+      Uri.parse("http://192.168.18.163:8000/unlock-device/"),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"child_id": childId}),
+    );
+
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Device unlocked successfully")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to unlock device")),
+      );
+    }
+  } catch (e) {
+    print("Unlock error: $e");
+  }
+}
+
+// to deactivate the child admin remotely
+  Future<void> _deactivateChildAdmin(int childId) async {
+  try {
+    final response = await http.post(
+      Uri.parse('http://192.168.18.163:8000/deactivate-admin/'),
+      headers: {
+        'Authorization': 'Bearer $widget.token', //  auth token
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({'child_id': childId}),
+    );
+    
+    if (response.statusCode == 200) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Command sent! Child app will deactivate soon.')),
+      );
+    }
+  } catch (e) {
+    print('Error: $e');
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

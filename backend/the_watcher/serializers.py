@@ -81,7 +81,7 @@ class PairingCodeSerializer(serializers.Serializer):
 class PairedChildSerializer(serializers.Serializer):
     class Meta:
         model =  models.child
-        fields = ['firstname', 'lastname', 'age', 'screen_time_limit']
+        fields = ['firstname', 'lastname', 'age', 'screen_time_limit','is_locked']
 
 # Usage Data Serializer
 class UsageDataSerializer(serializers.Serializer):
