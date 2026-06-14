@@ -377,6 +377,11 @@ def collectAppUsageData_Api(request):
             child = models.child.objects.get(id=child_id)
 
             today =  timezone.now().date()
+            now_time = timezone.localtime().time()
+            # REset on midnight
+            if now_time < datetime.time(0, 5):  # raat 12:00-12:05 ke beech
+                    models.child.objects.filter(parent_unlocked=True).update(parent_unlocked=False)
+            
             if is_bedtime(child):
                 child.is_locked = True
                 child.save()
@@ -385,7 +390,7 @@ def collectAppUsageData_Api(request):
 
             # Strictly applying screen time limit — agar limit exceed ho jati hai toh chahe koi bhi app use kar raha ho, device ko lock kar do. Isse parents ko ek strong signal milega ki limit important hai, aur unnecessary alerts se bhi bachenge.
             two_days_ago = timezone.now().date() - timedelta(days=1)
-            existing_usage = models.appUsage.objects.filter(child=child, date__gte=two_days_ago)
+            existing_usage = models.appUsage.objects.filter(child=child, date=today)
             merged_existing = {}
             for u in existing_usage:
                 pkg = u.package_name
@@ -608,17 +613,12 @@ def get_risk(category):
 # Parent Unlock API
 @api_view(['POST'])
 def unlock_device(request):
-
     child_id = request.data.get("child_id")
-
     child = models.child.objects.get(id=child_id)
-
     child.is_locked = False
+    child.parent_unlocked = True  # ← parent ne manually unlock kiya
     child.save()
-
-    return Response({
-        "message": "Device Unlocked"
-    })
+    return Response({"message": "Device Unlocked"})
 
 # api to send data to parent app 
 @api_view(['GET'])
@@ -1147,21 +1147,53 @@ def heartbeat_api(request):
 
 # API for child agent to check if device is locked by parent. Child agent is API ko periodically call karega, jaise ki har 5 minute mein, taki agar parent ne device lock kar diya hai toh child app ko pata chal jaye aur wo apne aap ko lock kar le.
 @api_view(['GET'])
+
 def check_lock_status(request):
     child_id = request.query_params.get('child_id')
     try:
         child = models.child.objects.get(id=child_id)
-        # Bedtime check — agar child ka bedtime chal raha hai, toh device ko lock kar do. Isse unnecessary alerts aur processing se bachenge.
+        
+        # Bedtime check — override se upar hai
         if is_bedtime(child):
             child.is_locked = True
+            child.parent_unlocked = False
             child.save()
             return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+
+        # Usage calculate karo (dono cases ke liye chahiye)
+        today = timezone.now().date()
+        existing_usage = models.appUsage.objects.filter(child=child, date=today)
+        merged = {}
+        for u in existing_usage:
+            pkg = u.package_name
+            if pkg not in merged or u.usage_time > merged[pkg]:
+                merged[pkg] = u.usage_time
+        total_usage_today = sum(merged.values())
+        screen_limit_seconds = child.screen_time_limit * 60
+
+        print(f"Lock check — used: {total_usage_today}s, limit: {screen_limit_seconds}s")
+
+        # Normal lock check — sirf tab jab parent ne unlock nahi kiya
+        if not child.is_locked and not child.parent_unlocked:
+            if total_usage_today >= screen_limit_seconds:
+                child.is_locked = True
+                child.save()
+                return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
+
+        # Grace period check — parent ne unlock kiya tha, 30 min extra
+        if child.parent_unlocked:
+            buffer_seconds = 30 * 60  # 30 minute grace period
+            if total_usage_today >= screen_limit_seconds + buffer_seconds:
+                child.is_locked = True
+                child.parent_unlocked = False  # override khatam
+                child.save()
+                return Response({"is_locked": True, "reason": "screen_limit_exceeded_after_unlock"}, status=200)
+
         print(f"Lock status check for child {child_id}: is_locked={child.is_locked}")
         return Response({"is_locked": child.is_locked})
     except models.child.DoesNotExist:
         return Response({"is_locked": False})
-
-
+    
 # api to lock the device from child side, jab ML model ya agent detect kare ki risky activity ho rahi hai, toh wo device ko lock karne ke liye is API ko call karega, taki parent ko pata chal jaye ki risky activity detect hui hai, aur device lock bhi ho jaye taki child uss activity ko continue na kar sake. Is API ko call karne se DB mein is_locked=True save hoga, taki checkLockStatus() API reboot ke baad bhi correct status return kare.
 
 @api_view(['POST'])
@@ -1664,15 +1696,30 @@ def update_screen_limits(request):
     return Response({"status": "updated", "is_locked": child.is_locked}, status=200)
 
 # Function to check bedtime status for a child. Agar current time bedtime range mein hai, toh True return karega, warna False. Bedtime range ko handle karte waqt overnight ranges (jaise 21:00 - 07:00) ko bhi consider kiya gaya hai.
+
+
 def is_bedtime(child):
-    
     if not child.bedtime_enabled or not child.bedtime_start or not child.bedtime_end:
         return False
+    
     now = timezone.localtime().time()
+    
+    # String ho sakti hai ya time object — dono handle karo
     start = child.bedtime_start
     end = child.bedtime_end
+    
+    if isinstance(start, str):
+        parts = start.split(':')
+        start = timezone.time(int(parts[0]), int(parts[1]))
+    
+    if isinstance(end, str):
+        parts = end.split(':')
+        end = timezone.time(int(parts[0]), int(parts[1]))
+    
     if start <= end:
         return start <= now <= end
-    else:  # overnight range, e.g. 21:00 - 07:00
+    else:  # overnight, e.g. 21:00 - 07:00
         return now >= start or now <= end
+
+
 

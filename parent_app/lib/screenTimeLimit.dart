@@ -202,8 +202,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 
-// TODO: apna base URL yahan set karo
-const String kBaseUrl = "https://your-backend-url.com/api";
+const String kBaseUrl = "http://192.168.18.163:8000"; 
 
 class ScreenTimeLimitScreen extends StatefulWidget {
   final int childId;
@@ -225,8 +224,7 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
 
-  // Backend se aayega
-  int _screenTimeLimitMinutes = 150; // default 2h 30m
+  int _screenTimeLimitMinutes = 150;
   int _totalUsageSeconds = 0;
   Map<String, int> _categoryUsageSeconds = {
     "Social": 0,
@@ -238,7 +236,6 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
   TimeOfDay _bedtimeEnd = const TimeOfDay(hour: 7, minute: 0);
   bool _bedtimeEnabled = true;
 
-  // Theme colors
   static const Color primaryOrange = Color(0xFFEB9974);
   static const Color bgColor = Color(0xFFFBFBFC);
 
@@ -248,6 +245,7 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
     _fetchLimits();
   }
 
+  //  Fetch current limits
   Future<void> _fetchLimits() async {
     setState(() => _isLoading = true);
     try {
@@ -257,10 +255,6 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        
-
-
-
         setState(() {
           _screenTimeLimitMinutes = data['screen_time_limit'] ?? 150;
           _totalUsageSeconds = data['total_usage_seconds'] ?? 0;
@@ -280,27 +274,18 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
             _bedtimeEnd = _parseTime(data['bedtime_end']);
           }
         });
+      } else {
+        _showSnack("Failed to load limits (${response.statusCode})", isError: true);
       }
     } catch (e) {
       debugPrint("Error fetching limits: $e");
-      _showSnack("Failed to load limits. Showing defaults.", isError: true);
+      _showSnack("Network error. Check your server URL.", isError: true);
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  TimeOfDay _parseTime(String timeStr) {
-    // "21:00:00" or "21:00"
-    final parts = timeStr.split(':');
-    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
-  }
-
-  String _formatTimeOfDay(TimeOfDay t) {
-    final h = t.hour.toString().padLeft(2, '0');
-    final m = t.minute.toString().padLeft(2, '0');
-    return "$h:$m:00";
-  }
-
+  //  Apply / save limits 
   Future<void> _applyLimits() async {
     setState(() => _isSaving = true);
     try {
@@ -317,21 +302,79 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
       );
 
       if (response.statusCode == 200) {
-        _showSnack("Limits updated successfully");
         final data = jsonDecode(response.body);
         final isLocked = data['is_locked'] ?? false;
-        _showSnack(isLocked 
-            ? "Limits updated. Device still locked." 
-            : "Limits updated. Device unlocked!");
-            } else {
-        _showSnack("Failed to update limits", isError: true);
+        _showSnack(
+          isLocked
+              ? "Limits updated. Device still locked."
+              : "Limits updated successfully!",
+        );
+      } else {
+        _showSnack("Failed to update limits (${response.statusCode})", isError: true);
       }
     } catch (e) {
       debugPrint("Error updating limits: $e");
-      _showSnack("Network error. Please try again.", isError: true);
+      _showSnack("Network error. Check your server URL.", isError: true);
     } finally {
       setState(() => _isSaving = false);
     }
+  }
+
+  //  Lock device manually  
+  Future<void> _lockDevice() async {
+    try {
+      final res = await http.post(
+        Uri.parse('$kBaseUrl/lock-device/'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"child_id": widget.childId}),
+      );
+      _showSnack(
+        res.statusCode == 200 ? "Device locked successfully" : "Lock failed",
+        isError: res.statusCode != 200,
+      );
+    } catch (e) {
+      _showSnack("Network error.", isError: true);
+    }
+  }
+
+  // Helpers 
+  TimeOfDay _parseTime(String timeStr) {
+    final parts = timeStr.split(':');
+    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+  }
+
+  String _formatTimeOfDay(TimeOfDay t) {
+    final h = t.hour.toString().padLeft(2, '0');
+    final m = t.minute.toString().padLeft(2, '0');
+    return "$h:$m:00";
+  }
+
+  String _formatTimeDisplay(TimeOfDay t) {
+    final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
+    final minute = t.minute.toString().padLeft(2, '0');
+    final period = t.period == DayPeriod.am ? "AM" : "PM";
+    return "$hour:$minute $period";
+  }
+
+  String _formatDailyLimitDisplay() {
+    final h = _screenTimeLimitMinutes ~/ 60;
+    final m = _screenTimeLimitMinutes % 60;
+    if (h == 0) return "${m}m";
+    if (m == 0) return "${h}h";
+    return "${h}h ${m}m";
+  }
+
+  String _formatUsageTime(int seconds) {
+    final mins = (seconds / 60).round();
+    if (mins < 60) return "${mins}m";
+    final h = mins ~/ 60;
+    final m = mins % 60;
+    return m == 0 ? "${h}h" : "${h}h ${m}m";
+  }
+
+  double _categoryProgress(int seconds) {
+    if (_screenTimeLimitMinutes <= 0) return 0.0;
+    return ((seconds / 60) / _screenTimeLimitMinutes).clamp(0.0, 1.0);
   }
 
   void _showSnack(String msg, {bool isError = false}) {
@@ -345,7 +388,37 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
     );
   }
 
-  //  Edit Daily Limit Dialog 
+  //Bedtime time picker 
+  Future<void> _pickBedtime({required bool isStart}) async {
+    final initial = isStart ? _bedtimeStart : _bedtimeEnd;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: primaryOrange,
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        if (isStart) {
+          _bedtimeStart = picked;
+        } else {
+          _bedtimeEnd = picked;
+        }
+      });
+    }
+  }
+
+  // Edit Daily Limit bottom sheet
   Future<void> _showEditLimitDialog() async {
     int hours = _screenTimeLimitMinutes ~/ 60;
     int minutes = _screenTimeLimitMinutes % 60;
@@ -378,8 +451,10 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                     ),
                   ),
                   SizedBox(height: 20.h),
-                  Text("Set Daily Screen Limit",
-                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                  Text(
+                    "Set daily screen limit",
+                    style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                  ),
                   SizedBox(height: 24.h),
                   Row(
                     children: [
@@ -419,8 +494,14 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                         minimumSize: Size(double.infinity, 50.h),
                         shape: const StadiumBorder(),
                       ),
-                      child: Text("Done",
-                          style: TextStyle(color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        "Done",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -441,7 +522,14 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
   }) {
     return Column(
       children: [
-        Text(label, style: TextStyle(fontSize: 12.sp, color: Colors.grey, fontWeight: FontWeight.w600)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.sp,
+            color: Colors.grey,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         SizedBox(height: 10.h),
         Container(
           decoration: BoxDecoration(
@@ -461,7 +549,10 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                   onChanged(newVal);
                 },
               ),
-              Text("$value", style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold)),
+              Text(
+                "$value",
+                style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
+              ),
               _circleIconButton(
                 icon: Icons.add,
                 onTap: () {
@@ -492,62 +583,7 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
     );
   }
 
-  //  Bedtime Time Picker 
-  Future<void> _pickBedtime({required bool isStart}) async {
-    final initial = isStart ? _bedtimeStart : _bedtimeEnd;
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: initial,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: primaryOrange,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _bedtimeStart = picked;
-        } else {
-          _bedtimeEnd = picked;
-        }
-      });
-    }
-  }
-
-  String _formatTimeDisplay(TimeOfDay t) {
-    final hour = t.hourOfPeriod == 0 ? 12 : t.hourOfPeriod;
-    final minute = t.minute.toString().padLeft(2, '0');
-    final period = t.period == DayPeriod.am ? "AM" : "PM";
-    return "$hour:$minute $period";
-  }
-
-  String _formatDailyLimitDisplay() {
-    final h = _screenTimeLimitMinutes ~/ 60;
-    final m = _screenTimeLimitMinutes % 60;
-    if (h == 0) return "${m}m";
-    if (m == 0) return "${h}h";
-    return "${h}h ${m}m";
-  }
-
-  double _formatHoursDecimal(int seconds) => seconds / 3600;
-
-  String _formatUsageTime(int seconds) {
-    final mins = (seconds / 60).round();
-    if (mins < 60) return "${mins}m";
-    final h = mins ~/ 60;
-    final m = mins % 60;
-    return m == 0 ? "${h}h" : "${h}h ${m}m";
-  }
-
+  //BUILD 
   @override
   Widget build(BuildContext context) {
     final overallProgress = _screenTimeLimitMinutes > 0
@@ -562,9 +598,18 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        leading: Icon(Icons.arrow_back, color: Colors.black, size: 24.sp),
-        title: Text("Screen Time Limit",
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18.sp)),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black, size: 24.sp),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          "Screen time limit",
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+            fontSize: 18.sp,
+          ),
+        ),
         actions: [
           Icon(Icons.notifications_none, color: Colors.black, size: 28.sp),
           SizedBox(width: 10.w),
@@ -583,7 +628,7 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    //  Profile Section 
+                    // Profile 
                     Row(
                       children: [
                         CircleAvatar(
@@ -592,28 +637,41 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                           child: CircleAvatar(
                             radius: 32.r,
                             backgroundImage: const NetworkImage(
-                                'https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png'),
+                              'https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png',
+                            ),
                           ),
                         ),
                         SizedBox(width: 15.w),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(widget.childName,
-                                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
-                            Text("${widget.childAge} Years Old",
-                                style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
+                            Text(
+                              widget.childName,
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              "${widget.childAge} years old",
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12.sp,
+                              ),
+                            ),
                           ],
-                        )
+                        ),
                       ],
                     ),
 
                     SizedBox(height: 25.h),
-                    Text("Daily Screen Time",
-                        style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                    Text(
+                      "Daily screen time",
+                      style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold),
+                    ),
                     SizedBox(height: 20.h),
 
-                    // Graph and Side Cards
+                    //  Ring + Side Cards 
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -635,7 +693,7 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                           child: Column(
                             children: [
                               _buildEditableCard(
-                                "Daily Limit",
+                                "Daily limit",
                                 _formatDailyLimitDisplay(),
                                 Icons.add_circle_outline,
                                 onTap: _showEditLimitDialog,
@@ -650,23 +708,38 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
 
                     SizedBox(height: 30.h),
 
-                    // App Category Section (read-only usage display) 
+                    // App Category Usage 
                     Container(
                       padding: EdgeInsets.all(16.w),
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20.r),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                          )
+                        ],
                       ),
                       child: Column(
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text("App Category Usage",
-                                  style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold)),
-                              Text("last 2 days",
-                                  style: TextStyle(fontSize: 11.sp, color: Colors.grey)),
+                              Text(
+                                "App category usage",
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                "last 2 days",
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: Colors.grey,
+                                ),
+                              ),
                             ],
                           ),
                           SizedBox(height: 18.h),
@@ -694,9 +767,134 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                       ),
                     ),
 
-                    SizedBox(height: 40.h),
+                    SizedBox(height: 20.h),
 
-                    // --- Apply Button ---
+                    //  Quick Stats Row 
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _statCard(
+                            label: "Used today",
+                            value: _formatUsageTime(_totalUsageSeconds),
+                            valueColor: primaryOrange,
+                            badge: _buildUsageBadge(),
+                          ),
+                        ),
+                        SizedBox(width: 10.w),
+                        Expanded(
+                          child: _statCard(
+                            label: "Daily limit",
+                            value: _formatDailyLimitDisplay(),
+                            valueColor: Colors.black87,
+                            badge: Container(
+                              margin: EdgeInsets.only(top: 6.h),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8.w,
+                                vertical: 3.h,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.green.shade50,
+                                borderRadius: BorderRadius.circular(20.r),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.check_circle_outline,
+                                    size: 11.sp,
+                                    color: Colors.green.shade700,
+                                  ),
+                                  SizedBox(width: 3.w),
+                                  Text(
+                                    "Active",
+                                    style: TextStyle(
+                                      fontSize: 11.sp,
+                                      color: Colors.green.shade700,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    SizedBox(height: 16.h),
+
+                    // Controls Card 
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          _controlRow(
+                            iconData: Icons.bedtime_outlined,
+                            iconColor: primaryOrange,
+                            iconBg: primaryOrange.withOpacity(0.12),
+                            title: "Bedtime block",
+                            subtitle:
+                                "${_formatTimeDisplay(_bedtimeStart)} – ${_formatTimeDisplay(_bedtimeEnd)}",
+                            trailing: Transform.scale(
+                              scale: 0.8,
+                              child: Switch(
+                                value: _bedtimeEnabled,
+                                activeColor: primaryOrange,
+                                onChanged: (v) =>
+                                    setState(() => _bedtimeEnabled = v),
+                              ),
+                            ),
+                            showDivider: true,
+                            onTap: _bedtimeEnabled
+                                ? () => _pickBedtime(isStart: true)
+                                : null,
+                          ),
+                          _controlRow(
+                            iconData: Icons.lock_outline,
+                            iconColor: const Color(0xFF185FA5),
+                            iconBg: const Color(0xFFE6F1FB),
+                            title: "Lock device now",
+                            subtitle: "Immediately restricts access",
+                            trailing: OutlinedButton(
+                              onPressed: _lockDevice,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF185FA5),
+                                side: const BorderSide(
+                                  color: Color(0xFF185FA5),
+                                  width: 0.8,
+                                ),
+                                shape: const StadiumBorder(),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w,
+                                  vertical: 4.h,
+                                ),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                "Lock",
+                                style: TextStyle(fontSize: 12.sp),
+                              ),
+                            ),
+                            showDivider: false,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: 30.h),
+
+                    // Apply Button
                     Center(
                       child: ElevatedButton(
                         onPressed: _isSaving ? null : _applyLimits,
@@ -715,12 +913,17 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                                   strokeWidth: 2.5,
                                 ),
                               )
-                            : Text("Apply Limits",
+                            : Text(
+                                "Apply limits",
                                 style: TextStyle(
-                                    color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                                  color: Colors.white,
+                                  fontSize: 16.sp,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
-                    SizedBox(height: 20.h),
+                    SizedBox(height: 24.h),
                   ],
                 ),
               ),
@@ -728,13 +931,131 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
     );
   }
 
-  double _categoryProgress(int seconds) {
-    if (_screenTimeLimitMinutes <= 0) return 0.0;
-    final progress = (seconds / 60) / _screenTimeLimitMinutes;
-    return progress.clamp(0.0, 1.0);
+  //  Widget Helpers 
+
+  Widget _statCard({
+    required String label,
+    required String value,
+    required Color valueColor,
+    required Widget badge,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(14.w),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+              color: valueColor,
+            ),
+          ),
+          badge,
+        ],
+      ),
+    );
   }
 
-  Widget _buildEditableCard(String title, String sub, IconData icon, {required VoidCallback onTap}) {
+  Widget _buildUsageBadge() {
+    final usedMins = _totalUsageSeconds / 60;
+    final leftMins = _screenTimeLimitMinutes - usedMins;
+    final isOver = leftMins <= 0;
+    return Container(
+      margin: EdgeInsets.only(top: 6.h),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+      decoration: BoxDecoration(
+        color: isOver ? Colors.red.shade50 : Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(20.r),
+      ),
+      child: Text(
+        isOver ? "Limit reached" : "${leftMins.round()}m left",
+        style: TextStyle(
+          fontSize: 11.sp,
+          color: isOver ? Colors.red.shade700 : Colors.orange.shade800,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _controlRow({
+    required IconData iconData,
+    required Color iconColor,
+    required Color iconBg,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    required bool showDivider,
+    VoidCallback? onTap,
+  }) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12.r),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 13.h),
+            child: Row(
+              children: [
+                Container(
+                  width: 36.w,
+                  height: 36.w,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Icon(iconData, color: iconColor, size: 18.sp),
+                ),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 11.sp,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                trailing,
+              ],
+            ),
+          ),
+        ),
+        if (showDivider) Divider(height: 1, color: Colors.grey.shade100),
+      ],
+    );
+  }
+
+  Widget _buildEditableCard(
+    String title,
+    String sub,
+    IconData icon, {
+    required VoidCallback onTap,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(15.r),
@@ -744,13 +1065,25 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(15.r),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)],
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold)),
-            Text(sub, style: TextStyle(fontSize: 14.sp, color: Colors.black87, fontWeight: FontWeight.w600)),
+            Text(
+              title,
+              style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+            ),
+            Text(
+              sub,
+              style: TextStyle(
+                fontSize: 14.sp,
+                color: Colors.black87,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const Divider(),
             Align(
               alignment: Alignment.centerRight,
@@ -769,7 +1102,9 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15.r),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)],
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -777,7 +1112,11 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("Bedtime Block", style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold)),
+              Text(
+                "Bedtime block",
+                style:
+                    TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
+              ),
               Transform.scale(
                 scale: 0.7,
                 child: Switch(
@@ -791,10 +1130,12 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
           GestureDetector(
             onTap: _bedtimeEnabled ? () => _pickBedtime(isStart: true) : null,
             child: Text(
-              "${_formatTimeDisplay(_bedtimeStart)} - ${_formatTimeDisplay(_bedtimeEnd)}",
+              "${_formatTimeDisplay(_bedtimeStart)} – ${_formatTimeDisplay(_bedtimeEnd)}",
               style: TextStyle(
                 fontSize: 10.sp,
-                color: _bedtimeEnabled ? Colors.grey.shade700 : Colors.grey.shade400,
+                color: _bedtimeEnabled
+                    ? Colors.grey.shade700
+                    : Colors.grey.shade400,
               ),
             ),
           ),
@@ -803,15 +1144,28 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               GestureDetector(
-                onTap: _bedtimeEnabled ? () => _pickBedtime(isStart: true) : null,
-                child: Icon(Icons.bedtime_outlined,
-                    color: _bedtimeEnabled ? primaryOrange : Colors.grey.shade300, size: 18.sp),
+                onTap:
+                    _bedtimeEnabled ? () => _pickBedtime(isStart: true) : null,
+                child: Icon(
+                  Icons.bedtime_outlined,
+                  color: _bedtimeEnabled
+                      ? primaryOrange
+                      : Colors.grey.shade300,
+                  size: 18.sp,
+                ),
               ),
               SizedBox(width: 10.w),
               GestureDetector(
-                onTap: _bedtimeEnabled ? () => _pickBedtime(isStart: false) : null,
-                child: Icon(Icons.wb_sunny_outlined,
-                    color: _bedtimeEnabled ? primaryOrange : Colors.grey.shade300, size: 18.sp),
+                onTap: _bedtimeEnabled
+                    ? () => _pickBedtime(isStart: false)
+                    : null,
+                child: Icon(
+                  Icons.wb_sunny_outlined,
+                  color: _bedtimeEnabled
+                      ? primaryOrange
+                      : Colors.grey.shade300,
+                  size: 18.sp,
+                ),
               ),
             ],
           ),
@@ -820,15 +1174,27 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
     );
   }
 
-  Widget _categoryWithCircle(String title, String time, double progress, Color col) {
+  Widget _categoryWithCircle(
+      String title, String time, double progress, Color col) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
-            Text(time, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.sp, color: col)),
+            Text(
+              title,
+              style:
+                  TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp),
+            ),
+            Text(
+              time,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12.sp,
+                color: col,
+              ),
+            ),
           ],
         ),
         SizedBox(height: 12.h),
@@ -863,7 +1229,9 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                       border: Border.all(color: col, width: 3),
-                      boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4)],
+                      boxShadow: const [
+                        BoxShadow(color: Colors.black12, blurRadius: 4)
+                      ],
                     ),
                   ),
                 ),
@@ -876,9 +1244,9 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
   }
 }
 
-// --- Custom Painted Ring for Daily Limit ---
+//  Custom Painted Ring 
 class _DailyLimitRing extends StatelessWidget {
-  final double progress; // 0.0 - 1.0
+  final double progress;
   final String usedLabel;
   final String limitLabel;
   final Color color;
@@ -904,14 +1272,28 @@ class _DailyLimitRing extends StatelessWidget {
           Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(usedLabel,
-                  style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold, color: Colors.black87)),
+              Text(
+                usedLabel,
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
               SizedBox(height: 2.h),
-              Text("of $limitLabel",
-                  style: TextStyle(fontSize: 10.sp, color: Colors.grey)),
+              Text(
+                "of $limitLabel",
+                style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+              ),
               SizedBox(height: 2.h),
-              Text("Daily Limit",
-                  style: TextStyle(fontSize: 10.sp, color: Colors.grey, fontWeight: FontWeight.w600)),
+              Text(
+                "Daily limit",
+                style: TextStyle(
+                  fontSize: 10.sp,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ],
@@ -946,8 +1328,8 @@ class _RingPainter extends CustomPainter {
 
     canvas.drawCircle(center, radius, bgPaint);
 
-    const startAngle = -1.5708; // -90 degrees (top)
-    final sweepAngle = 6.2832 * progress; // 2*pi * progress
+    const startAngle = -1.5708;
+    final sweepAngle = 6.2832 * progress;
 
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
