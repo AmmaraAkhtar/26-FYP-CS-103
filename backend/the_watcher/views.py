@@ -1436,6 +1436,11 @@ def collect_chat(request):
 
         if msg_lower in UI_NOISE:
             return Response({"status": "ignored_noise"}, status=200)
+        
+        if is_content:
+                CONTENT_NOISE = {"like", "save", "share", "comment", "subscribe", "follow", "more", "less", "ad", "sponsored"}
+                if message.lower().strip() in CONTENT_NOISE:
+                    return Response({"status": "ignored_noise"}, status=200)
 
         if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
             return Response({"status": "ignored_date"}, status=200)
