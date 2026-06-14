@@ -425,6 +425,7 @@ def collectAppUsageData_Api(request):
                     child.is_locked = True
                     child.save()
                     return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
+            
             SKIP_PACKAGES = {
             'com.android', 'android',
             'com.samsung.android.app.galaxyfinder',
@@ -435,11 +436,184 @@ def collectAppUsageData_Api(request):
             'com.example.child_app',
         }
             AGENT_CATEGORIES = {"Social", "Sensitive", "Games", "Entertainment"}
+            KNOWN_CATEGORIES = {
+    # ── Social Media ──
+    'instagram': 'Social',
+    'facebook': 'Social',
+    'tiktok': 'Social',
+    'snapchat': 'Social',
+    'twitter': 'Social',
+    'pinterest': 'Social',
+    'linkedin': 'Social',
+    'discord': 'Social',
+    'tumblr': 'Social',
+    'reddit': 'Social',
+    'bereal': 'Social',
 
+    # ── Chatting ──
+    'whatsapp': 'Social',
+    'telegram': 'Social',
+    'signal': 'Social',
+    'skype': 'Social',
+    'imo': 'Social',
+    'viber': 'Social',
+    'messenger': 'Social',
+    'wechat': 'Social',
+    'line': 'Social',
+
+    # ── Entertainment ──
+    'youtube': 'Entertainment',
+    'netflix': 'Entertainment',
+    'spotify': 'Entertainment',
+    'twitch': 'Entertainment',
+    'dailymotion': 'Entertainment',
+    'vimeo': 'Entertainment',
+    'soundcloud': 'Entertainment',
+    'primevideo': 'Entertainment',
+    'hotstar': 'Entertainment',
+    'disneyplus': 'Entertainment',
+    'hulu': 'Entertainment',
+    'tving': 'Entertainment',
+    'bigo': 'Entertainment',
+    'likee': 'Entertainment',
+    'mxtakatak': 'Entertainment',
+    'resso': 'Entertainment',
+    'jiosaavn': 'Entertainment',
+    'gaana': 'Entertainment',
+
+    # ── Games ──
+    'roblox': 'Games',
+    'pubg': 'Games',
+    'freefire': 'Games',
+    'free.fire': 'Games',
+    'callofduty': 'Games',
+    'fortnite': 'Games',
+    'minecraft': 'Games',
+    'subway': 'Games',
+    'candycrush': 'Games',
+    'clashofclans': 'Games',
+    'brawlstars': 'Games',
+    'clashroyale': 'Games',
+    'mobilelegends': 'Games',
+    'hillclimb': 'Games',
+    'templerun': 'Games',
+    'angrybirds': 'Games',
+    'amongus': 'Games',
+    'fingersoft': 'Games',
+    'supercell': 'Games',
+    'miniclip': 'Games',
+    'gameloft': 'Games',
+    'eaplay': 'Games',
+    'fifamobile': 'Games',
+    'efootball': 'Games',
+    'ludo': 'Games',
+    'carrompool': 'Games',
+    '8ballpool': 'Games',
+    'gta': 'Games',
+    'battleground': 'Games',
+    'fpsshooter': 'Games',
+    'wordgame': 'Games',
+    'solitaire': 'Games',
+
+    # ── Education ──
+    'duolingo': 'Education',
+    'kahoot': 'Education',
+    'quizlet': 'Education',
+    'coursera': 'Education',
+    'udemy': 'Education',
+    'khan': 'Education',
+    'brainly': 'Education',
+    'photomath': 'Education',
+    'mathway': 'Education',
+    'grammarly': 'Education',
+    'dictionary': 'Education',
+    'encyclopedia': 'Education',
+    'google.classroom': 'Education',
+    'edmodo': 'Education',
+    'byju': 'Education',
+
+    # ── Tools / Browsers ──
+    'chrome': 'Tools',
+    'firefox': 'Tools',
+    'opera': 'Tools',
+    'brave': 'Tools',
+    'uc.browser': 'Tools',
+    'ucbrowser': 'Tools',
+    'duckduckgo': 'Tools',
+    'gmail': 'Tools',
+    'outlook': 'Tools',
+    'yahoo': 'Tools',
+    'maps': 'Tools',
+    'calculator': 'Tools',
+    'clock': 'Tools',
+    'calendar': 'Tools',
+    'camera': 'Tools',
+    'gallery': 'Tools',
+    'filemanager': 'Tools',
+    'files': 'Tools',
+    'drive': 'Tools',
+    'dropbox': 'Tools',
+    'onedrive': 'Tools',
+    'translate': 'Tools',
+    'weather': 'Tools',
+    'flashlight': 'Tools',
+    'compass': 'Tools',
+    'scanner': 'Tools',
+    'pdf': 'Tools',
+    'notepad': 'Tools',
+    'notes': 'Tools',
+    'reminder': 'Tools',
+    'contacts': 'Tools',
+
+    # ── Pakistan Specific ──
+    'jazzcash': 'Tools',
+    'easypaisa': 'Tools',
+    'daraz': 'Tools',
+    'foodpanda': 'Tools',
+    'careem': 'Tools',
+    'uber': 'Tools',
+    'bykea': 'Tools',
+    'ptcl': 'Tools',
+    'ufone': 'Tools',
+    'telenor': 'Tools',
+    'zong': 'Tools',
+    'mobilink': 'Tools',
+    'jazz': 'Tools',
+    'hbl': 'Tools',
+    'meezan': 'Tools',
+    'ubl': 'Tools',
+    'mcb': 'Tools',
+    'alfalahhbank': 'Tools',
+    'pakwheels': 'Tools',
+    'zameen': 'Tools',
+    'olx': 'Tools',
+    'imdb': 'Entertainment',
+    'arynews': 'Entertainment',
+    'geo': 'Entertainment',
+    'samaa': 'Entertainment',
+    'dawn': 'Education',
+    'express': 'Entertainment',
+
+    # ── Sensitive ──
+    'vpn': 'Sensitive',
+    'tor': 'Sensitive',
+    'proxy': 'Sensitive',
+    'hider': 'Sensitive',
+    'incognito': 'Sensitive',
+    'privatebrowser': 'Sensitive',
+    'darkweb': 'Sensitive',
+    'onion': 'Sensitive',
+}
             for i, app in enumerate(usage_data):
                 category = category_predictions[i]
                 package  = app["package_name"]
                 usage_time = app["usage_time"]
+
+                # Override if known app
+                for keyword, forced_cat in KNOWN_CATEGORIES.items():
+                    if keyword in package:
+                        category = forced_cat
+                        break
 
                 # ── DUPLICATE CHECK ──
                 # Aaj ka same package already save hai?
@@ -499,6 +673,7 @@ def collectAppUsageData_Api(request):
                         "alert_message": None,
                     })
                     continue
+                
 
                 # Sirf meaningful categories par agent chalao
                 if category not in AGENT_CATEGORIES:
