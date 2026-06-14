@@ -39,6 +39,7 @@ from rest_framework.permissions import IsAuthenticated
 
 
 
+
 # Sign UP API
 @api_view(['POST'])
 def signup_api(request):
@@ -374,7 +375,15 @@ def collectAppUsageData_Api(request):
 
             child_id = validated_data["child_id"]
             child = models.child.objects.get(id=child_id)
+
             today =  timezone.now().date()
+            if is_bedtime(child):
+                child.is_locked = True
+                child.save()
+                return Response({
+                    "message": "Bedtime active — device locked",
+                    "predictions": []
+                })
             SKIP_PACKAGES = {
     'com.android', 'android',
     'com.samsung.android.app.galaxyfinder',
@@ -478,9 +487,10 @@ def collectAppUsageData_Api(request):
                 "usage_time":     app["usage_time"],
                 "ml_category":    category_predictions[i],
                 "child_id":       child_id,
+                
 
                 # Baaki sab None — agent ne ye sbb data fill krna hai 
-                "child_age": None, "screen_limit_mins": None,
+                "child_age": None, "screen_limit_mins": child.screen_time_limit,
                 "usage_history": None, "recent_alerts": None,
                 "total_usage_today": None, "action": None,
                 "reasoning": None, "alert_message": None,
@@ -668,6 +678,15 @@ def collect_web_usage(request):
         except models.child.DoesNotExist:
             return Response({"error": "Child not found"}, status=404)
 
+
+        # Bedtime check — agar child ka bedtime chal raha hai, toh URL ko ignore kar do. Isse unnecessary alerts aur processing se bachenge.
+        if is_bedtime(child_obj):
+            child_obj.is_locked = True
+            child_obj.save()
+            return Response({
+                "message": "Bedtime active — device locked",
+                "predictions": []
+            })
         #  DUPLICATE CHECK (same URL last 2 minute mein already save hai?)
 
         recent_duplicate = models.webUsage.objects.filter(
@@ -1101,7 +1120,17 @@ def heartbeat_api(request):
     try:
         child_obj = models.child.objects.get(id=child_id)
         child_obj.last_seen = timezone.now()
+
         child_obj.save()
+        # Bedtime check — agar child ka bedtime chal raha hai, toh device ko lock kar do. Isse unnecessary alerts aur processing se bachenge.
+        if is_bedtime(child_obj):
+                child_obj.is_locked = True
+                child_obj.save()
+                return Response({
+                    "message": "Bedtime active — device locked",
+                    "predictions": []
+                })
+        
         return Response({"status": "ok"}, status=200)
     except models.child.DoesNotExist:
         return Response({"error": "Child not found"}, status=404)
@@ -1113,6 +1142,14 @@ def check_lock_status(request):
     child_id = request.query_params.get('child_id')
     try:
         child = models.child.objects.get(id=child_id)
+        # Bedtime check — agar child ka bedtime chal raha hai, toh device ko lock kar do. Isse unnecessary alerts aur processing se bachenge.
+        if is_bedtime(child):
+            child.is_locked = True
+            child.save()
+            return Response({
+                "message": "Bedtime active — device locked",
+                "predictions": []
+            })
         print(f"Lock status check for child {child_id}: is_locked={child.is_locked}")
         return Response({"is_locked": child.is_locked})
     except models.child.DoesNotExist:
@@ -1194,6 +1231,14 @@ def collect_chat(request):
         return Response({"error": "Child not found"}, status=404)
 
     print(f"Chat — Child: {child_id} | App: {app_name} | Msg: {message}")
+
+    if is_bedtime(child_obj):
+        child_obj.is_locked = True
+        child_obj.save()
+        return Response({
+            "message": "Bedtime active — device locked",
+            "predictions": []
+    })
 
     # ── Timestamp parse ──
     try:
@@ -1569,3 +1614,38 @@ def get_screen_limits(request):
         "bedtime_end": str(child.bedtime_end) if child.bedtime_end else None,
         "category_usage_seconds": category_usage,
     }, status=200)
+
+
+# POST - update overall limit + bedtime
+@api_view(['POST'])
+def update_screen_limits(request):
+    child_id = request.data.get('child_id')
+    try:
+        child = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    if 'screen_time_limit' in request.data:
+        child.screen_time_limit = request.data['screen_time_limit']
+
+    if 'bedtime_start' in request.data:
+        child.bedtime_start = request.data['bedtime_start']
+
+    if 'bedtime_end' in request.data:
+        child.bedtime_end = request.data['bedtime_end']
+
+    child.save()
+    return Response({"status": "updated"}, status=200)
+
+
+# Function to check bedtime status for a child. Agar current time bedtime range mein hai, toh True return karega, warna False. Bedtime range ko handle karte waqt overnight ranges (jaise 21:00 - 07:00) ko bhi consider kiya gaya hai.
+def is_bedtime(child):
+    if not child.bedtime_start or not child.bedtime_end:
+        return False
+    now = timezone.localtime().time()
+    start = child.bedtime_start
+    end = child.bedtime_end
+    if start <= end:
+        return start <= now <= end
+    else:  # overnight range, e.g. 21:00 - 07:00
+        return now >= start or now <= end
