@@ -138,6 +138,15 @@ class _MonitoringState extends State<Monitoring> {
       ),
     );
   }
+ // Helper function for youtube activity
+  String _buildYoutubeSubValue() {
+  if (dashboardData?.lastYoutubeContent != null) {
+    final title = dashboardData!.lastYoutubeContent!;
+    final shortened = title.length > 35 ? "${title.substring(0, 35)}..." : title;
+    return "Last watched:\n$shortened";
+  }
+  return "No data yet";
+}
 
   // to deactivate the child admin remotely
   Future<void> _deactivateChildAdmin(int childId) async {
@@ -448,27 +457,35 @@ class _MonitoringState extends State<Monitoring> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildActivityCard(
-                        title: "YouTube Activities",
-                        headerColor: const Color(0xFFFFEBEE),
-                        iconPath: "assets/youtube1.png",
-                        iconColor: Colors.red,
-                        mainValue: isDashboardLoading
-                            ? "Loading..."
-                            : "${dashboardData?.youtubeCount ?? 0} videos watch",
-                        subValue: (dashboardData?.lastYoutube != null)
-                            ? "Last watched:\n${dashboardData!.lastYoutube}"
-                            : "No data yet",
-                        buttonText: "View All »",
-                        buttonColor: const Color(0xFFF44336),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) => YoutubeActivityScreen()),
-                          );
-                        },
+                        child: _buildActivityCard(
+                          title: "YouTube Activities",
+                          headerColor: const Color(0xFFFFEBEE),
+                          iconPath: "assets/youtube1.png",
+                          iconColor: Colors.red,
+                          mainValue: isDashboardLoading
+                              ? "Loading..."
+                              : "${dashboardData?.youtubeCount ?? 0} videos watched",
+                          subValue: isDashboardLoading
+                              ? ""
+                              : _buildYoutubeSubValue(),
+                          buttonText: (dashboardData?.flaggedYoutubeCount ?? 0) > 0
+                              ? "${dashboardData!.flaggedYoutubeCount} Flagged »"
+                              : "View All »",
+                          buttonColor: (dashboardData?.flaggedYoutubeCount ?? 0) > 0
+                              ? Colors.orange.shade700
+                              : const Color(0xFFF44336),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => YoutubeActivityScreen(
+                                  //childId: childId, childName: widget.childData?['name'] ?? 'Unknown', childAge: widget.childData?['age'] ?? 0
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
                     SizedBox(width: 16.w),
                     Expanded(
                       child: _buildActivityCard(
