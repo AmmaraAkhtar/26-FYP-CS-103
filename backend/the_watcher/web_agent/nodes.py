@@ -294,6 +294,7 @@ def web_action_executor_node(state: WebState) -> WebState:
         alert_obj = models.Alert.objects.create(
             child=child,
             alert_type=state["action"].capitalize(),
+            source="web",
             message=state["alert_message"]
         )
         send_alert(alert_obj)

@@ -238,7 +238,8 @@ def action_executor_node(state: AppState) -> AppState:
         alert_obj = models.Alert.objects.create(
             child=child,
             alert_type=state["action"].capitalize(),
-            message=state["alert_message"]
+            message=state["alert_message"],
+            source     = "app",
         )
         
         send_alert(alert_obj)

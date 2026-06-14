@@ -318,6 +318,7 @@ def chat_action_executor_node(state: ChatState) -> ChatState:
             child      = child,
             alert_type = state["final_category"],
             message    = state["alert_message"],
+            source     = "chat",
         )
         send_alert(alert_obj)
         print(f"ALERT SENT: {state['alert_message']}")
