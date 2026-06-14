@@ -1,7 +1,7 @@
 from xml.parsers.expat import model
 
 from django.shortcuts import render
-from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer,WebUsageDataSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer,ChatMessageSerializer
+from . serializers import ParentSerializer,OtpSerializer,PasswordResetSerializer, UpdateProfileSerializer,WebUsageDataSerializer,LoginSerializer,ChildSerializer,PairingCodeSerializer,PairedChildSerializer,AppUsageSerializer,AlertSerializer,ChatMessageSerializer
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -2143,4 +2143,40 @@ def get_profile_api(request):
         "username": user.username,
         "email":    user.email,
         "phone":    profile.phone or "",
+    }, status=200)
+
+# update profile api, jisme parent apna username, password aur phone number update kar sakta hai. Agar username already taken hai toh error return karega. Password change hone ke baad naya JWT token generate hoga taki user ko dobara login na karna pade.
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def update_profile_api(request):
+    serializer = UpdateProfileSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response({"errors": serializer.errors}, status=400)
+
+    user = request.user
+
+    if 'username' in serializer.validated_data and serializer.validated_data['username']:
+        new_username = serializer.validated_data['username']
+        if User.objects.filter(username=new_username).exclude(id=user.id).exists():
+            return Response({"error": "Username already taken."}, status=400)
+        user.username = new_username
+
+    if 'password' in serializer.validated_data and serializer.validated_data['password']:
+        user.set_password(serializer.validated_data['password'])
+
+    user.save()
+
+    phone = serializer.validated_data.get('phone', '')
+    profile, _ = models.ParentProfile.objects.get_or_create(user=user)
+    profile.phone = phone
+    profile.save()
+
+    # Password change ke baad naya token generate karo
+    refresh = RefreshToken.for_user(user)
+    return Response({
+        "message": "Profile updated successfully",
+        "tokens": {
+            "refresh": str(refresh),
+            "access":  str(refresh.access_token),
+        }
     }, status=200)
