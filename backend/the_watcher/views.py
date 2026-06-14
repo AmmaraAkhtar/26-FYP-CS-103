@@ -32,6 +32,7 @@ from datetime import datetime
 from .chat_agent.graph import chat_agent
 from rest_framework.permissions import IsAuthenticated
 from datetime import time as dt_time
+from django.db.models import Q
 
 
 
@@ -403,20 +404,36 @@ def collectAppUsageData_Api(request):
 
             screen_limit_seconds = child.screen_time_limit * 60
 
+            # if total_usage_today >= screen_limit_seconds:
+            #     child.is_locked = True
+            #     child.save()
+            #     return Response({"is_locked": True, "reason": "bedtime"}, status=200)
             if total_usage_today >= screen_limit_seconds:
-                child.is_locked = True
-                child.save()
-                return Response({"is_locked": True, "reason": "bedtime"}, status=200)
-            
+                if child.parent_unlocked and child.parent_unlocked_at:
+                    elapsed = (timezone.now() - child.parent_unlocked_at).total_seconds()
+                    # Parent ne unlock kiya tha — 30 min grace period check karo
+                    if elapsed < 30 * 60:
+                        pass  # Grace period — lock mat karo
+                    else:
+                        child.parent_unlocked = False
+                        child.parent_unlocked_at = None
+                        child.is_locked = True
+                        child.save()
+                        return Response({"is_locked": True, "reason": "screen_limit_after_grace"}, status=200)
+                    # Grace period mein hai — lock mat karo
+                else:
+                    child.is_locked = True
+                    child.save()
+                    return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
             SKIP_PACKAGES = {
-    'com.android', 'android',
-    'com.samsung.android.app.galaxyfinder',
-    'com.samsung.android.bixby.agent',
-    'com.google.android.permissioncontroller',
-    'com.sec.android.app.launcher',
-    'com.samsung.android.dialer',
-    'com.example.child_app',
-}
+            'com.android', 'android',
+            'com.samsung.android.app.galaxyfinder',
+            'com.samsung.android.bixby.agent',
+            'com.google.android.permissioncontroller',
+            'com.sec.android.app.launcher',
+            'com.samsung.android.dialer',
+            'com.example.child_app',
+        }
             AGENT_CATEGORIES = {"Social", "Sensitive", "Games", "Entertainment"}
 
             for i, app in enumerate(usage_data):
@@ -620,6 +637,7 @@ def unlock_device(request):
     child = models.child.objects.get(id=child_id)
     child.is_locked = False
     child.parent_unlocked = True  # ← parent ne manually unlock kiya
+    child.parent_unlocked_at = timezone.now()
     child.save()
     return Response({"message": "Device Unlocked"})
 
@@ -1149,21 +1167,35 @@ def heartbeat_api(request):
 
 
 # API for child agent to check if device is locked by parent. Child agent is API ko periodically call karega, jaise ki har 5 minute mein, taki agar parent ne device lock kar diya hai toh child app ko pata chal jaye aur wo apne aap ko lock kar le.
-@api_view(['GET'])
 
+
+@api_view(['GET'])
 def check_lock_status(request):
     child_id = request.query_params.get('child_id')
     try:
         child = models.child.objects.get(id=child_id)
-        
-        # Bedtime check — override se upar hai
+
+        # Bedtime always wins
         if is_bedtime(child):
             child.is_locked = True
             child.parent_unlocked = False
+            child.parent_unlocked_at = None
             child.save()
             return Response({"is_locked": True, "reason": "bedtime"}, status=200)
 
-        # Usage calculate karo (dono cases ke liye chahiye)
+        # Grace period check — time-based (30 min from unlock time)
+        if child.parent_unlocked and child.parent_unlocked_at:
+            elapsed = timezone.now() - child.parent_unlocked_at
+            if elapsed.total_seconds() < 30 * 60:
+                # Grace period mein hai — lock mat karo
+                return Response({"is_locked": False})
+            else:
+                # 30 min guzar gaye — grace khatam, reset karo
+                child.parent_unlocked = False
+                child.parent_unlocked_at = None
+                child.save()
+
+        # Normal usage check
         today = timezone.now().date()
         existing_usage = models.appUsage.objects.filter(child=child, date=today)
         merged = {}
@@ -1176,23 +1208,16 @@ def check_lock_status(request):
 
         print(f"Lock check — used: {total_usage_today}s, limit: {screen_limit_seconds}s")
 
-        # Normal lock check — sirf tab jab parent ne unlock nahi kiya
-        if not child.is_locked and not child.parent_unlocked:
-            if total_usage_today >= screen_limit_seconds:
-                child.is_locked = True
-                child.save()
-                return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
+        if total_usage_today >= screen_limit_seconds:
+            child.is_locked = True
+            child.save()
+            return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
 
-        # Grace period check — parent ne unlock kiya tha, 30 min extra
-        if child.parent_unlocked:
-            buffer_seconds = 30 * 60  # 30 minute grace period
-            if total_usage_today >= screen_limit_seconds + buffer_seconds:
-                child.is_locked = True
-                child.parent_unlocked = False  # override khatam
-                child.save()
-                return Response({"is_locked": True, "reason": "screen_limit_exceeded_after_unlock"}, status=200)
+        # Usage limit cross nahi hui, unlock karo agar locked tha
+        if child.is_locked:
+            child.is_locked = False
+            child.save()
 
-        print(f"Lock status check for child {child_id}: is_locked={child.is_locked}")
         return Response({"is_locked": child.is_locked})
     except models.child.DoesNotExist:
         return Response({"is_locked": False})
@@ -1440,7 +1465,14 @@ def collect_chat(request):
             return Response({"status": "ignored_noise"}, status=200)
         
         if is_content:
-                CONTENT_NOISE = {"like", "save", "share", "comment", "subscribe", "follow", "more", "less", "ad", "sponsored"}
+                CONTENT_NOISE = {"like", "save", "share", "comment", "subscribe", "follow",
+    "more", "less", "ad", "sponsored", "shorts", "summary",
+    "music", "play", "news", "gaming", "months", "learning",
+    "fashion", "beauty", "podcasts", "live", "explore",
+    "youtube playables", "instant games, no downloads",
+    "breaking news", "television series", "weather forecasting",
+    "pakistani dramas", "cricket highlights", "fitness workouts", "cooking recipes",
+    "travel vlogs", "unboxing videos", "technology reviews", "educational content", "comedy sketches", "music videos",}
                 if message.lower().strip() in CONTENT_NOISE:
                     return Response({"status": "ignored_noise"}, status=200)
 
@@ -2101,7 +2133,7 @@ def youtube_activity_api(request):
     alerts = models.Alert.objects.filter(
         child=child,
     ).filter(
-        models.Q(source='youtube') | models.Q(message__icontains='youtube')
+        Q(source='youtube') | Q(message__icontains='youtube')
     ).order_by('-created_at')[:10]
 
     alert_data = [{

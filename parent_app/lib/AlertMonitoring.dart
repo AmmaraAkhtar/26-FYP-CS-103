@@ -1220,6 +1220,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
   List<dynamic> alerts = [];
   bool isLoading = true;
   String? errorMessage;
+  bool _isDeviceLocked = true;
 
   static const kGreen = Color(0xFF699886);
   static const kOrange = Color(0xFFEB9974);
@@ -1228,6 +1229,24 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
   void initState() {
     super.initState();
     fetchAlerts();
+    _fetchLockStatus();
+  }
+
+  Future<void> _fetchLockStatus() async {
+    try {
+      final response = await http.get(
+        Uri.parse(
+            'http://192.168.18.163:8000/check-lock-status/?child_id=${widget.childId}'),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (mounted) {
+          setState(() => _isDeviceLocked = data['is_locked'] ?? true);
+        }
+      }
+    } catch (e) {
+      print("Lock status error: $e");
+    }
   }
 
   Future<void> fetchAlerts() async {
@@ -1269,12 +1288,26 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
     }
   }
 
-  // ✅ FIX 1 — device alerts ka sahi color
   Color getAlertColor(String type, String source) {
     if (source == 'device') {
       if (type == 'accessibility_off') return Colors.orange;
       if (type == 'admin_disabled') return Colors.red;
       return Colors.blueGrey;
+    }
+    if (source == 'chat') {
+      switch (type.toLowerCase()) {
+        case 'bullying':
+          return Colors.red;
+        case 'hate':
+          return Colors.red;
+        case 'suicide':
+          return Colors.purple;
+        case 'warn':
+        case 'alert':
+          return Colors.orange;
+        default:
+          return Colors.orange;
+      }
     }
     switch (type.toLowerCase()) {
       case 'bullying':
@@ -1284,6 +1317,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
       case 'suicide':
       case 'escalate':
         return Colors.purple;
+      case 'warn':
       case 'alert':
         return Colors.orange;
       default:
@@ -1309,6 +1343,8 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
           return Icons.report;
         case 'suicide':
           return Icons.psychology;
+        default:
+          return Icons.chat_bubble_outline;
       }
     } else if (source == 'app') {
       switch (type.toLowerCase()) {
@@ -1332,7 +1368,6 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
     return Icons.error;
   }
 
-  // ✅ FIX 2 — device alerts mein dono buttons
   List<String> getActionButtons(String type, String source) {
     if (source == 'device') {
       return ["Unblock Device", "View Instructions"];
@@ -1365,8 +1400,9 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
             return "Hate Speech Detected in Chat";
           case 'suicide':
             return "Concerning Message Detected";
+          default:
+            return "Suspicious Chat Detected";
         }
-        break;
       case 'app':
         switch (type.toLowerCase()) {
           case 'block':
@@ -1401,8 +1437,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new,
-              color: Colors.black, size: 20.sp),
+          icon: Icon(Icons.arrow_back_ios_new, color: Colors.black, size: 20.sp),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -1414,23 +1449,28 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
         ),
         actions: [
           IconButton(
-            onPressed: fetchAlerts,
+            onPressed: () {
+              fetchAlerts();
+              _fetchLockStatus();
+            },
             icon: Icon(Icons.refresh, color: Colors.black, size: 22.sp),
           ),
           SizedBox(width: 8.w),
         ],
       ),
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: kGreen))
+          ? const Center(child: CircularProgressIndicator(color: kGreen))
           : RefreshIndicator(
               color: kGreen,
-              onRefresh: fetchAlerts,
+              onRefresh: () async {
+                await fetchAlerts();
+                await _fetchLockStatus();
+              },
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Padding(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 16.w, vertical: 12.h),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1441,8 +1481,8 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
                           height: 62.r,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                                colors: [kGreen, kOrange]),
+                            gradient:
+                                LinearGradient(colors: [kGreen, kOrange]),
                           ),
                           padding: EdgeInsets.all(2.5.r),
                           child: const CircleAvatar(
@@ -1458,15 +1498,50 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
                                 style: TextStyle(
                                     fontSize: 18.sp,
                                     fontWeight: FontWeight.bold)),
-                            Text(
-                                "${widget.childAge} Years Old",
+                            Text("${widget.childAge} Years Old",
                                 style: TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 12.sp)),
+                                    color: Colors.grey, fontSize: 12.sp)),
                           ],
                         ),
                       ]),
                       SizedBox(height: 20.h),
+
+                      // Device status indicator
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 14.w, vertical: 10.h),
+                        decoration: BoxDecoration(
+                          color: _isDeviceLocked
+                              ? Colors.red.shade50
+                              : Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(
+                            color: _isDeviceLocked
+                                ? Colors.red.shade200
+                                : Colors.green.shade200,
+                          ),
+                        ),
+                        child: Row(children: [
+                          Icon(
+                            _isDeviceLocked ? Icons.lock : Icons.lock_open,
+                            color: _isDeviceLocked ? Colors.red : kGreen,
+                            size: 18.r,
+                          ),
+                          SizedBox(width: 8.w),
+                          Text(
+                            _isDeviceLocked
+                                ? "Device is currently LOCKED"
+                                : "Device is Unlocked",
+                            style: TextStyle(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                              color:
+                                  _isDeviceLocked ? Colors.red : kGreen,
+                            ),
+                          ),
+                        ]),
+                      ),
+                      SizedBox(height: 16.h),
 
                       // Summary chips
                       if (alerts.isNotEmpty) _buildSummaryRow(),
@@ -1490,8 +1565,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
                               SizedBox(height: 10.h),
                               Text(errorMessage!,
                                   style: TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 13.sp)),
+                                      color: Colors.red, fontSize: 13.sp)),
                             ]),
                           ),
                         )
@@ -1505,13 +1579,12 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
                               Container(
                                 width: 72.r,
                                 height: 72.r,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE8FADC),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFE8FADC),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(Icons.check_circle,
-                                    size: 40.sp,
-                                    color: kGreen),
+                                    size: 40.sp, color: kGreen),
                               ),
                               SizedBox(height: 14.h),
                               Text("All clear!",
@@ -1521,8 +1594,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
                               SizedBox(height: 4.h),
                               Text("No alerts for ${widget.childName}",
                                   style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 13.sp)),
+                                      color: Colors.grey, fontSize: 13.sp)),
                             ]),
                           ),
                         )
@@ -1536,8 +1608,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
                             return _buildAlertCard(
                               title: getAlertTitle(type, source),
                               message: alert['message'] ?? '',
-                              time: formatTime(
-                                  alert['created_at'] ?? ''),
+                              time: formatTime(alert['created_at'] ?? ''),
                               color: getAlertColor(type, source),
                               icon: getAlertIcon(type, source),
                               actions: getActionButtons(type, source),
@@ -1556,24 +1627,21 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
     );
   }
 
-  // Summary chips at top
   Widget _buildSummaryRow() {
     final total = alerts.length;
     final critical = alerts
-        .where((a) =>
-            ['block', 'escalate', 'suicide', 'bullying', 'hate']
-                .contains((a['alert_type'] ?? '').toLowerCase()))
+        .where((a) => ['block', 'escalate', 'suicide', 'bullying', 'hate']
+            .contains((a['alert_type'] ?? '').toLowerCase()))
         .length;
-    final device = alerts
-        .where((a) => (a['source'] ?? '') == 'device')
-        .length;
+    final device =
+        alerts.where((a) => (a['source'] ?? '') == 'device').length;
 
     return Row(children: [
       _chip("$total Total", Colors.grey.shade700, Colors.grey.shade100),
       SizedBox(width: 8.w),
       if (critical > 0)
-        _chip("$critical Critical", Colors.red.shade700,
-            Colors.red.shade50),
+        _chip(
+            "$critical Critical", Colors.red.shade700, Colors.red.shade50),
       SizedBox(width: 8.w),
       if (device > 0)
         _chip("$device Device", Colors.orange.shade700,
@@ -1583,8 +1651,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
 
   Widget _chip(String label, Color textColor, Color bgColor) {
     return Container(
-      padding:
-          EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20.r),
@@ -1597,7 +1664,6 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
     );
   }
 
-  // ✅ FIX 3 — source bhi parameter mein
   Widget _buildAlertCard({
     required String title,
     required String message,
@@ -1632,8 +1698,8 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
                 EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
             decoration: BoxDecoration(
               color: bgColor,
-              borderRadius: BorderRadius.vertical(
-                  top: Radius.circular(20.r)),
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(20.r)),
             ),
             child: Row(
               children: [
@@ -1659,7 +1725,6 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
                   ),
                 ),
                 SizedBox(width: 8.w),
-                // Source badge
                 Container(
                   padding: EdgeInsets.symmetric(
                       horizontal: 8.w, vertical: 3.h),
@@ -1689,18 +1754,15 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
                 Text(
                   message,
                   style: TextStyle(
-                      color: Colors.black87,
-                      fontSize: 12.sp,
-                      height: 1.4),
+                      color: Colors.black87, fontSize: 12.sp, height: 1.4),
                 ),
                 SizedBox(height: 8.h),
                 Row(children: [
-                  Icon(Icons.access_time,
-                      size: 11.r, color: Colors.grey),
+                  Icon(Icons.access_time, size: 11.r, color: Colors.grey),
                   SizedBox(width: 4.w),
                   Text(time,
-                      style: TextStyle(
-                          color: Colors.grey, fontSize: 10.sp)),
+                      style:
+                          TextStyle(color: Colors.grey, fontSize: 10.sp)),
                 ]),
               ],
             ),
@@ -1718,35 +1780,41 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
               child: Row(
                 children: actions.map((btnText) {
                   final isUnlock = btnText == "Unblock Device";
+                  final isDisabled = isUnlock && !_isDeviceLocked;
+
                   return Expanded(
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 4.w),
                       child: SizedBox(
                         height: 36.h,
                         child: ElevatedButton(
-                          // ✅ FIX 4 — source bhi pass karo
-                          onPressed: () =>
-                              _handleAction(btnText, alertType, source),
+                          onPressed: isDisabled
+                              ? null
+                              : () => _handleAction(
+                                  btnText, alertType, source),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isUnlock
-                                ? color
-                                : Colors.white,
-                            foregroundColor: isUnlock
-                                ? Colors.white
-                                : color,
-                            elevation: isUnlock ? 2 : 0,
-                            side: isUnlock
+                            backgroundColor: isDisabled
+                                ? Colors.grey.shade300
+                                : isUnlock
+                                    ? color
+                                    : Colors.white,
+                            foregroundColor: isDisabled
+                                ? Colors.grey
+                                : isUnlock
+                                    ? Colors.white
+                                    : color,
+                            elevation:
+                                isDisabled ? 0 : (isUnlock ? 2 : 0),
+                            side: (isUnlock || isDisabled)
                                 ? BorderSide.none
-                                : BorderSide(
-                                    color: color, width: 1.w),
+                                : BorderSide(color: color, width: 1.w),
                             shape: RoundedRectangleBorder(
-                              borderRadius:
-                                  BorderRadius.circular(20.r),
+                              borderRadius: BorderRadius.circular(20.r),
                             ),
                             padding: EdgeInsets.zero,
                           ),
                           child: Text(
-                            btnText,
+                            isDisabled ? "Already Unlocked" : btnText,
                             style: TextStyle(
                                 fontSize: 11.sp,
                                 fontWeight: FontWeight.bold),
@@ -1764,7 +1832,6 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
     );
   }
 
-  // ✅ FIX 4 — source parameter add kiya
   void _handleAction(String action, String type, String source) async {
     switch (action) {
       case "Unblock Device":
@@ -1794,10 +1861,11 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Device unlocked successfully"),
-            backgroundColor: Color(0xFF699886),
+            backgroundColor: kGreen,
           ),
         );
-        fetchAlerts();
+        await fetchAlerts();
+        await _fetchLockStatus();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -1818,8 +1886,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
     switch (type) {
       case 'accessibility_off':
         title = "Re-enable Accessibility";
-        content =
-            "Accessibility permission band ho gayi hai.\n\n"
+        content = "Accessibility permission band ho gayi hai.\n\n"
             "Fix karne ke liye:\n"
             "1. Child ke device mein Settings kholo\n"
             "2. Accessibility > Downloaded apps mein jao\n"
@@ -1828,8 +1895,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
         break;
       case 'admin_disabled':
         title = "Re-enable Device Admin";
-        content =
-            "Device admin/monitoring disable ho gaya hai.\n\n"
+        content = "Device admin/monitoring disable ho gaya hai.\n\n"
             "Fix karne ke liye:\n"
             "1. Child ke device mein Settings kholo\n"
             "2. Apps > Special access > Device admin apps mein jao\n"
@@ -1838,8 +1904,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
         break;
       default:
         title = "Re-enable Permission";
-        content =
-            "Ek monitoring permission disable ho gayi hai.\n"
+        content = "Ek monitoring permission disable ho gayi hai.\n"
             "Device settings mein ja kar ise re-enable karo.";
     }
 
@@ -1850,15 +1915,13 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
             borderRadius: BorderRadius.circular(20)),
         title: Text(title,
             style: const TextStyle(
-                color: Color(0xFF699886),
-                fontWeight: FontWeight.bold)),
-        content: Text(content,
-            style: const TextStyle(height: 1.5)),
+                color: kGreen, fontWeight: FontWeight.bold)),
+        content: Text(content, style: const TextStyle(height: 1.5)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text("OK",
-                style: TextStyle(color: Color(0xFF699886))),
+            child:
+                const Text("OK", style: TextStyle(color: kGreen)),
           ),
         ],
       ),
