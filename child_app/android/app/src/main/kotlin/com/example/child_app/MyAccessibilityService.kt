@@ -78,10 +78,34 @@ class MyAccessibilityService : AccessibilityService() {
             packageName.contains("messaging")  -> "SMS"
             packageName.contains("mms")        -> "SMS"
             packageName.contains("snapchat")  -> "Snapchat"
+            
             else -> null
         }
 
-        if (chatAppName != null) {
+        // Content apps map
+            val contentAppName = when {
+                packageName.contains("youtube") -> "YouTube"
+                packageName.contains("tiktok") || packageName.contains("musical") -> "TikTok"
+                packageName.contains("instagram") -> "Instagram"
+                packageName.contains("snapchat") -> "Snapchat"
+                else -> null
+            }
+
+            if (contentAppName != null && chatAppName == null) {
+    val source = event.source ?: return
+    val contentTexts = extractContentText(source, contentAppName)
+    contentTexts.forEach { text ->
+        val now = System.currentTimeMillis()
+        if (text != lastSentMessage || now - lastSentTime > COOLDOWN_MS) {
+            lastSentMessage = text
+            lastSentTime = now
+            Log.d("ContentMonitor", "App: $contentAppName | Text: $text")
+            sendContentToBackend(appName = contentAppName, content = text)
+        }
+    }
+}
+
+        if (  chatAppName == null) {
             val source = event.source ?: return
             val messages = extractChatMessages(source)
 
@@ -307,6 +331,75 @@ private fun findSenderRecursive(node: AccessibilityNodeInfo?, depth: Int): Strin
             } //response.close() 
         }
     }
+
+    // apps ka content extract krne k lye
+
+    private fun extractContentText(node: AccessibilityNodeInfo, appName: String): List<String> {
+    val result = mutableListOf<String>()
+    
+    // App-specific IDs se title fetch karo
+    val titleIds = when (appName) {
+        "YouTube" -> listOf(
+            "com.google.android.youtube:id/title",
+            "com.google.android.youtube:id/video_title",
+            "com.google.android.youtube:id/text"
+        )
+        "TikTok" -> listOf(
+            "com.zhiliaoapp.musically:id/desc",
+            "com.ss.android.ugc.trill:id/text_desc"
+        )
+        else -> listOf()
+    }
+    
+    for (id in titleIds) {
+        val nodes = node.findAccessibilityNodeInfosByViewId(id)
+        nodes?.forEach { n ->
+            val text = n.text?.toString()?.trim()
+            if (!text.isNullOrBlank() && text.length > 5) {
+                result.add(text)
+            }
+        }
+    }
+    
+    // Fallback — recursive text extraction
+    if (result.isEmpty()) {
+        extractTextRecursive(node, result, 0)
+    }
+    
+    return result.distinct()
+}
+
+private fun sendContentToBackend(appName: String, content: String) {
+    val id = childId
+    if (id == -1) return
+
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val json = JSONObject().apply {
+                put("child_id", id)
+                put("app_name", appName)
+                put("sender", "content")  // content monitoring
+                put("message", content)
+                put("timestamp", SimpleDateFormat(
+                    "yyyy-MM-dd'T'HH:mm:ss",
+                    Locale.getDefault()
+                ).format(Date()))
+            }
+
+            val body = json.toString().toRequestBody("application/json".toMediaType())
+            val request = Request.Builder()
+                .url("http://192.168.18.163:8000/collectchat/")
+                .post(body)
+                .build()
+
+            httpClient.newCall(request).execute().use { response ->
+                Log.d("ContentMonitor", "Sent | ${response.code}")
+            }
+        } catch (e: Exception) {
+            Log.e("ContentMonitor", "Failed: ${e.message}")
+        }
+    }
+}
 
     // Web Monitoring Code 
     private fun sendUrl(url: String) {
