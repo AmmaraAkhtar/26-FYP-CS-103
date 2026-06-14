@@ -596,15 +596,24 @@ def unlock_device(request):
 # api to send data to parent app 
 @api_view(['GET'])
 def get_child_usage(request, child_id):
-    # Last saved usage data return karo
-    usage = models.appUsage.objects.filter(child_id=child_id).last()
-    if usage:
-        return Response({
-            "usage_data": usage.usage_data,
-            "timestamp": usage.timestamp,
-            "total_screen_time": usage.total_screen_time
-        })
-    return Response({"error": "No data found"}, status=404)
+    try:
+        child = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    today = timezone.now().date()
+    usage_qs = models.appUsage.objects.filter(child=child, date=today)
+
+    usage_data = [{
+        "package_name": u.package_name,
+        "usage_time": u.usage_time,
+        "category": u.category,
+    } for u in usage_qs]
+
+    return Response({
+        "usage_data": usage_data,
+        "timestamp": timezone.now(),
+    }, status=200)
 
 # API to collect web usage data
 
