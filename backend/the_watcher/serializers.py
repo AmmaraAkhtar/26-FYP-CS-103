@@ -136,6 +136,7 @@ class AlertSerializer(serializers.Serializer):
     child_id = serializers.IntegerField()
     alert_type = serializers.CharField()
     message = serializers.CharField()
+    source = serializers.CharField(required=False, default="unknown")
 
     def create(self, validated_data):
 
@@ -144,6 +145,7 @@ class AlertSerializer(serializers.Serializer):
         return models.Alert.objects.create(
             child=child_obj,
             alert_type=validated_data['alert_type'],
-            message=validated_data['message']
+            message=validated_data['message'],
+            source=validated_data.get('source', 'unknown')
         )
 
