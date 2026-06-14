@@ -1422,3 +1422,50 @@ def fetchAlerts_api(request):
         },
         "alerts": data
     }, status=200)
+
+
+## Api alerts related to device status, jaise ki accessibility permission off hona, device admin disable hona, etc. Jab bhi child app detect kare ki koi important monitoring permission disable hui hai, toh wo is API ko call karega taki parent ko alert bheja ja sake ki device ki monitoring compromised ho sakti hai, aur wo apne child se keh sake ki wo us permission ko jaldi se re-enable kar de.
+@api_view(['POST'])
+def report_device_status(request):
+    """
+    Child app calls this when it detects:
+    - accessibility permission turned off
+    - device admin/monitoring disabled by user
+    """
+    child_id = request.data.get('child_id')
+    status_type = request.data.get('status_type')  # 'accessibility_off' / 'admin_disabled'
+
+    try:
+        child = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    # Duplicate check — same status alert in last 30 mins
+    recent = models.Alert.objects.filter(
+        child=child,
+        alert_type=status_type,
+        source="device",
+        created_at__gte=timezone.now() - timedelta(minutes=30)
+    ).exists()
+
+    if recent:
+        return Response({"status": "duplicate"}, status=200)
+
+    messages = {
+        "accessibility_off": "Accessibility permission has been turned off on your child's device. Monitoring features like app and web tracking may not work correctly. Please ask your child to re-enable it.",
+        "admin_disabled": "Device admin / monitoring has been disabled on your child's device. The app can no longer enforce locks or restrictions until it's re-enabled.",
+    }
+
+    message = messages.get(status_type, "A monitoring permission was disabled on your child's device.")
+
+    alert_obj = models.Alert.objects.create(
+        child=child,
+        alert_type=status_type,
+        source="device",
+        message=message,
+    )
+
+    # reuse send_alert from views.py
+    send_alert(alert_obj)
+
+    return Response({"status": "alert created"}, status=200)
