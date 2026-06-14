@@ -598,7 +598,11 @@ class _MonitoringState extends State<Monitoring> {
                   onTap: () {
                     Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => AlertMonitoringDashboard()));
+                        MaterialPageRoute(builder: (context) => AlertMonitoringDashboard(
+            childId: childId,
+            childName: widget.childData?['name'] ?? 'Unknown',
+            childAge: widget.childData?['age'] ?? 0,
+          ),));
                   },
                   child: Container(
                     padding:
