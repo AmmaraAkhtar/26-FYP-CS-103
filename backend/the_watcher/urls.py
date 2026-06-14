@@ -26,4 +26,5 @@ urlpatterns = [
     path('dashboard-summary/', views.dashboard_summary_api),
     path('browsing-monitoring/', views.browsing_monitoring_api),
     path('fetch-alerts/', views.fetchAlerts_api),
+    path('report-device-status/', views.report_device_status),
 ]

@@ -614,9 +614,9 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
 
   Future<void> _unlockDevice() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      //int? childId = prefs.getInt("child_id");
-      //if (childId == null) return;
+      // SharedPreferences prefs = await SharedPreferences.getInstance();
+      // int? childId = prefs.getInt("child_id");
+      // if (childId == null) return;
 
       final response = await http.post(
         Uri.parse("http://192.168.18.163:8000/unlock-device/"),
