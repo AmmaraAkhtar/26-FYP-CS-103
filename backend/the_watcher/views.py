@@ -1650,15 +1650,30 @@ def dashboard_summary_api(request):
             continue
         app_usage_time += usage
 
-    # YouTube
-    youtube_entries = {
-        pkg: usage for pkg, usage in merged.items()
-        if 'youtube' in pkg.lower()
-    }
-    youtube_count = len(youtube_entries)
-    last_youtube_pkg = models.appUsage.objects.filter(
-        child=child, package_name__icontains='youtube'
+    # # YouTube
+    # youtube_entries = {
+    #     pkg: usage for pkg, usage in merged.items()
+    #     if 'youtube' in pkg.lower()
+    # }
+    # youtube_count = len(youtube_entries)
+    # last_youtube_pkg = models.appUsage.objects.filter(
+    #     child=child, package_name__icontains='youtube'
+    # ).order_by('-created_at').first()
+
+        # Latest YouTube content (title)
+    latest_youtube_content = models.ChatMessage.objects.filter(
+        child=child,
+        app_name="YouTube",
+        sender="content"
     ).order_by('-created_at').first()
+
+    # Flagged YouTube content count (last 7 days)
+    flagged_youtube_count = models.ChatMessage.objects.filter(
+        child=child,
+        app_name="YouTube",
+        sender="content",
+        created_at__gte=timezone.now() - timedelta(days=7)
+    ).exclude(action__in=['Allow', 'allow']).count()
 
     # Blocked sites
     blocked_sites = models.webUsage.objects.filter(
@@ -1676,9 +1691,12 @@ def dashboard_summary_api(request):
         "screen_time_seconds": total_screen_time,   # ← sab apps ka total
         "screen_time_limit": child.screen_time_limit,
         "app_usage_seconds": app_usage_time,         # ← sirf user apps
-        "youtube_count": youtube_count,
-        "last_youtube": last_youtube_pkg.package_name if last_youtube_pkg else None,
-        "blocked_sites_count": blocked_count,
+        # "youtube_count": youtube_count,
+        # "last_youtube": last_youtube_pkg.package_name if last_youtube_pkg else None,
+        "last_youtube_content": latest_youtube_content.message if latest_youtube_content else None,  
+        "youtube_content_category": latest_youtube_content.category if latest_youtube_content else None,  
+        "flagged_youtube_count": flagged_youtube_count, 
+            "blocked_sites_count": blocked_count,
         "last_blocked_url": last_blocked.url if last_blocked else None,
         "latest_chat_alert": {
             "title": "Suspicious Chat Detected",
