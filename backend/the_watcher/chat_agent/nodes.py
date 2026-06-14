@@ -394,11 +394,12 @@ def chat_action_executor_node(state: ChatState) -> ChatState:
 
     # Alert bhejo
     if state.get("should_send_alert") and state.get("alert_message"):
+        is_content = state.get("content_type") == "content"
         alert_obj = models.Alert.objects.create(
             child      = child,
             alert_type = state["final_category"],
             message    = state["alert_message"],
-            source     = "chat",
+            source     = "content" if is_content else "chat",
         )
         send_alert(alert_obj)
         print(f"ALERT SENT: {state['alert_message']}")
