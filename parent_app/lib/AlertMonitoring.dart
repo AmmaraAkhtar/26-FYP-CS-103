@@ -211,16 +211,16 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
     });
 
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int? childId = prefs.getInt("child_id");
+      // SharedPreferences prefs = await SharedPreferences.getInstance();
+      // int? childId = prefs.getInt("child_id");
 
-      if (childId == null) {
-        setState(() {
-          isLoading = false;
-          errorMessage = "Child not paired yet";
-        });
-        return;
-      }
+      // if (childId == null) {
+      //   setState(() {
+      //     isLoading = false;
+      //     errorMessage = "Child not paired yet";
+      //   });
+      //   return;
+      // }
 
       final response = await http.get(
         Uri.parse('http://192.168.18.163:8000/fetch-alerts/?child_id=${widget.childId}'),
@@ -588,14 +588,14 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
 
   Future<void> _lockDevice() async {
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int? childId = prefs.getInt("child_id");
-      if (childId == null) return;
+      // SharedPreferences prefs = await SharedPreferences.getInstance();
+      // int? childId = prefs.getInt("child_id");
+      // if (childId == null) return;
 
       final response = await http.post(
         Uri.parse("http://192.168.18.163:8000/lock-device/"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"child_id": childId}),
+        body: jsonEncode({"child_id": widget.childId}),
       );
 
       if (response.statusCode == 200) {
@@ -615,13 +615,13 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
   Future<void> _unlockDevice() async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      int? childId = prefs.getInt("child_id");
-      if (childId == null) return;
+      //int? childId = prefs.getInt("child_id");
+      //if (childId == null) return;
 
       final response = await http.post(
         Uri.parse("http://192.168.18.163:8000/unlock-device/"),
         headers: {"Content-Type": "application/json"},
-        body: jsonEncode({"child_id": childId}),
+        body: jsonEncode({"child_id": widget.childId}),
       );
 
       if (response.statusCode == 200) {
