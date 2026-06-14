@@ -412,7 +412,9 @@ class _MonitoringState extends State<Monitoring> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => ScreenTimeLimitScreen()),
+                            MaterialPageRoute(builder: (context) => ScreenTimeLimitScreen(childId: childId,
+            childName: widget.childData?['name'] ?? 'Unknown',
+            childAge: widget.childData?['age'] ?? 0)),
                           );
                         },
                       ),
