@@ -3,6 +3,9 @@ class DashboardSummary {
   final int screenTimeLimit;
   final int appUsageSeconds;
   final int youtubeCount;
+  final String? lastYoutubeContent;        
+  final String? youtubeContentCategory;     
+  final int flaggedYoutubeCount;
   final String? lastYoutube;
   final int blockedSitesCount;
   final String? lastBlockedUrl;
@@ -14,6 +17,9 @@ class DashboardSummary {
     required this.appUsageSeconds,
     required this.youtubeCount,
     this.lastYoutube,
+    this.lastYoutubeContent,
+    this.youtubeContentCategory,
+    this.flaggedYoutubeCount = 0,
     required this.blockedSitesCount,
     this.lastBlockedUrl,
     this.latestChatAlert,
@@ -26,6 +32,9 @@ class DashboardSummary {
       appUsageSeconds: json['app_usage_seconds'] ?? 0,
       youtubeCount: json['youtube_count'] ?? 0,
       lastYoutube: json['last_youtube'],
+      lastYoutubeContent: json['last_youtube_content'],
+      youtubeContentCategory: json['youtube_content_category'],
+      flaggedYoutubeCount: json['flagged_youtube_count'] ?? 0,
       blockedSitesCount: json['blocked_sites_count'] ?? 0,
       lastBlockedUrl: json['last_blocked_url'],
       latestChatAlert: json['latest_chat_alert'] != null

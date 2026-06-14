@@ -355,6 +355,8 @@ class _ChatMonitoringDashboardState extends State<ChatMonitoringDashboard> {
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        debugPrint("STATUS: ${response.statusCode}");
+        debugPrint("BODY: ${response.body}");
         setState(() {
           _totalToday = data['stats']['total_today'] ?? 0;
           _totalAll = data['stats']['total_all'] ?? 0;

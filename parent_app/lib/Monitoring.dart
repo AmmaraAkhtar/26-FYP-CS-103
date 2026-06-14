@@ -530,7 +530,9 @@ class _MonitoringState extends State<Monitoring> {
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => ChatMonitoringDashboard()),
+                                  MaterialPageRoute(builder: (context) => ChatMonitoringDashboard(childId: childId,
+          childName: widget.childData?['name'] ?? 'Unknown',
+          childAge: widget.childData?['age'] ?? 0,)),
                                 );
                               },
                               child: const Text(
