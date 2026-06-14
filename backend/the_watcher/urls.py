@@ -30,5 +30,6 @@ urlpatterns = [
     path('get-child-usage/<int:child_id>/', views.get_child_usage),
     path('get-screen-limits/', views.get_screen_limits),
     path('update-screen-limits/', views.update_screen_limits),
+    path('fetch-chat-messages/', views.fetch_chat_messages),
 
 ]
