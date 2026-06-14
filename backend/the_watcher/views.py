@@ -1999,3 +1999,133 @@ def fetch_chat_messages(request):
         "flagged_chats": flagged_data,
         "safety_alerts": alert_data,
     }, status=200)
+
+## Youtube Api
+@api_view(['GET'])
+def youtube_activity_api(request):
+    child_id = request.query_params.get('child_id')
+    filter_type = request.query_params.get('filter', 'today')  # today / week / month
+
+    try:
+        child = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    today = timezone.now().date()
+    if filter_type == 'week':
+        start_date = today - timedelta(days=7)
+    elif filter_type == 'month':
+        start_date = today - timedelta(days=30)
+    else:
+        start_date = today
+
+    # History: YouTube content messages 
+    history_qs = models.ChatMessage.objects.filter(
+        child=child,
+        app_name="YouTube",
+        sender="content",
+        timestamp__date__gte=start_date,
+    ).order_by('-created_at')[:30]
+
+    history_data = []
+    for m in history_qs:
+        time_diff = timezone.now() - m.created_at
+        mins = int(time_diff.total_seconds() // 60)
+        if mins < 60:
+            time_ago = f"{mins} min ago"
+        elif mins < 1440:
+            time_ago = f"{mins // 60}h ago"
+        else:
+            time_ago = f"{mins // 1440}d ago"
+
+        history_data.append({
+            "id": m.id,
+            "title": m.message,
+            "category": m.category or "Unknown",
+            "is_flagged": m.action not in ['Allow', 'allow'],
+            "risk": m.risk or "Low",
+            "time_ago": time_ago,
+            "timestamp": m.created_at,
+        })
+
+    #  Stats 
+    total_videos = models.ChatMessage.objects.filter(
+        child=child, app_name="YouTube", sender="content",
+        timestamp__date__gte=start_date,
+    ).count()
+
+    flagged_count = models.ChatMessage.objects.filter(
+        child=child, app_name="YouTube", sender="content",
+        timestamp__date__gte=start_date,
+    ).exclude(action__in=['Allow', 'allow']).count()
+
+    # Category Breakdown 
+    all_content = models.ChatMessage.objects.filter(
+        child=child, app_name="YouTube", sender="content",
+        timestamp__date__gte=start_date,
+    )
+    category_map = {}
+    for m in all_content:
+        cat = m.category or "Unknown"
+        category_map[cat] = category_map.get(cat, 0) + 1
+
+    total_cat = sum(category_map.values()) or 1
+    categories = [
+        {"name": k, "count": v, "percent": round((v / total_cat) * 100)}
+        for k, v in category_map.items()
+    ]
+
+    # Watch time (YouTube app usage) - last 2 days, max per day
+    youtube_usage = models.appUsage.objects.filter(
+        child=child,
+        package_name__icontains='youtube',
+        date__gte=start_date,
+    ).order_by('date')
+
+    watch_time_by_day = {}
+    for u in youtube_usage:
+        d = str(u.date)
+        if d not in watch_time_by_day or u.usage_time > watch_time_by_day[d]:
+            watch_time_by_day[d] = u.usage_time
+
+    total_watch_seconds = sum(watch_time_by_day.values())
+
+    #  Last watched 
+    last = models.ChatMessage.objects.filter(
+        child=child, app_name="YouTube", sender="content"
+    ).order_by('-created_at').first()
+
+    # Safety Alerts
+    alerts = models.Alert.objects.filter(
+        child=child,
+    ).filter(
+        models.Q(source='youtube') | models.Q(message__icontains='youtube')
+    ).order_by('-created_at')[:10]
+
+    alert_data = [{
+        "id": a.id,
+        "alert_type": a.alert_type,
+        "message": a.message,
+        "created_at": a.created_at,
+    } for a in alerts]
+
+    return Response({
+        "child": {
+            "name": f"{child.firstname} {child.lastname}",
+            "age": child.age,
+        },
+        "stats": {
+            "total_videos": total_videos,
+            "flagged_count": flagged_count,
+            "total_watch_seconds": total_watch_seconds,
+            "watch_time_by_day": watch_time_by_day,
+        },
+        "last_watched": {
+            "title": last.message if last else None,
+            "category": last.category if last else None,
+            "is_flagged": last.action not in ['Allow', 'allow'] if last else False,
+        } if last else None,
+        "history": history_data,
+        "categories": categories,
+        "alerts": alert_data,
+    }, status=200)
