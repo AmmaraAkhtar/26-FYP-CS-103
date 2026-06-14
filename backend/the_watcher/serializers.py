@@ -60,6 +60,9 @@ class ChildSerializer(serializers.Serializer):
     lastname = serializers.CharField(max_length=100)
     age = serializers.IntegerField()
     screen_time_limit = serializers.IntegerField(default=60)  # in minutes
+    bedtime_start = serializers.TimeField(required=False, default='21:00')  # ADD
+    bedtime_end = serializers.TimeField(required=False, default='07:00')    # ADD
+    bedtime_enabled = serializers.BooleanField(required=False, default=True) # ADD
 
     def validate_age(self, data):
         if data < 0 or data > 18:
@@ -136,6 +139,7 @@ class AlertSerializer(serializers.Serializer):
     child_id = serializers.IntegerField()
     alert_type = serializers.CharField()
     message = serializers.CharField()
+    source = serializers.CharField(required=False, default="unknown")
 
     def create(self, validated_data):
 
@@ -144,6 +148,23 @@ class AlertSerializer(serializers.Serializer):
         return models.Alert.objects.create(
             child=child_obj,
             alert_type=validated_data['alert_type'],
-            message=validated_data['message']
+            message=validated_data['message'],
+            source=validated_data.get('source', 'unknown')
         )
 
+
+## to update profile
+class UpdateProfileSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, required=False)
+    phone    = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    password = serializers.CharField(max_length=250, required=False, allow_blank=True)
+
+    def validate_username(self, value):
+        if ' ' in value:
+            raise serializers.ValidationError("Username cannot contain spaces.")
+        return value
+
+    def validate_password(self, value):
+        if value and len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters.")
+        return value

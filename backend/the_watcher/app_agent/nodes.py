@@ -48,7 +48,7 @@ llm = get_llm()
 
 def context_fetcher_node(state: AppState) -> AppState:
     print("STATE RECEIVED:", state)   # ← yeh lagao
-    //print("URL IN STATE:", state.get("url"))
+    #print("URL IN STATE:", state.get("url"))
     child_id = state["child_id"]
     child = models.child.objects.select_related("parent").get(id=child_id)
 
@@ -230,15 +230,17 @@ Write ONLY the message, nothing else."""
 def action_executor_node(state: AppState) -> AppState:
     child = models.child.objects.get(id=state["child_id"])
 
-    if state["action"] == "block":
+    if state["action"] in ["block", "escalate"]:
         child.is_locked = True
         child.save()
+        
 
     if state.get("should_send_alert") and state.get("alert_message"):
         alert_obj = models.Alert.objects.create(
             child=child,
             alert_type=state["action"].capitalize(),
-            message=state["alert_message"]
+            message=state["alert_message"],
+            source     = "app",
         )
         
         send_alert(alert_obj)

@@ -29,6 +29,10 @@ class child(models.Model):
     deactivate_command = models.BooleanField(default=False)
     last_seen = models.DateTimeField(null=True, blank=True)
     admin_disabled = models.BooleanField(default=False)
+    bedtime_start = models.TimeField(null=True, blank=True, default='21:00')
+    bedtime_end = models.TimeField(null=True, blank=True, default='07:00')
+    bedtime_enabled = models.BooleanField(default=True)
+    parent_unlocked = models.BooleanField(default=False)
 
 
 # Pairing Code Model
@@ -61,6 +65,7 @@ class Alert(models.Model):
     alert_type = models.CharField(max_length=100)
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=20, default="unknown")  # "chat" / "app" / "web"
 
 # Web Usage Model
 class webUsage(models.Model):
@@ -86,3 +91,8 @@ class ChatMessage(models.Model):
     action = models.CharField(max_length=20, null=True, blank=True)
     reasoning = models.TextField(null=True, blank=True)
     created_at  = models.DateTimeField(auto_now_add=True)
+
+# default model ko extend garera parent profile banaye 
+class ParentProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    phone = models.CharField(max_length=20, blank=True, null=True)

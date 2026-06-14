@@ -23,4 +23,16 @@ urlpatterns = [
     path('check-lock-status/', views.check_lock_status),
     path('unlock-device/', views.unlock_device),
     path('lock-device/', views.lock_device),
+    path('dashboard-summary/', views.dashboard_summary_api),
+    path('browsing-monitoring/', views.browsing_monitoring_api),
+    path('fetch-alerts/', views.fetchAlerts_api),
+    path('report-device-status/', views.report_device_status),
+    path('get-child-usage/<int:child_id>/', views.get_child_usage),
+    path('get-screen-limits/', views.get_screen_limits),
+    path('update-screen-limits/', views.update_screen_limits),
+    path('fetch-chat-messages/', views.fetch_chat_messages),
+    path('youtube-activity/', views.youtube_activity_api),
+    path('getProfile/', views.get_profile_api),
+    path('updateProfile/', views.update_profile_api),
+
 ]

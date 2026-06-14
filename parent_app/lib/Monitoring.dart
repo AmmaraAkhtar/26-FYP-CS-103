@@ -9,11 +9,13 @@ import 'browsering1.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'dashboard_service.dart';
+import 'dashborad_model.dart';
 
 class Monitoring extends StatefulWidget {
   final Map<String, dynamic>? childData;
-  final String token ;
-  const Monitoring({super.key, this.childData,  required this.token});
+  final String token;
+  const Monitoring({super.key, this.childData, required this.token});
 
   @override
   State<Monitoring> createState() => _MonitoringState();
@@ -26,7 +28,10 @@ class _MonitoringState extends State<Monitoring> {
 
   late int childId;
 
-// To unlock the child device remotely
+  DashboardSummary? dashboardData;
+  bool isDashboardLoading = true;
+
+  // To unlock the child device remotely
   Future<void> unlockChildDevice(int childId) async {
     try {
       final response = await http.post(
@@ -50,11 +55,12 @@ class _MonitoringState extends State<Monitoring> {
     }
   }
 
-// Function to fetch the lock satus of the child device
-Future<void> _fetchLockStatus() async {
+  // Function to fetch the lock status of the child device
+  Future<void> _fetchLockStatus() async {
     try {
       final response = await http.get(
-        Uri.parse("http://192.168.18.163:8000/check-lock-status/?child_id=$childId"),
+        Uri.parse(
+            "http://192.168.18.163:8000/check-lock-status/?child_id=$childId"),
       );
 
       if (response.statusCode == 200) {
@@ -74,8 +80,31 @@ Future<void> _fetchLockStatus() async {
     }
   }
 
-// Function to shoew confirmation dialog before deactivating the child admin
-void _showDeactivateConfirmation(int childId) {
+  // Function to fetch dashboard summary data
+  Future<void> _fetchDashboardData() async {
+    final data = await DashboardService.getSummary(childId);
+    if (mounted && data != null) {
+      setState(() {
+        dashboardData = data;
+        isDashboardLoading = false;
+      });
+    } else if (mounted) {
+      setState(() {
+        isDashboardLoading = false;
+      });
+    }
+  }
+
+  // Helper to format seconds into "Xh Ym"
+  String formatDuration(int seconds) {
+    final hours = seconds ~/ 3600;
+    final minutes = (seconds % 3600) ~/ 60;
+    if (hours > 0) return "${hours}h ${minutes}m";
+    return "${minutes}m";
+  }
+
+  // Function to show confirmation dialog before deactivating the child admin
+  void _showDeactivateConfirmation(int childId) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -109,18 +138,24 @@ void _showDeactivateConfirmation(int childId) {
       ),
     );
   }
+ // Helper function for youtube activity
+  String _buildYoutubeSubValue() {
+  if (dashboardData?.lastYoutubeContent != null) {
+    final title = dashboardData!.lastYoutubeContent!;
+    final shortened = title.length > 35 ? "${title.substring(0, 35)}..." : title;
+    return "Last watched:\n$shortened";
+  }
+  return "No data yet";
+}
 
-// to deactivate the child admin remotely
-Future<void> _deactivateChildAdmin(int childId) async {
+  // to deactivate the child admin remotely
+  Future<void> _deactivateChildAdmin(int childId) async {
     try {
       final response = await http.post(
         Uri.parse('http://192.168.18.163:8000/deactivate-admin/'),
         headers: {
-            
-  'Authorization': 'Bearer ${widget.token}',
-  'Content-Type': 'application/json',
-
-          
+          'Authorization': 'Bearer ${widget.token}',
+          'Content-Type': 'application/json',
         },
         body: jsonEncode({'child_id': childId}),
       );
@@ -140,15 +175,17 @@ Future<void> _deactivateChildAdmin(int childId) async {
   }
 
   @override
- 
   void initState() {
     super.initState();
     childId = widget.childData?['id'] ?? 0;
+    print("CHILD DATA: ${widget.childData}");
     _fetchLockStatus();
+    _fetchDashboardData();
 
     // Har 15 sec status refresh karo
     _statusTimer = Timer.periodic(Duration(seconds: 15), (_) {
       _fetchLockStatus();
+      _fetchDashboardData();
     });
   }
 
@@ -157,10 +194,12 @@ Future<void> _deactivateChildAdmin(int childId) async {
     _statusTimer?.cancel();
     super.dispose();
   }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFBFBFC),
- appBar: AppBar(
+      appBar: AppBar(
         backgroundColor: const Color(0xFFFBFBFC),
         title: Text(
           "Browsing Monitoring",
@@ -203,29 +242,33 @@ Future<void> _deactivateChildAdmin(int childId) async {
             child: Column(
               children: [
                 // Profile Section
-                   Row(
-                children: [
-                  CircleAvatar(
-                    radius: 45.r,
-                    backgroundColor: Colors.green,
-                    child: CircleAvatar(
-                      radius: 42.r,
-                      backgroundImage: const NetworkImage(
-                          'https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png'),
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 45.r,
+                      backgroundColor: Colors.green,
+                      child: CircleAvatar(
+                        radius: 42.r,
+                        backgroundImage: const NetworkImage(
+                            'https://static.vecteezy.com/system/resources/thumbnails/053/537/859/small/cartoon-boy-with-green-shirt-on-transparent-background-free-png.png'),
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 20.w),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Hamza Ali",
-                          style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold)),
-                      Text("11 Years Old",
-                          style: TextStyle(color: Colors.grey, fontSize: 14.sp)),
-                    ],
-                  )
-                ],
-              ),
+                    SizedBox(width: 20.w),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.childData?['name'] ?? 'Unknown',
+                          style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          "${widget.childData?['age'] ?? '-'} Years Old",
+                          style: TextStyle(color: Colors.grey, fontSize: 14.sp),
+                        ),
+                      ],
+                    )
+                  ],
+                ),
                 SizedBox(height: 25.h),
 
                 SizedBox(height: 25.h),
@@ -367,14 +410,20 @@ Future<void> _deactivateChildAdmin(int childId) async {
                         headerColor: const Color(0xFFE8FADC),
                         iconPath: "assets/watch.png",
                         iconColor: Colors.green,
-                        mainValue: "2h 30m",
-                        subValue: "+1h 30m used",
+                        mainValue: isDashboardLoading
+                            ? "Loading..."
+                            : formatDuration(dashboardData?.screenTimeSeconds ?? 0),
+                        subValue: isDashboardLoading
+                            ? ""
+                            : "Limit: ${dashboardData?.screenTimeLimit ?? 0}m",
                         buttonText: "Set Limit",
                         buttonColor: const Color(0xFF8BC34A),
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => ScreenTimeLimitScreen()),
+                            MaterialPageRoute(builder: (context) => ScreenTimeLimitScreen(childId: childId,
+            childName: widget.childData?['name'] ?? 'Unknown',
+            childAge: widget.childData?['age'] ?? 0)),
                           );
                         },
                       ),
@@ -386,14 +435,16 @@ Future<void> _deactivateChildAdmin(int childId) async {
                         headerColor: const Color(0xFFFFD1A4),
                         iconPath: "assets/app.png",
                         iconColor: Colors.orange,
-                        mainValue: "2h 30m",
-                        subValue: "+1h 30m used",
+                        mainValue: isDashboardLoading
+                            ? "Loading..."
+                            : formatDuration(dashboardData?.appUsageSeconds ?? 0),
+                        subValue: "Today",
                         buttonText: "View All »",
                         buttonColor: const Color(0xFFFB8C00),
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => AppUsageMonitoringScreen()),
+                            MaterialPageRoute(builder: (context) => AppUsageMonitoringScreen(childId: childId, childName: widget.childData?['name'] ?? 'Unknown', childAge: widget.childData?['age'] ?? 0)),
                           );
                         },
                       ),
@@ -406,23 +457,35 @@ Future<void> _deactivateChildAdmin(int childId) async {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildActivityCard(
-                        title: "YouTube Activities",
-                        headerColor: const Color(0xFFFFEBEE),
-                        iconPath: "assets/youtube1.png",
-                        iconColor: Colors.red,
-                        mainValue: "2 videos watch",
-                        subValue: "Last watched:\nCompusx ML",
-                        buttonText: "View All »",
-                        buttonColor: const Color(0xFFF44336),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (context) =>YoutubeActivityScreen()),
-                          );
-                        },
+                        child: _buildActivityCard(
+                          title: "YouTube Activities",
+                          headerColor: const Color(0xFFFFEBEE),
+                          iconPath: "assets/youtube1.png",
+                          iconColor: Colors.red,
+                          mainValue: isDashboardLoading
+                              ? "Loading..."
+                              : "${dashboardData?.youtubeCount ?? 0} videos watched",
+                          subValue: isDashboardLoading
+                              ? ""
+                              : _buildYoutubeSubValue(),
+                          buttonText: (dashboardData?.flaggedYoutubeCount ?? 0) > 0
+                              ? "${dashboardData!.flaggedYoutubeCount} Flagged »"
+                              : "View All »",
+                          buttonColor: (dashboardData?.flaggedYoutubeCount ?? 0) > 0
+                              ? Colors.orange.shade700
+                              : const Color(0xFFF44336),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => YoutubeActivityScreen(
+                                  childId: childId, childName: widget.childData?['name'] ?? 'Unknown', childAge: widget.childData?['age'] ?? 0
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
-                    ),
                     SizedBox(width: 16.w),
                     Expanded(
                       child: _buildActivityCard(
@@ -430,14 +493,23 @@ Future<void> _deactivateChildAdmin(int childId) async {
                         headerColor: const Color(0xFFE3F2FD),
                         iconPath: "assets/web.png",
                         iconColor: Colors.blue,
-                        mainValue: "6 blocked sites",
-                        subValue: "Most Recent:\nfreev.com",
+                        mainValue: isDashboardLoading
+                            ? "Loading..."
+                            : "${dashboardData?.blockedSitesCount ?? 0} blocked sites",
+                        subValue: (dashboardData?.lastBlockedUrl != null)
+                            ? "Most Recent:\n${dashboardData!.lastBlockedUrl}"
+                            : "No data yet",
                         buttonText: "View All »",
                         buttonColor: const Color(0xFF03A9F4),
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const BrowsingMonitoringScreen()),
+                            MaterialPageRoute(
+                              builder: (context) => BrowsingMonitoringScreen(
+                                childId: childId,
+                                childData: widget.childData,
+                              ),
+                            ),
                           );
                         },
                       ),
@@ -475,7 +547,9 @@ Future<void> _deactivateChildAdmin(int childId) async {
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => ChatMonitoringDashboard()),
+                                  MaterialPageRoute(builder: (context) => ChatMonitoringDashboard(childId: childId,
+          childName: widget.childData?['name'] ?? 'Unknown',
+          childAge: widget.childData?['age'] ?? 0,)),
                                 );
                               },
                               child: const Text(
@@ -487,45 +561,51 @@ Future<void> _deactivateChildAdmin(int childId) async {
                         ),
                         Divider(thickness: 1.h),
                         SizedBox(height: 10.h),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(Icons.warning_rounded,
-                                color: Colors.orange, size: 30.r),
-                            SizedBox(width: 15.w),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        "Suspicious Chat Detected",
-                                        style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14.sp),
-                                      ),
-                                      Text(
-                                        "Today At 5:30pm",
-                                        style: TextStyle(
-                                            color: Colors.grey[600],
-                                            fontSize: 10.sp),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: 5.h),
-                                  Text(
-                                    "There's potentially inappropriate language in the chat with Abdullah",
-                                    style: TextStyle(
-                                        color: Colors.black87, fontSize: 14.sp),
-                                  ),
-                                ],
+                        if (isDashboardLoading)
+                          Text("Loading...", style: TextStyle(color: Colors.grey, fontSize: 13.sp))
+                        else if (dashboardData?.latestChatAlert != null)
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.warning_rounded,
+                                  color: Colors.orange, size: 30.r),
+                              SizedBox(width: 15.w),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          dashboardData!.latestChatAlert!.title,
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14.sp),
+                                        ),
+                                        Text(
+                                          dashboardData!.latestChatAlert!.time,
+                                          style: TextStyle(
+                                              color: Colors.grey[600],
+                                              fontSize: 10.sp),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 5.h),
+                                    Text(
+                                      "There's potentially inappropriate language in the chat with ${dashboardData!.latestChatAlert!.sender}",
+                                      style: TextStyle(
+                                          color: Colors.black87, fontSize: 14.sp),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          )
+                        else
+                          Text("No recent chat alerts",
+                              style: TextStyle(color: Colors.grey, fontSize: 13.sp)),
                         SizedBox(height: 10.h),
                         Divider(thickness: 2.h, color: Colors.grey),
                       ],
@@ -539,7 +619,11 @@ Future<void> _deactivateChildAdmin(int childId) async {
                   onTap: () {
                     Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => AlertMonitoringDashboard()));
+                        MaterialPageRoute(builder: (context) => AlertMonitoringDashboard(
+            childId: childId,
+            childName: widget.childData?['name'] ?? 'Unknown',
+            childAge: widget.childData?['age'] ?? 0,
+          ),));
                   },
                   child: Container(
                     padding:

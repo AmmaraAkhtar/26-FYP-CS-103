@@ -58,7 +58,7 @@ def get_llm():
 
 # Pydantic MOdel for Structured output from LLM
 class AgentDecision(BaseModel):
-    final_category: Literal["normal", "bullying", "hate", "suicide"] = Field(
+    final_category: Literal["normal", "bullying", "hate", "suicide","violence", "sexual", "drugs_self_harm", "age_inappropriate", "safe"] = Field(
         description="Actual category after full context analysis"
     )
     risk_level: Literal["low", "medium", "high"] = Field(
@@ -97,16 +97,30 @@ def chat_context_fetcher_node(state: ChatState) -> ChatState:
     )
     for a in recent_alerts:
         a["created_at"] = str(a["created_at"])
+    
+    is_content = state.get("content_type") == "content"
 
-    # Same app ki last 10 messages history
+    history_qs = models.ChatMessage.objects.filter(child=child, app_name=state["app_name"])
+    if is_content:
+        history_qs = history_qs.filter(sender="content")
+    else:
+        history_qs = history_qs.exclude(sender="content")
+
     chat_history = list(
-        models.ChatMessage.objects
-        .filter(child=child, app_name=state["app_name"])
-        .order_by("-timestamp")
-        .values("message", "category", "risk", "timestamp")[:10]
+        history_qs.order_by("-timestamp").values("message", "category", "risk", "timestamp")[:10]
     )
     for c in chat_history:
         c["timestamp"] = str(c["timestamp"])
+
+    # Same app ki last 10 messages history
+    # chat_history = list(
+    #     models.ChatMessage.objects
+    #     .filter(child=child, app_name=state["app_name"])
+    #     .order_by("-timestamp")
+    #     .values("message", "category", "risk", "timestamp")[:10]
+    # )
+    # for c in chat_history:
+    #     c["timestamp"] = str(c["timestamp"])
 
     # Aaj kitne messages aaye
     total_chats_today = models.ChatMessage.objects.filter(
@@ -126,7 +140,7 @@ def chat_context_fetcher_node(state: ChatState) -> ChatState:
 # Node1--------> LLM Reasoning Node
 
 def chat_reasoning_node(state: ChatState) -> ChatState:
-
+    
     # Chat history text
     if state.get("chat_history"):
         history_text = "\n".join([
@@ -149,72 +163,138 @@ def chat_reasoning_node(state: ChatState) -> ChatState:
         ])
     else:
         alerts_text = "  No recent alerts sent to parent."
+    
+    is_content = state.get("content_type") == "content"
+    # history_qs = models.ChatMessage.objects.filter(child=child, app_name=state["app_name"])
+    # if is_content:
+    #         history_qs = history_qs.filter(sender="content")
+    # else:
+    #         history_qs = history_qs.exclude(sender="content")
 
-    prompt = f"""You are an intelligent child safety agent. Your job is to assess 
-the risk of a chat message and decide what action to take.
-Reason carefully using ALL context — do NOT follow fixed rules.
+    # chat_history = list(
+    #         history_qs.order_by("-timestamp").values("message", "category", "risk", "timestamp")[:10]
+    #     )
+
+    if is_content:
+        prompt = f"""You are an intelligent child safety agent. Your job is to assess 
+whether content (video/post title or description) being viewed by a child 
+is age-appropriate, and decide what action to take.
 
 ━━━ CHILD PROFILE ━━━
 Age: {state['child_age']} years old
 App: {state['app_name']}
 
-Total messages today: {state['total_chats_today']}
-
-━━━ CURRENT MESSAGE ━━━
+━━━ CONTENT BEING VIEWED ━━━
 "{state['message']}"
 
-
-
-━━━ RECENT CHAT HISTORY (same app) ━━━
-Total flagged messages before: {flagged_count}
-Detail:
+━━━ RECENT VIEWING HISTORY (same app) ━━━
 {history_text}
 
 ━━━ RECENT ALERTS SENT TO PARENT (last 24h) ━━━
 {alerts_text}
 
 ━━━ YOUR TASK ━━━
-Step 1 — Classify message:
-  - "normal"   → casual conversation, school talk, family, fun
-  - "bullying" → threats, insults, harassment, peer pressure
-  - "hate"     → hate speech, discrimination, offensive language
-  - "suicide"  → self-harm mentions, suicidal thoughts, hopelessness
+Step 1 — Classify content:
+  - "safe"               → age-appropriate, educational, normal entertainment
+  - "violence"           → fight content, gore, weapons, violent challenges
+  - "sexual"             → sexual/suggestive content, nudity references
+  - "drugs_self_harm"    → drug use, self-harm promotion, dangerous challenges
+  - "age_inappropriate"  → mature themes not suitable for this child's age (horror, extreme language, adult humor)
+  - "normal"             → everything else safe/neutral
 
-Step 2 — Assess Risk:
-  Decide risk_level as "low", "medium", or "high" based on:
-  - Child's age (younger = stricter)
-  - ML initial signal (starting point only)
-  - Flagged messages before (pattern = more serious)
-  - Context of message (Roman Urdu / mixed language)
+Step 2 — Assess Risk (low/medium/high):
+  - Child's age — younger child = stricter judgement
+  - Repeated exposure pattern from history
+  - Severity of the content theme
 
 Step 3 — Decide Action:
-  - "allow" → Safe, just log
-  - "warn"  → Notify parent but allow
-  - "block" → Block app immediately + alert parent
+  - "allow"    → Safe content, just log
+  - "warn"     → Notify parent but allow viewing
+  - "block"    → Block the app immediately + alert parent
+  - "escalate" → Severe risk (self-harm/drugs promotion), immediate parent alert + lock
 
 Step 4 — Consider:
+  - Is this a one-off or a repeated pattern (binge of similar content)?
   - Would another alert cause alert fatigue?
-  - Is child's age making this more serious?
-  - First time vs repeated pattern?
-  - Roman Urdu context — "mar dunga" in anger vs real threat?
-  - Properly analyze mixed language — "hate" words in slang vs actual hate speech?
+  - Title/description may be in Roman Urdu or mixed language — interpret accordingly.
 
-Step 5 — Alert Message:
-  If action is warn/block/escalate, write alert_message for parent:
+Step 5 — Alert Message (if warn/block/escalate):
   - 3 sentences max
-  - Sentence 1: what was detected (category + app name)
-  - Sentence 2: why concerning based on THIS child's pattern
+  - Sentence 1: what content was detected (category + app name)
+  - Sentence 2: why concerning for THIS child given age/pattern
   - Sentence 3: one clear action parent can take right now
-  - Calm tone, simple English, no jargon
+  - Calm tone, simple English
   If action is allow, set alert_message to null.
 
-NOTE: ML only sees the text surface. It does NOT know child's age, 
-history, or patterns. Your job is to use ALL context above to make 
-a smarter decision.
-A "hate" flagged message might be normal slang for a 17-year-old.
-A "normal" message after 5 bullying messages is more concerning.
-
 Reason step by step before giving your final answer."""
+
+    else:
+
+        prompt = f"""You are an intelligent child safety agent. Your job is to assess 
+    the risk of a chat message and decide what action to take.
+    Reason carefully using ALL context — do NOT follow fixed rules.
+
+    ━━━ CHILD PROFILE ━━━
+    Age: {state['child_age']} years old
+    App: {state['app_name']}
+
+    Total messages today: {state['total_chats_today']}
+
+    ━━━ CURRENT MESSAGE ━━━
+    "{state['message']}"
+
+
+
+    ━━━ RECENT CHAT HISTORY (same app) ━━━
+    Total flagged messages before: {flagged_count}
+    Detail:
+    {history_text}
+
+    ━━━ RECENT ALERTS SENT TO PARENT (last 24h) ━━━
+    {alerts_text}
+
+    ━━━ YOUR TASK ━━━
+    Step 1 — Classify message:
+    - "normal"   → casual conversation, school talk, family, fun
+    - "bullying" → threats, insults, harassment, peer pressure
+    - "hate"     → hate speech, discrimination, offensive language
+    - "suicide"  → self-harm mentions, suicidal thoughts, hopelessness
+
+    Step 2 — Assess Risk:
+    Decide risk_level as "low", "medium", or "high" based on:
+    - Child's age (younger = stricter)
+    - ML initial signal (starting point only)
+    - Flagged messages before (pattern = more serious)
+    - Context of message (Roman Urdu / mixed language)
+
+    Step 3 — Decide Action:
+    - "allow" → Safe, just log
+    - "warn"  → Notify parent but allow
+    - "block" → Block app immediately + alert parent
+
+    Step 4 — Consider:
+    - Would another alert cause alert fatigue?
+    - Is child's age making this more serious?
+    - First time vs repeated pattern?
+    - Roman Urdu context — "mar dunga" in anger vs real threat?
+    - Properly analyze mixed language — "hate" words in slang vs actual hate speech?
+
+    Step 5 — Alert Message:
+    If action is warn/block/escalate, write alert_message for parent:
+    - 3 sentences max
+    - Sentence 1: what was detected (category + app name)
+    - Sentence 2: why concerning based on THIS child's pattern
+    - Sentence 3: one clear action parent can take right now
+    - Calm tone, simple English, no jargon
+    If action is allow, set alert_message to null.
+
+    NOTE: ML only sees the text surface. It does NOT know child's age, 
+    history, or patterns. Your job is to use ALL context above to make 
+    a smarter decision.
+    A "hate" flagged message might be normal slang for a 17-year-old.
+    A "normal" message after 5 bullying messages is more concerning.
+
+    Reason step by step before giving your final answer."""
 
     try:
         llm = get_llm()
@@ -314,10 +394,12 @@ def chat_action_executor_node(state: ChatState) -> ChatState:
 
     # Alert bhejo
     if state.get("should_send_alert") and state.get("alert_message"):
+        is_content = state.get("content_type") == "content"
         alert_obj = models.Alert.objects.create(
             child      = child,
             alert_type = state["final_category"],
             message    = state["alert_message"],
+            source     = "content" if is_content else "chat",
         )
         send_alert(alert_obj)
         print(f"ALERT SENT: {state['alert_message']}")
