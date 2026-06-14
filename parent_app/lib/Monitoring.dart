@@ -479,7 +479,7 @@ class _MonitoringState extends State<Monitoring> {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => YoutubeActivityScreen(
-                                  //childId: childId, childName: widget.childData?['name'] ?? 'Unknown', childAge: widget.childData?['age'] ?? 0
+                                  childId: childId, childName: widget.childData?['name'] ?? 'Unknown', childAge: widget.childData?['age'] ?? 0
                                 ),
                               ),
                             );
