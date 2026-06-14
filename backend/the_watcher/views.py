@@ -1616,6 +1616,7 @@ def get_screen_limits(request):
         "bedtime_start": str(child.bedtime_start) if child.bedtime_start else None,
         "bedtime_end": str(child.bedtime_end) if child.bedtime_end else None,
         "category_usage_seconds": category_usage,
+        'bedtime_enabled': child.bedtime_enabled,
     }, status=200)
 
 
@@ -1636,6 +1637,9 @@ def update_screen_limits(request):
 
     if 'bedtime_end' in request.data:
         child.bedtime_end = request.data['bedtime_end']
+
+    if 'bedtime_enabled' in request.data:
+        child.bedtime_enabled = request.data['bedtime_enabled']
 
     child.save()
 
@@ -1661,7 +1665,8 @@ def update_screen_limits(request):
 
 # Function to check bedtime status for a child. Agar current time bedtime range mein hai, toh True return karega, warna False. Bedtime range ko handle karte waqt overnight ranges (jaise 21:00 - 07:00) ko bhi consider kiya gaya hai.
 def is_bedtime(child):
-    if not child.bedtime_start or not child.bedtime_end:
+    
+    if not child.bedtime_enabled or not child.bedtime_start or not child.bedtime_end:
         return False
     now = timezone.localtime().time()
     start = child.bedtime_start
@@ -1670,3 +1675,4 @@ def is_bedtime(child):
         return start <= now <= end
     else:  # overnight range, e.g. 21:00 - 07:00
         return now >= start or now <= end
+

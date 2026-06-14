@@ -31,6 +31,7 @@ class child(models.Model):
     admin_disabled = models.BooleanField(default=False)
     bedtime_start = models.TimeField(null=True, blank=True, default='21:00')
     bedtime_end = models.TimeField(null=True, blank=True, default='07:00')
+    bedtime_enabled = models.BooleanField(default=True)
 
 
 # Pairing Code Model

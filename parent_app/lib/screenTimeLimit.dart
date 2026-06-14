@@ -257,10 +257,14 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        
+
+
 
         setState(() {
           _screenTimeLimitMinutes = data['screen_time_limit'] ?? 150;
           _totalUsageSeconds = data['total_usage_seconds'] ?? 0;
+          _bedtimeEnabled = data['bedtime_enabled'] ?? true;
 
           final catUsage = data['category_usage_seconds'] ?? {};
           _categoryUsageSeconds = {
@@ -308,12 +312,18 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
           "screen_time_limit": _screenTimeLimitMinutes,
           "bedtime_start": _formatTimeOfDay(_bedtimeStart),
           "bedtime_end": _formatTimeOfDay(_bedtimeEnd),
+          "bedtime_enabled": _bedtimeEnabled,
         }),
       );
 
       if (response.statusCode == 200) {
         _showSnack("Limits updated successfully");
-      } else {
+        final data = jsonDecode(response.body);
+        final isLocked = data['is_locked'] ?? false;
+        _showSnack(isLocked 
+            ? "Limits updated. Device still locked." 
+            : "Limits updated. Device unlocked!");
+            } else {
         _showSnack("Failed to update limits", isError: true);
       }
     } catch (e) {
@@ -335,7 +345,7 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
     );
   }
 
-  // ---------- Edit Daily Limit Dialog ----------
+  //  Edit Daily Limit Dialog 
   Future<void> _showEditLimitDialog() async {
     int hours = _screenTimeLimitMinutes ~/ 60;
     int minutes = _screenTimeLimitMinutes % 60;
@@ -482,7 +492,7 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
     );
   }
 
-  // ---------- Bedtime Time Picker ----------
+  //  Bedtime Time Picker 
   Future<void> _pickBedtime({required bool isStart}) async {
     final initial = isStart ? _bedtimeStart : _bedtimeEnd;
     final picked = await showTimePicker(
@@ -573,7 +583,7 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- Profile Section ---
+                    //  Profile Section 
                     Row(
                       children: [
                         CircleAvatar(
@@ -603,7 +613,7 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
                         style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.bold)),
                     SizedBox(height: 20.h),
 
-                    // --- Graph and Side Cards ---
+                    // Graph and Side Cards
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -640,7 +650,7 @@ class _ScreenTimeLimitScreenState extends State<ScreenTimeLimitScreen> {
 
                     SizedBox(height: 30.h),
 
-                    // --- App Category Section (read-only usage display) ---
+                    // App Category Section (read-only usage display) 
                     Container(
                       padding: EdgeInsets.all(16.w),
                       decoration: BoxDecoration(
