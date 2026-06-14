@@ -28,4 +28,7 @@ urlpatterns = [
     path('fetch-alerts/', views.fetchAlerts_api),
     path('report-device-status/', views.report_device_status),
     path('get-child-usage/<int:child_id>/', views.get_child_usage),
+    path('get-screen-limits/', views.get_screen_limits),
+    path('update-screen-limits/', views.update_screen_limits),
+
 ]
