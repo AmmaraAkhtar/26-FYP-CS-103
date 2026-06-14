@@ -1394,3 +1394,31 @@ def browsing_monitoring_api(request):
         "browsing": web_list,
         "alerts": alert_list,
     }, status=200)
+
+
+# APi to fetch alerts for alerts page, jaha parent ko chronological list dikhani hai child ke safety alerts ki, jaise ki risky websites visit karna, suspicious chats, screen time limit cross karna, etc. Taaki parent ko ek clear timeline mil jaye child ke risky activities ka, aur wo un alerts ko click karke unke details bhi dekh sake.
+@api_view(['GET'])
+def fetchAlerts_api(request):
+    child_id = request.query_params.get('child_id')
+    try:
+        child = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    alerts = models.Alert.objects.filter(child=child).order_by('-created_at')[:20]
+
+    data = [{
+        "id": a.id,
+        "alert_type": a.alert_type,
+        "source": a.source,
+        "message": a.message,
+        "created_at": a.created_at,
+    } for a in alerts]
+
+    return Response({
+        "child": {
+            "name": f"{child.firstname} {child.lastname}",
+            "age": child.age
+        },
+        "alerts": data
+    }, status=200)
