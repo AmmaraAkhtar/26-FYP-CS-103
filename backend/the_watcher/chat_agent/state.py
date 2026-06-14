@@ -8,7 +8,8 @@ class ChatState(TypedDict):
     app_name:str
     message: str
     chat_obj_id: int
-    ml_category: str  # ML se jo category aayi hai
+    ml_category: str # ML se jo category aayi hai
+    content_type: Optional[str]
  
     # Agent will fetch this information throgh context fetcher node
     child_age:  Optional[int]
