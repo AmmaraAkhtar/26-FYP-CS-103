@@ -152,3 +152,19 @@ class AlertSerializer(serializers.Serializer):
             source=validated_data.get('source', 'unknown')
         )
 
+
+## to update profile
+class UpdateProfileSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=150, required=False)
+    phone    = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    password = serializers.CharField(max_length=250, required=False, allow_blank=True)
+
+    def validate_username(self, value):
+        if ' ' in value:
+            raise serializers.ValidationError("Username cannot contain spaces.")
+        return value
+
+    def validate_password(self, value):
+        if value and len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters.")
+        return value
