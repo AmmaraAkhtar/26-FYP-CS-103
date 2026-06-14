@@ -468,7 +468,7 @@ class _EditprofileState extends State<profile> {
           builder: (context) => SingleChildScrollView(
             child: Column(
               children: [
-                // ── Header image section ──
+                //  Header image section
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
