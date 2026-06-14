@@ -31,5 +31,6 @@ urlpatterns = [
     path('get-screen-limits/', views.get_screen_limits),
     path('update-screen-limits/', views.update_screen_limits),
     path('fetch-chat-messages/', views.fetch_chat_messages),
+    path('youtube-activity/', views.youtube_activity_api),
 
 ]
