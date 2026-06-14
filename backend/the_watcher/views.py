@@ -31,6 +31,7 @@ from django.utils.timezone import make_aware
 from datetime import datetime
 from .chat_agent.graph import chat_agent
 from rest_framework.permissions import IsAuthenticated
+from datetime import time as dt_time
 
 
 
@@ -379,7 +380,7 @@ def collectAppUsageData_Api(request):
             today =  timezone.now().date()
             now_time = timezone.localtime().time()
             # REset on midnight
-            if now_time < datetime.time(0, 5):  # raat 12:00-12:05 ke beech
+            if now_time < dt_time(0, 5):  # raat 12:00-12:05 ke beech
                     models.child.objects.filter(parent_unlocked=True).update(parent_unlocked=False)
             
             if is_bedtime(child):
@@ -1625,9 +1626,9 @@ def get_screen_limits(request):
         return Response({"error": "Child not found"}, status=404)
 
     today = timezone.now().date()
-    two_days_ago = today - timedelta(days=1)
 
-    usage_qs = models.appUsage.objects.filter(child=child, date__gte=two_days_ago)
+    # Sirf aaj ka data — categories aur total usage ke liye
+    usage_qs = models.appUsage.objects.filter(child=child, date=today)
     merged = {}
     for u in usage_qs:
         pkg = u.package_name
@@ -1643,14 +1644,13 @@ def get_screen_limits(request):
     total_usage = sum(v["usage_time"] for v in merged.values())
 
     return Response({
-        "screen_time_limit": child.screen_time_limit,       # minutes
+        "screen_time_limit": child.screen_time_limit,
         "total_usage_seconds": total_usage,
         "bedtime_start": str(child.bedtime_start) if child.bedtime_start else None,
         "bedtime_end": str(child.bedtime_end) if child.bedtime_end else None,
         "category_usage_seconds": category_usage,
         'bedtime_enabled': child.bedtime_enabled,
     }, status=200)
-
 
 # POST - update overall limit + bedtime
 @api_view(['POST'])
@@ -1710,11 +1710,11 @@ def is_bedtime(child):
     
     if isinstance(start, str):
         parts = start.split(':')
-        start = timezone.time(int(parts[0]), int(parts[1]))
+        start = dt_time(int(parts[0]), int(parts[1]))
     
     if isinstance(end, str):
         parts = end.split(':')
-        end = timezone.time(int(parts[0]), int(parts[1]))
+        end = dt_time(int(parts[0]), int(parts[1]))
     
     if start <= end:
         return start <= now <= end
@@ -1722,4 +1722,65 @@ def is_bedtime(child):
         return now >= start or now <= end
 
 
+# API to fetch chat messages
+@api_view(['GET'])
+def fetch_chat_messages(request):
+    child_id = request.query_params.get('child_id')
+    try:
+        child = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
 
+    # Flagged chats — jo allow nahi hain
+    flagged = models.ChatMessage.objects.filter(
+        child=child
+    ).exclude(
+        action__in=['Allow', 'allow', 'historical']
+    ).order_by('-created_at')[:20]
+
+    # Stats
+    today = timezone.now().date()
+    total_today = models.ChatMessage.objects.filter(
+        child=child,
+        timestamp__date=today
+    ).count()
+
+    total_all = models.ChatMessage.objects.filter(child=child).count()
+
+    safe_count = models.ChatMessage.objects.filter(
+        child=child,
+        action__in=['Allow', 'allow']
+    ).count()
+
+    flagged_data = [{
+        "id": m.id,
+        "app_name": m.app_name,
+        "sender": m.sender or "Unknown",
+        "message": m.message,
+        "category": m.category or "unknown",
+        "risk": m.risk or "Low",
+        "action": m.action or "Allow",
+        "time": m.created_at,
+    } for m in flagged]
+
+    # Safety alerts — chat se
+    alerts = models.Alert.objects.filter(
+        child=child,
+        source="chat"
+    ).order_by('-created_at')[:10]
+
+    alert_data = [{
+        "alert_type": a.alert_type,
+        "message": a.message,
+        "created_at": a.created_at,
+    } for a in alerts]
+
+    return Response({
+        "stats": {
+            "total_today": total_today,
+            "total_all": total_all,
+            "safe_count": safe_count,
+        },
+        "flagged_chats": flagged_data,
+        "safety_alerts": alert_data,
+    }, status=200)
