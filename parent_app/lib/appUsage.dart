@@ -345,7 +345,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
       }
 
       final response = await http.get(
-        Uri.parse('http://192.168.18.166:8000/childusage/$childId/'),
+       Uri.parse('http://192.168.18.163:8000/get-child-usage/$childId/'),
         headers: {"Content-Type": "application/json"},
       );
 

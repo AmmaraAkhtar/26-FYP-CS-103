@@ -274,9 +274,10 @@ Write ONLY the message, nothing else."""
 def web_action_executor_node(state: WebState) -> WebState:
     child = models.child.objects.get(id=state["child_id"])
 
-    if state["action"] == "block":
+    if state["action"] in ["block", "escalate"]:
         child.is_locked = True
         child.save()
+        
 
     # ID se exact record update karo
     try:

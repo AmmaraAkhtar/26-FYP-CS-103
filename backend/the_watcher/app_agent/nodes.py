@@ -230,9 +230,10 @@ Write ONLY the message, nothing else."""
 def action_executor_node(state: AppState) -> AppState:
     child = models.child.objects.get(id=state["child_id"])
 
-    if state["action"] == "block":
+    if state["action"] in ["block", "escalate"]:
         child.is_locked = True
         child.save()
+        
 
     if state.get("should_send_alert") and state.get("alert_message"):
         alert_obj = models.Alert.objects.create(
