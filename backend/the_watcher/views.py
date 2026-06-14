@@ -235,7 +235,9 @@ def createChild_api(request):
         if models.child.objects.filter(firstname=firstname,lastname=lastname,parent=user).exists():
             print("Child already exists for this parent")
             return Response({"error": "Child already exists for this parent"}, status=400)
-        child = models.child.objects.create(firstname=firstname, lastname=lastname, age=age, screen_time_limit=screen_time_limit,parent = user,pairingCode=pairing_code)
+        child = models.child.objects.create(firstname=firstname, lastname=lastname, age=age, screen_time_limit=screen_time_limit,parent = user,pairingCode=pairing_code,bedtime_start=serializer.validated_data.get('bedtime_start', '21:00'),   
+    bedtime_end=serializer.validated_data.get('bedtime_end', '07:00'),       
+    bedtime_enabled=serializer.validated_data.get('bedtime_enabled', True),)
         models.pairingCode.objects.create(pairing_code=pairing_code,parent=user,child=child)    
         send_code(parent_email, pairing_code)
         return Response({
