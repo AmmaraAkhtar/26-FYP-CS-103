@@ -2131,3 +2131,16 @@ def youtube_activity_api(request):
         "categories": categories,
         "alerts": alert_data,
     }, status=200)
+
+
+## Api to fetch profile data
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_profile_api(request):
+    user = request.user
+    profile, _ = models.ParentProfile.objects.get_or_create(user=user)
+    return Response({
+        "username": user.username,
+        "email":    user.email,
+        "phone":    profile.phone or "",
+    }, status=200)
