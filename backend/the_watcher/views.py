@@ -1533,3 +1533,39 @@ def report_device_status(request):
     send_alert(alert_obj)
 
     return Response({"status": "alert created"}, status=200)
+
+
+# GET - fetch current limits + category usage (for display only)
+@api_view(['GET'])
+def get_screen_limits(request):
+    child_id = request.query_params.get('child_id')
+    try:
+        child = models.child.objects.get(id=child_id)
+    except models.child.DoesNotExist:
+        return Response({"error": "Child not found"}, status=404)
+
+    today = timezone.now().date()
+    two_days_ago = today - timedelta(days=1)
+
+    usage_qs = models.appUsage.objects.filter(child=child, date__gte=two_days_ago)
+    merged = {}
+    for u in usage_qs:
+        pkg = u.package_name
+        if pkg not in merged or u.usage_time > merged[pkg]["usage_time"]:
+            merged[pkg] = {"usage_time": u.usage_time, "category": u.category}
+
+    category_usage = {"Social": 0, "Entertainment": 0, "Games": 0}
+    for data in merged.values():
+        cat = data["category"]
+        if cat in category_usage:
+            category_usage[cat] += data["usage_time"]
+
+    total_usage = sum(v["usage_time"] for v in merged.values())
+
+    return Response({
+        "screen_time_limit": child.screen_time_limit,       # minutes
+        "total_usage_seconds": total_usage,
+        "bedtime_start": str(child.bedtime_start) if child.bedtime_start else None,
+        "bedtime_end": str(child.bedtime_end) if child.bedtime_end else None,
+        "category_usage_seconds": category_usage,
+    }, status=200)
