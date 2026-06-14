@@ -433,7 +433,7 @@ class _MonitoringState extends State<Monitoring> {
                         onTap: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => AppUsageMonitoringScreen()),
+                            MaterialPageRoute(builder: (context) => AppUsageMonitoringScreen(childId: childId, childName: widget.childData?['name'] ?? 'Unknown', childAge: widget.childData?['age'] ?? 0)),
                           );
                         },
                       ),

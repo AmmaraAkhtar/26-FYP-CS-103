@@ -202,10 +202,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class AppUsageMonitoringScreen extends StatefulWidget {
-  const AppUsageMonitoringScreen({super.key});
+  final int childId;
+  final String childName;
+  final int childAge;
+
+  const AppUsageMonitoringScreen({
+    super.key,
+    required this.childId,
+    required this.childName,
+    required this.childAge,
+  });
 
   @override
   State<AppUsageMonitoringScreen> createState() => _AppUsageMonitoringScreenState();
@@ -223,65 +231,55 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
 
   // Package name se readable app name nikalo - fully dynamic
   String getAppName(String packageName) {
-    // com.whatsapp → WhatsApp
-    // com.instagram.android → Instagram
-    // com.sec.android.app.launcher → Launcher
     List<String> parts = packageName.split('.');
-    
-    // Last meaningful part lo
     String last = parts.last;
-    
-    // Common suffixes hata do
     if (last == 'android' || last == 'app' || last == 'mobile') {
       last = parts.length >= 2 ? parts[parts.length - 2] : last;
     }
-    
-    // Capitalize karo
     return last[0].toUpperCase() + last.substring(1);
   }
 
   // Package name se category detect karo - dynamic
   String getCategory(String packageName) {
-    if (packageName.contains('whatsapp') || 
+    if (packageName.contains('whatsapp') ||
         packageName.contains('telegram') ||
         packageName.contains('messenger') ||
         packageName.contains('signal')) {
       return 'Chatting';
-    } else if (packageName.contains('instagram') || 
-               packageName.contains('facebook') ||
-               packageName.contains('tiktok') ||
-               packageName.contains('snapchat') ||
-               packageName.contains('pinterest') ||
-               packageName.contains('twitter')) {
+    } else if (packageName.contains('instagram') ||
+        packageName.contains('facebook') ||
+        packageName.contains('tiktok') ||
+        packageName.contains('snapchat') ||
+        packageName.contains('pinterest') ||
+        packageName.contains('twitter')) {
       return 'Social Media';
-    } else if (packageName.contains('youtube') || 
-               packageName.contains('netflix') ||
-               packageName.contains('spotify')) {
+    } else if (packageName.contains('youtube') ||
+        packageName.contains('netflix') ||
+        packageName.contains('spotify')) {
       return 'Entertainment';
-    } else if (packageName.contains('chrome') || 
-               packageName.contains('browser') ||
-               packageName.contains('firefox')) {
+    } else if (packageName.contains('chrome') ||
+        packageName.contains('browser') ||
+        packageName.contains('firefox')) {
       return 'Browsing';
-    } else if (packageName.contains('game') || 
-               packageName.contains('hillclimb') ||
-               packageName.contains('roblox') ||
-               packageName.contains('pubg') ||
-               packageName.contains('fingersoft')) {
+    } else if (packageName.contains('game') ||
+        packageName.contains('hillclimb') ||
+        packageName.contains('roblox') ||
+        packageName.contains('pubg') ||
+        packageName.contains('fingersoft')) {
       return 'Gaming';
-    } else if (packageName.contains('gmail') || 
-               packageName.contains('mail')) {
+    } else if (packageName.contains('gmail') ||
+        packageName.contains('mail')) {
       return 'Email';
-    } else if (packageName.contains('launcher') || 
-               packageName.contains('calculator') ||
-               packageName.contains('dialer') ||
-               packageName.contains('android') ||
-               packageName.contains('samsung')) {
+    } else if (packageName.contains('launcher') ||
+        packageName.contains('calculator') ||
+        packageName.contains('dialer') ||
+        packageName.contains('android') ||
+        packageName.contains('samsung')) {
       return 'System';
     }
     return 'App';
   }
 
-  // Category se color - dynamic
   Color getCategoryColor(String category) {
     switch (category) {
       case 'Chatting': return Colors.green;
@@ -295,7 +293,6 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
     }
   }
 
-  // Category se background color
   Color getHeaderBg(String category) {
     switch (category) {
       case 'Chatting': return const Color(0xFFE8F5E9);
@@ -309,7 +306,6 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
     }
   }
 
-  // Category se icon - dynamic
   IconData getCategoryIcon(String category) {
     switch (category) {
       case 'Chatting': return Icons.chat_bubble_rounded;
@@ -323,7 +319,6 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
     }
   }
 
-  //  Seconds ko readable format
   String formatTime(int seconds) {
     if (seconds < 60) return "${seconds}s";
     int minutes = seconds ~/ 60;
@@ -336,16 +331,8 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
   Future<void> fetchUsageData() async {
     setState(() => isLoading = true);
     try {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      int? childId = prefs.getInt("child_id");
-
-      if (childId == null) {
-        setState(() => isLoading = false);
-        return;
-      }
-
       final response = await http.get(
-       Uri.parse('http://192.168.18.163:8000/get-child-usage/$childId/'),
+        Uri.parse('http://192.168.18.163:8000/get-child-usage/${widget.childId}/'),
         headers: {"Content-Type": "application/json"},
       );
 
@@ -353,12 +340,10 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
         final data = jsonDecode(response.body);
         List<dynamic> rawUsage = data['usage_data'];
 
-        // System apps filter karo
         List<Map<String, dynamic>> filtered = rawUsage
             .where((app) {
               String pkg = app['package_name'];
               int time = app['usage_time'] as int;
-              // System apps aur zero usage hata do
               return time > 0 &&
                   !pkg.contains('android') &&
                   !pkg.contains('samsung') &&
@@ -371,7 +356,6 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
             .map((app) => Map<String, dynamic>.from(app))
             .toList();
 
-        // Usage time se sort karo - highest first
         filtered.sort((a, b) =>
             (b['usage_time'] as int).compareTo(a['usage_time'] as int));
 
@@ -379,6 +363,8 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
           usageData = filtered;
           isLoading = false;
         });
+      } else {
+        setState(() => isLoading = false);
       }
     } catch (e) {
       print("Error: $e");
@@ -403,10 +389,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
         ),
         title: Text(
           "App Usage Monitoring",
-          style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 18.sp),
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18.sp),
         ),
         actions: [
           IconButton(
@@ -417,15 +400,13 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
         ],
       ),
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFEB9974)))
+          ? const Center(child: CircularProgressIndicator(color: Color(0xFFEB9974)))
           : RefreshIndicator(
               onRefresh: fetchUsageData,
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                   child: Column(
                     children: [
                       // Profile
@@ -445,13 +426,10 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text("Hamza Ali",
-                                  style: TextStyle(
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.bold)),
-                              Text("11 Years Old",
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 12.sp)),
+                              Text(widget.childName,
+                                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                              Text("${widget.childAge} Years Old",
+                                  style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
                             ],
                           )
                         ],
@@ -472,8 +450,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
                         child: Column(
                           children: [
                             Text("Total Screen Time Today",
-                                style: TextStyle(
-                                    fontSize: 14.sp, color: Colors.white)),
+                                style: TextStyle(fontSize: 14.sp, color: Colors.white)),
                             SizedBox(height: 5.h),
                             Text(
                               formatTime(totalSeconds),
@@ -485,9 +462,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
                             ),
                             Text(
                               "${usageData.length} apps used",
-                              style: TextStyle(
-                                  fontSize: 12.sp,
-                                  color: Colors.white70),
+                              style: TextStyle(fontSize: 12.sp, color: Colors.white70),
                             ),
                           ],
                         ),
@@ -495,24 +470,18 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
 
                       SizedBox(height: 20.h),
                       Text("Time Spent",
-                          style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold)),
+                          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
                       SizedBox(height: 15.h),
 
-                      // ✅ 100% Dynamic Cards
                       usageData.isEmpty
                           ? Padding(
                               padding: EdgeInsets.only(top: 50.h),
                               child: Column(
                                 children: [
-                                  Icon(Icons.phonelink_off,
-                                      size: 60.sp, color: Colors.grey),
+                                  Icon(Icons.phonelink_off, size: 60.sp, color: Colors.grey),
                                   SizedBox(height: 10.h),
                                   Text("No usage data yet",
-                                      style: TextStyle(
-                                          color: Colors.grey,
-                                          fontSize: 16.sp)),
+                                      style: TextStyle(color: Colors.grey, fontSize: 16.sp)),
                                 ],
                               ),
                             )
@@ -526,7 +495,6 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
                                     ? ((appSeconds / totalSeconds) * 100).round()
                                     : 0;
 
-                                // ✅ Sab kuch package name se automatically
                                 String appName = getAppName(pkg);
                                 String category = getCategory(pkg);
                                 Color color = getCategoryColor(category);
@@ -561,9 +529,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
                           child: Text(
                             'Change Screen Limit',
                             style: TextStyle(
-                                fontSize: 18.sp,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
+                                fontSize: 18.sp, color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
@@ -603,7 +569,6 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Header - icon + name
           Container(
             padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.h),
             decoration: BoxDecoration(
@@ -620,15 +585,13 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
                 Expanded(
                   child: Text(
                     appName,
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13.sp),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.sp),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
           ),
-          // Body
           Padding(
             padding: EdgeInsets.all(12.w),
             child: Column(
@@ -636,12 +599,8 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("$percentage%",
-                        style:
-                            TextStyle(color: Colors.grey, fontSize: 11.sp)),
-                    Text(time,
-                        style: TextStyle(
-                            fontWeight: FontWeight.w600, fontSize: 11.sp)),
+                    Text("$percentage%", style: TextStyle(color: Colors.grey, fontSize: 11.sp)),
+                    Text(time, style: TextStyle(fontWeight: FontWeight.w600, fontSize: 11.sp)),
                   ],
                 ),
                 SizedBox(height: 6.h),
@@ -665,10 +624,7 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
                   ),
                   child: Text(
                     category,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.bold),
+                    style: TextStyle(color: Colors.white, fontSize: 10.sp, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
