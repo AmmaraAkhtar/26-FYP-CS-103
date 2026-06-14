@@ -60,6 +60,9 @@ class ChildSerializer(serializers.Serializer):
     lastname = serializers.CharField(max_length=100)
     age = serializers.IntegerField()
     screen_time_limit = serializers.IntegerField(default=60)  # in minutes
+    bedtime_start = serializers.TimeField(required=False, default='21:00')  # ADD
+    bedtime_end = serializers.TimeField(required=False, default='07:00')    # ADD
+    bedtime_enabled = serializers.BooleanField(required=False, default=True) # ADD
 
     def validate_age(self, data):
         if data < 0 or data > 18:
