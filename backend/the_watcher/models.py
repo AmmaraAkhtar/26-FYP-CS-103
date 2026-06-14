@@ -29,6 +29,8 @@ class child(models.Model):
     deactivate_command = models.BooleanField(default=False)
     last_seen = models.DateTimeField(null=True, blank=True)
     admin_disabled = models.BooleanField(default=False)
+    bedtime_start = models.TimeField(null=True, blank=True, default='21:00')
+    bedtime_end = models.TimeField(null=True, blank=True, default='07:00')
 
 
 # Pairing Code Model
@@ -87,3 +89,4 @@ class ChatMessage(models.Model):
     action = models.CharField(max_length=20, null=True, blank=True)
     reasoning = models.TextField(null=True, blank=True)
     created_at  = models.DateTimeField(auto_now_add=True)
+

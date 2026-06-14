@@ -1324,6 +1324,7 @@ def collect_chat(request):
 
 # Api to send data on dashboard home page, jaha parent ko child ki summary dikhani hai, jaise ki total screen time, app usage summary, YouTube usage, blocked websites, suspicious chats, etc. Taaki parent ko ek quick overview mil jaye child ki activities ka, bina alag alag APIs call kiye.
 
+
 @api_view(['GET'])
 def dashboard_summary_api(request):
     child_id = request.query_params.get('child_id')
@@ -1333,50 +1334,76 @@ def dashboard_summary_api(request):
         return Response({"error": "Child not found"}, status=404)
 
     today = timezone.now().date()
+    two_days_ago = today - timedelta(days=1)
 
+    # Screen time = total of ALL apps (last 2 days, max per app)
+    all_usage = models.appUsage.objects.filter(
+        child=child,
+        date__gte=two_days_ago
+    )
 
-    # Screen time = total app usage time today (seconds)
-    total_app_time = models.appUsage.objects.filter(
-        child=child, date=today
-    ).aggregate(total=Sum('usage_time'))['total'] or 0
+    # Same package ki duplicate entries merge karo — max lo
+    merged = {}
+    for u in all_usage:
+        pkg = u.package_name
+        if pkg not in merged or u.usage_time > merged[pkg]:
+            merged[pkg] = u.usage_time
 
-    # App usage card 
-    # DEBUG: Yeh print karo temporarily
-    all_usage = models.appUsage.objects.filter(child=child)
-    print(f"Total records for child {child_id}: {all_usage.count()}")
-    print(f"Today's date: {today}")
-    for u in all_usage[:5]:
-        print(f"  package: {u.package_name}, date: {u.date}, time: {u.usage_time}")
-    app_usage_time = total_app_time
+    total_screen_time = sum(merged.values())
 
+    # App usage = sirf social/entertainment/gaming apps (non-system)
+    SKIP_KEYWORDS = [
+        'android', 'samsung', 'launcher', 'dialer',
+        'calculator', 'permissioncontroller', 'bixby',
+        'systemui', 'inputmethod', 'com.example',
+    ]
+    SKIP_PACKAGES = {
+        'cn.wps.moffice_eng',
+        'com.google.android.googlequicksearchbox',
+        'com.samsung.android.incallui',
+        'com.sec.android.gallery3d',
+        'com.samsung.accessibility',
+        'com.android.settings',
+        'com.techlogix.mobilinkcustomer',
+    }
 
-    # YouTube activities count (agar package_name mein youtube ho)
-    youtube_count = models.appUsage.objects.filter(
-        child=child, date=today, package_name__icontains='youtube'
-    ).count()
+    app_usage_time = 0
+    for pkg, usage in merged.items():
+        pkg_lower = pkg.lower()
+        if pkg_lower in SKIP_PACKAGES:
+            continue
+        if any(kw in pkg_lower for kw in SKIP_KEYWORDS):
+            continue
+        app_usage_time += usage
 
-    last_youtube = models.appUsage.objects.filter(
+    # YouTube
+    youtube_entries = {
+        pkg: usage for pkg, usage in merged.items()
+        if 'youtube' in pkg.lower()
+    }
+    youtube_count = len(youtube_entries)
+    last_youtube_pkg = models.appUsage.objects.filter(
         child=child, package_name__icontains='youtube'
     ).order_by('-created_at').first()
 
-    # Blocked web sites count
+    # Blocked sites
     blocked_sites = models.webUsage.objects.filter(
         child=child, date=today, action='Block'
     )
     blocked_count = blocked_sites.count()
     last_blocked = blocked_sites.order_by('-created_at').first()
 
-    # Latest suspicious chat
+    # Latest chat alert
     latest_chat_alert = models.ChatMessage.objects.filter(
         child=child
     ).exclude(action='Allow').order_by('-created_at').first()
 
     return Response({
-        "screen_time_seconds": total_app_time,
+        "screen_time_seconds": total_screen_time,   # ← sab apps ka total
         "screen_time_limit": child.screen_time_limit,
-        "app_usage_seconds": app_usage_time,
+        "app_usage_seconds": app_usage_time,         # ← sirf user apps
         "youtube_count": youtube_count,
-        "last_youtube": last_youtube.package_name if last_youtube else None,
+        "last_youtube": last_youtube_pkg.package_name if last_youtube_pkg else None,
         "blocked_sites_count": blocked_count,
         "last_blocked_url": last_blocked.url if last_blocked else None,
         "latest_chat_alert": {
