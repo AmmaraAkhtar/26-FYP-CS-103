@@ -380,10 +380,26 @@ def collectAppUsageData_Api(request):
             if is_bedtime(child):
                 child.is_locked = True
                 child.save()
-                return Response({
-                    "message": "Bedtime active — device locked",
-                    "predictions": []
-                })
+                return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+            
+
+            # Strictly applying screen time limit — agar limit exceed ho jati hai toh chahe koi bhi app use kar raha ho, device ko lock kar do. Isse parents ko ek strong signal milega ki limit important hai, aur unnecessary alerts se bhi bachenge.
+            two_days_ago = timezone.now().date() - timedelta(days=1)
+            existing_usage = models.appUsage.objects.filter(child=child, date__gte=two_days_ago)
+            merged_existing = {}
+            for u in existing_usage:
+                pkg = u.package_name
+                if pkg not in merged_existing or u.usage_time > merged_existing[pkg]:
+                    merged_existing[pkg] = u.usage_time
+            total_usage_today = sum(merged_existing.values())  # seconds
+
+            screen_limit_seconds = child.screen_time_limit * 60
+
+            if total_usage_today >= screen_limit_seconds:
+                child.is_locked = True
+                child.save()
+                return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+            
             SKIP_PACKAGES = {
     'com.android', 'android',
     'com.samsung.android.app.galaxyfinder',
@@ -683,10 +699,7 @@ def collect_web_usage(request):
         if is_bedtime(child_obj):
             child_obj.is_locked = True
             child_obj.save()
-            return Response({
-                "message": "Bedtime active — device locked",
-                "predictions": []
-            })
+            return Response({"is_locked": True, "reason": "bedtime"}, status=200)
         #  DUPLICATE CHECK (same URL last 2 minute mein already save hai?)
 
         recent_duplicate = models.webUsage.objects.filter(
@@ -1126,11 +1139,7 @@ def heartbeat_api(request):
         if is_bedtime(child_obj):
                 child_obj.is_locked = True
                 child_obj.save()
-                return Response({
-                    "message": "Bedtime active — device locked",
-                    "predictions": []
-                })
-        
+                return Response({"is_locked": True, "reason": "bedtime"}, status=200)
         return Response({"status": "ok"}, status=200)
     except models.child.DoesNotExist:
         return Response({"error": "Child not found"}, status=404)
@@ -1146,10 +1155,7 @@ def check_lock_status(request):
         if is_bedtime(child):
             child.is_locked = True
             child.save()
-            return Response({
-                "message": "Bedtime active — device locked",
-                "predictions": []
-            })
+            return Response({"is_locked": True, "reason": "bedtime"}, status=200)
         print(f"Lock status check for child {child_id}: is_locked={child.is_locked}")
         return Response({"is_locked": child.is_locked})
     except models.child.DoesNotExist:
@@ -1235,10 +1241,7 @@ def collect_chat(request):
     if is_bedtime(child_obj):
         child_obj.is_locked = True
         child_obj.save()
-        return Response({
-            "message": "Bedtime active — device locked",
-            "predictions": []
-    })
+        return Response({"is_locked": True, "reason": "bedtime"}, status=200)
 
     # ── Timestamp parse ──
     try:
