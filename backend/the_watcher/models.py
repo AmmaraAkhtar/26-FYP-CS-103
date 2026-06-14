@@ -61,6 +61,7 @@ class Alert(models.Model):
     alert_type = models.CharField(max_length=100)
     message = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    source = models.CharField(max_length=20, default="unknown")  # "chat" / "app" / "web"
 
 # Web Usage Model
 class webUsage(models.Model):
