@@ -1773,7 +1773,7 @@ def browsing_monitoring_api(request):
     } for w in web_records]
 
     # Safety alerts
-    alerts = models.Alert.objects.filter(child=child).order_by('-created_at')[:10]
+    alerts = models.Alert.objects.filter(child=child, source="web").order_by('-created_at')[:10]
     alert_list = [{
         "alert_type": a.alert_type,
         "message": a.message,
