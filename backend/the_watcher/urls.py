@@ -27,4 +27,5 @@ urlpatterns = [
     path('browsing-monitoring/', views.browsing_monitoring_api),
     path('fetch-alerts/', views.fetchAlerts_api),
     path('report-device-status/', views.report_device_status),
+    path('get-child-usage/<int:child_id>/', views.get_child_usage),
 ]

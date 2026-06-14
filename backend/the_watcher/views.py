@@ -374,7 +374,7 @@ def collectAppUsageData_Api(request):
 
             child_id = validated_data["child_id"]
             child = models.child.objects.get(id=child_id)
-            today = validated_data["timestamp"].date()
+            today =  timezone.now().date()
             SKIP_PACKAGES = {
     'com.android', 'android',
     'com.samsung.android.app.galaxyfinder',
@@ -382,6 +382,7 @@ def collectAppUsageData_Api(request):
     'com.google.android.permissioncontroller',
     'com.sec.android.app.launcher',
     'com.samsung.android.dialer',
+    'com.example.child_app',
 }
             AGENT_CATEGORIES = {"Social", "Sensitive", "Games", "Entertainment"}
 
@@ -459,7 +460,7 @@ def collectAppUsageData_Api(request):
                         category=category,
                         risk="allow",
                         action="allow",
-                        date=validated_data["timestamp"].date()
+                        date=timezone.now().date()
                     )
                     result.append({
                         "package_name": package,
@@ -498,7 +499,7 @@ def collectAppUsageData_Api(request):
                 category=category_predictions[i],
                 risk=final["action"],       # action hi risk hai ab
                 action=final["action"],
-                date=validated_data["timestamp"].date()
+                date=timezone.now().date()
             )
                 if final["action"] == "Block" or final["action"] == "Escalate":
                     child.is_locked = True
@@ -604,11 +605,30 @@ def get_child_usage(request, child_id):
     today = timezone.now().date()
     usage_qs = models.appUsage.objects.filter(child=child, date=today)
 
-    usage_data = [{
-        "package_name": u.package_name,
-        "usage_time": u.usage_time,
-        "category": u.category,
-    } for u in usage_qs]
+    # Last 2 din ka data — kal ka bhi cover ho jaye
+    two_days_ago = timezone.now().date() - timedelta(days=1)
+    usage_qs = models.appUsage.objects.filter(
+        child=child,
+        date__gte=two_days_ago  # ← today + yesterday
+    )
+    # Merge the duplicate package entries by taking the max usage_time and latest category
+    merged = {}
+    for u in usage_qs:
+        pkg = u.package_name
+        if pkg not in merged:
+            merged[pkg] = {
+                "package_name": pkg,
+                "usage_time": u.usage_time,
+                "category": u.category,
+            }
+        else:
+            # Max usage time lo dono dates mein se
+            if u.usage_time > merged[pkg]["usage_time"]:
+                merged[pkg]["usage_time"] = u.usage_time
+                merged[pkg]["category"] = u.category
+
+
+    usage_data = list(merged.values())
 
     return Response({
         "usage_data": usage_data,
@@ -1314,13 +1334,21 @@ def dashboard_summary_api(request):
 
     today = timezone.now().date()
 
+
     # Screen time = total app usage time today (seconds)
     total_app_time = models.appUsage.objects.filter(
         child=child, date=today
     ).aggregate(total=Sum('usage_time'))['total'] or 0
 
     # App usage card 
+    # DEBUG: Yeh print karo temporarily
+    all_usage = models.appUsage.objects.filter(child=child)
+    print(f"Total records for child {child_id}: {all_usage.count()}")
+    print(f"Today's date: {today}")
+    for u in all_usage[:5]:
+        print(f"  package: {u.package_name}, date: {u.date}, time: {u.usage_time}")
     app_usage_time = total_app_time
+
 
     # YouTube activities count (agar package_name mein youtube ho)
     youtube_count = models.appUsage.objects.filter(
