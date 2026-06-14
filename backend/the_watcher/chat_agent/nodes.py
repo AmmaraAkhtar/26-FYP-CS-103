@@ -113,14 +113,14 @@ def chat_context_fetcher_node(state: ChatState) -> ChatState:
         c["timestamp"] = str(c["timestamp"])
 
     # Same app ki last 10 messages history
-    chat_history = list(
-        models.ChatMessage.objects
-        .filter(child=child, app_name=state["app_name"])
-        .order_by("-timestamp")
-        .values("message", "category", "risk", "timestamp")[:10]
-    )
-    for c in chat_history:
-        c["timestamp"] = str(c["timestamp"])
+    # chat_history = list(
+    #     models.ChatMessage.objects
+    #     .filter(child=child, app_name=state["app_name"])
+    #     .order_by("-timestamp")
+    #     .values("message", "category", "risk", "timestamp")[:10]
+    # )
+    # for c in chat_history:
+    #     c["timestamp"] = str(c["timestamp"])
 
     # Aaj kitne messages aaye
     total_chats_today = models.ChatMessage.objects.filter(

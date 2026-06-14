@@ -1924,11 +1924,13 @@ def fetch_chat_messages(request):
     except models.child.DoesNotExist:
         return Response({"error": "Child not found"}, status=404)
 
-    # Flagged chats — jo allow nahi hain
+    # Flagged chats — jo allow nahi hain, aur content exclude karo
     flagged = models.ChatMessage.objects.filter(
         child=child
     ).exclude(
         action__in=['Allow', 'allow', 'historical']
+    ).exclude(
+        sender="content"   
     ).order_by('-created_at')[:20]
 
     # Stats
@@ -1936,14 +1938,16 @@ def fetch_chat_messages(request):
     total_today = models.ChatMessage.objects.filter(
         child=child,
         timestamp__date=today
-    ).count()
+    ).exclude(sender="content").count()   
 
-    total_all = models.ChatMessage.objects.filter(child=child).count()
+    total_all = models.ChatMessage.objects.filter(
+        child=child
+    ).exclude(sender="content").count()  
 
     safe_count = models.ChatMessage.objects.filter(
         child=child,
         action__in=['Allow', 'allow']
-    ).count()
+    ).exclude(sender="content").count()   
 
     flagged_data = [{
         "id": m.id,
