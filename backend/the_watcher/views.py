@@ -1638,8 +1638,26 @@ def update_screen_limits(request):
         child.bedtime_end = request.data['bedtime_end']
 
     child.save()
-    return Response({"status": "updated"}, status=200)
 
+    # Auto-unlock check — agar naya limit set hone ke baad usage limit se kam hai
+    # aur bedtime active nahi hai, to lock hata do
+    if child.is_locked and not is_bedtime(child):
+        two_days_ago = timezone.now().date() - timedelta(days=1)
+        existing_usage = models.appUsage.objects.filter(child=child, date__gte=two_days_ago)
+        merged_existing = {}
+        for u in existing_usage:
+            pkg = u.package_name
+            if pkg not in merged_existing or u.usage_time > merged_existing[pkg]:
+                merged_existing[pkg] = u.usage_time
+        total_usage_today = sum(merged_existing.values())
+
+        screen_limit_seconds = child.screen_time_limit * 60
+
+        if total_usage_today < screen_limit_seconds:
+            child.is_locked = False
+            child.save()
+
+    return Response({"status": "updated", "is_locked": child.is_locked}, status=200)
 
 # Function to check bedtime status for a child. Agar current time bedtime range mein hai, toh True return karega, warna False. Bedtime range ko handle karte waqt overnight ranges (jaise 21:00 - 07:00) ko bhi consider kiya gaya hai.
 def is_bedtime(child):
