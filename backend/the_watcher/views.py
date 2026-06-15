@@ -1822,7 +1822,7 @@ def dashboard_summary_api(request):
     # Screen time = total of ALL apps (last 2 days, max per app)
     all_usage = models.appUsage.objects.filter(
         child=child,
-        date__gte=two_days_ago
+        date=today,
     )
 
     # Same package ki duplicate entries merge karo — max lo
@@ -2099,7 +2099,8 @@ def update_screen_limits(request):
     # aur bedtime active nahi hai, to lock hata do
     if child.is_locked and not is_bedtime(child):
         two_days_ago = timezone.now().date() - timedelta(days=1)
-        existing_usage = models.appUsage.objects.filter(child=child, date__gte=two_days_ago)
+        today = timezone.now().date()
+        existing_usage = models.appUsage.objects.filter(child=child, date=today)
         merged_existing = {}
         for u in existing_usage:
             pkg = u.package_name
