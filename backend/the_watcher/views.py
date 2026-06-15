@@ -32,6 +32,7 @@ from datetime import datetime
 from .chat_agent.graph import chat_agent
 from rest_framework.permissions import IsAuthenticated
 from datetime import time as dt_time
+from django.db.models import Q
 
 
 
@@ -403,26 +404,216 @@ def collectAppUsageData_Api(request):
 
             screen_limit_seconds = child.screen_time_limit * 60
 
+            # if total_usage_today >= screen_limit_seconds:
+            #     child.is_locked = True
+            #     child.save()
+            #     return Response({"is_locked": True, "reason": "bedtime"}, status=200)
             if total_usage_today >= screen_limit_seconds:
-                child.is_locked = True
-                child.save()
-                return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+                if child.parent_unlocked and child.parent_unlocked_at:
+                    elapsed = (timezone.now() - child.parent_unlocked_at).total_seconds()
+                    # Parent ne unlock kiya tha — 30 min grace period check karo
+                    if elapsed < 30 * 60:
+                        pass  # Grace period — lock mat karo
+                    else:
+                        child.parent_unlocked = False
+                        child.parent_unlocked_at = None
+                        child.is_locked = True
+                        child.save()
+                        return Response({"is_locked": True, "reason": "screen_limit_after_grace"}, status=200)
+                    # Grace period mein hai — lock mat karo
+                else:
+                    child.is_locked = True
+                    child.save()
+                    return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
             
             SKIP_PACKAGES = {
-    'com.android', 'android',
-    'com.samsung.android.app.galaxyfinder',
-    'com.samsung.android.bixby.agent',
-    'com.google.android.permissioncontroller',
-    'com.sec.android.app.launcher',
-    'com.samsung.android.dialer',
-    'com.example.child_app',
-}
+            'com.android', 'android',
+            'com.samsung.android.app.galaxyfinder',
+            'com.samsung.android.bixby.agent',
+            'com.google.android.permissioncontroller',
+            'com.sec.android.app.launcher',
+            'com.samsung.android.dialer',
+            'com.example.child_app',
+        }
             AGENT_CATEGORIES = {"Social", "Sensitive", "Games", "Entertainment"}
+            KNOWN_CATEGORIES = {
+    # ── Social Media ──
+    'instagram': 'Social',
+    'facebook': 'Social',
+    'tiktok': 'Social',
+    'snapchat': 'Social',
+    'twitter': 'Social',
+    'pinterest': 'Social',
+    'linkedin': 'Social',
+    'discord': 'Social',
+    'tumblr': 'Social',
+    'reddit': 'Social',
+    'bereal': 'Social',
 
+    # ── Chatting ──
+    'whatsapp': 'Social',
+    'telegram': 'Social',
+    'signal': 'Social',
+    'skype': 'Social',
+    'imo': 'Social',
+    'viber': 'Social',
+    'messenger': 'Social',
+    'wechat': 'Social',
+    'line': 'Social',
+
+    # ── Entertainment ──
+    'youtube': 'Entertainment',
+    'netflix': 'Entertainment',
+    'spotify': 'Entertainment',
+    'twitch': 'Entertainment',
+    'dailymotion': 'Entertainment',
+    'vimeo': 'Entertainment',
+    'soundcloud': 'Entertainment',
+    'primevideo': 'Entertainment',
+    'hotstar': 'Entertainment',
+    'disneyplus': 'Entertainment',
+    'hulu': 'Entertainment',
+    'tving': 'Entertainment',
+    'bigo': 'Entertainment',
+    'likee': 'Entertainment',
+    'mxtakatak': 'Entertainment',
+    'resso': 'Entertainment',
+    'jiosaavn': 'Entertainment',
+    'gaana': 'Entertainment',
+
+    # ── Games ──
+    'roblox': 'Games',
+    'pubg': 'Games',
+    'freefire': 'Games',
+    'free.fire': 'Games',
+    'callofduty': 'Games',
+    'fortnite': 'Games',
+    'minecraft': 'Games',
+    'subway': 'Games',
+    'candycrush': 'Games',
+    'clashofclans': 'Games',
+    'brawlstars': 'Games',
+    'clashroyale': 'Games',
+    'mobilelegends': 'Games',
+    'hillclimb': 'Games',
+    'templerun': 'Games',
+    'angrybirds': 'Games',
+    'amongus': 'Games',
+    'fingersoft': 'Games',
+    'supercell': 'Games',
+    'miniclip': 'Games',
+    'gameloft': 'Games',
+    'eaplay': 'Games',
+    'fifamobile': 'Games',
+    'efootball': 'Games',
+    'ludo': 'Games',
+    'carrompool': 'Games',
+    '8ballpool': 'Games',
+    'gta': 'Games',
+    'battleground': 'Games',
+    'fpsshooter': 'Games',
+    'wordgame': 'Games',
+    'solitaire': 'Games',
+
+    # ── Education ──
+    'duolingo': 'Education',
+    'kahoot': 'Education',
+    'quizlet': 'Education',
+    'coursera': 'Education',
+    'udemy': 'Education',
+    'khan': 'Education',
+    'brainly': 'Education',
+    'photomath': 'Education',
+    'mathway': 'Education',
+    'grammarly': 'Education',
+    'dictionary': 'Education',
+    'encyclopedia': 'Education',
+    'google.classroom': 'Education',
+    'edmodo': 'Education',
+    'byju': 'Education',
+
+    # ── Tools / Browsers ──
+    'chrome': 'Tools',
+    'firefox': 'Tools',
+    'opera': 'Tools',
+    'brave': 'Tools',
+    'uc.browser': 'Tools',
+    'ucbrowser': 'Tools',
+    'duckduckgo': 'Tools',
+    'gmail': 'Tools',
+    'outlook': 'Tools',
+    'yahoo': 'Tools',
+    'maps': 'Tools',
+    'calculator': 'Tools',
+    'clock': 'Tools',
+    'calendar': 'Tools',
+    'camera': 'Tools',
+    'gallery': 'Tools',
+    'filemanager': 'Tools',
+    'files': 'Tools',
+    'drive': 'Tools',
+    'dropbox': 'Tools',
+    'onedrive': 'Tools',
+    'translate': 'Tools',
+    'weather': 'Tools',
+    'flashlight': 'Tools',
+    'compass': 'Tools',
+    'scanner': 'Tools',
+    'pdf': 'Tools',
+    'notepad': 'Tools',
+    'notes': 'Tools',
+    'reminder': 'Tools',
+    'contacts': 'Tools',
+
+    # ── Pakistan Specific ──
+    'jazzcash': 'Tools',
+    'easypaisa': 'Tools',
+    'daraz': 'Tools',
+    'foodpanda': 'Tools',
+    'careem': 'Tools',
+    'uber': 'Tools',
+    'bykea': 'Tools',
+    'ptcl': 'Tools',
+    'ufone': 'Tools',
+    'telenor': 'Tools',
+    'zong': 'Tools',
+    'mobilink': 'Tools',
+    'jazz': 'Tools',
+    'hbl': 'Tools',
+    'meezan': 'Tools',
+    'ubl': 'Tools',
+    'mcb': 'Tools',
+    'alfalahhbank': 'Tools',
+    'pakwheels': 'Tools',
+    'zameen': 'Tools',
+    'olx': 'Tools',
+    'imdb': 'Entertainment',
+    'arynews': 'Entertainment',
+    'geo': 'Entertainment',
+    'samaa': 'Entertainment',
+    'dawn': 'Education',
+    'express': 'Entertainment',
+
+    # ── Sensitive ──
+    'vpn': 'Sensitive',
+    'tor': 'Sensitive',
+    'proxy': 'Sensitive',
+    'hider': 'Sensitive',
+    'incognito': 'Sensitive',
+    'privatebrowser': 'Sensitive',
+    'darkweb': 'Sensitive',
+    'onion': 'Sensitive',
+}
             for i, app in enumerate(usage_data):
                 category = category_predictions[i]
                 package  = app["package_name"]
                 usage_time = app["usage_time"]
+
+                # Override if known app
+                for keyword, forced_cat in KNOWN_CATEGORIES.items():
+                    if keyword in package:
+                        category = forced_cat
+                        break
 
                 # ── DUPLICATE CHECK ──
                 # Aaj ka same package already save hai?
@@ -482,6 +673,7 @@ def collectAppUsageData_Api(request):
                         "alert_message": None,
                     })
                     continue
+                
 
                 # Sirf meaningful categories par agent chalao
                 if category not in AGENT_CATEGORIES:
@@ -620,6 +812,7 @@ def unlock_device(request):
     child = models.child.objects.get(id=child_id)
     child.is_locked = False
     child.parent_unlocked = True  # ← parent ne manually unlock kiya
+    child.parent_unlocked_at = timezone.now()
     child.save()
     return Response({"message": "Device Unlocked"})
 
@@ -1149,21 +1342,35 @@ def heartbeat_api(request):
 
 
 # API for child agent to check if device is locked by parent. Child agent is API ko periodically call karega, jaise ki har 5 minute mein, taki agar parent ne device lock kar diya hai toh child app ko pata chal jaye aur wo apne aap ko lock kar le.
-@api_view(['GET'])
 
+
+@api_view(['GET'])
 def check_lock_status(request):
     child_id = request.query_params.get('child_id')
     try:
         child = models.child.objects.get(id=child_id)
-        
-        # Bedtime check — override se upar hai
+
+        # Bedtime always wins
         if is_bedtime(child):
             child.is_locked = True
             child.parent_unlocked = False
+            child.parent_unlocked_at = None
             child.save()
             return Response({"is_locked": True, "reason": "bedtime"}, status=200)
 
-        # Usage calculate karo (dono cases ke liye chahiye)
+        # Grace period check — time-based (30 min from unlock time)
+        if child.parent_unlocked and child.parent_unlocked_at:
+            elapsed = timezone.now() - child.parent_unlocked_at
+            if elapsed.total_seconds() < 30 * 60:
+                # Grace period mein hai — lock mat karo
+                return Response({"is_locked": False})
+            else:
+                # 30 min guzar gaye — grace khatam, reset karo
+                child.parent_unlocked = False
+                child.parent_unlocked_at = None
+                child.save()
+
+        # Normal usage check
         today = timezone.now().date()
         existing_usage = models.appUsage.objects.filter(child=child, date=today)
         merged = {}
@@ -1176,23 +1383,16 @@ def check_lock_status(request):
 
         print(f"Lock check — used: {total_usage_today}s, limit: {screen_limit_seconds}s")
 
-        # Normal lock check — sirf tab jab parent ne unlock nahi kiya
-        if not child.is_locked and not child.parent_unlocked:
-            if total_usage_today >= screen_limit_seconds:
-                child.is_locked = True
-                child.save()
-                return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
+        if total_usage_today >= screen_limit_seconds:
+            child.is_locked = True
+            child.save()
+            return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
 
-        # Grace period check — parent ne unlock kiya tha, 30 min extra
-        if child.parent_unlocked:
-            buffer_seconds = 30 * 60  # 30 minute grace period
-            if total_usage_today >= screen_limit_seconds + buffer_seconds:
-                child.is_locked = True
-                child.parent_unlocked = False  # override khatam
-                child.save()
-                return Response({"is_locked": True, "reason": "screen_limit_exceeded_after_unlock"}, status=200)
+        # Usage limit cross nahi hui, unlock karo agar locked tha
+        if child.is_locked:
+            child.is_locked = False
+            child.save()
 
-        print(f"Lock status check for child {child_id}: is_locked={child.is_locked}")
         return Response({"is_locked": child.is_locked})
     except models.child.DoesNotExist:
         return Response({"is_locked": False})
@@ -1440,7 +1640,14 @@ def collect_chat(request):
             return Response({"status": "ignored_noise"}, status=200)
         
         if is_content:
-                CONTENT_NOISE = {"like", "save", "share", "comment", "subscribe", "follow", "more", "less", "ad", "sponsored"}
+                CONTENT_NOISE = {"like", "save", "share", "comment", "subscribe", "follow",
+    "more", "less", "ad", "sponsored", "shorts", "summary",
+    "music", "play", "news", "gaming", "months", "learning",
+    "fashion", "beauty", "podcasts", "live", "explore",
+    "youtube playables", "instant games, no downloads",
+    "breaking news", "television series", "weather forecasting",
+    "pakistani dramas", "cricket highlights", "fitness workouts", "cooking recipes",
+    "travel vlogs", "unboxing videos", "technology reviews", "educational content", "comedy sketches", "music videos",}
                 if message.lower().strip() in CONTENT_NOISE:
                     return Response({"status": "ignored_noise"}, status=200)
 
@@ -1615,7 +1822,7 @@ def dashboard_summary_api(request):
     # Screen time = total of ALL apps (last 2 days, max per app)
     all_usage = models.appUsage.objects.filter(
         child=child,
-        date__gte=two_days_ago
+        date=today,
     )
 
     # Same package ki duplicate entries merge karo — max lo
@@ -1741,7 +1948,7 @@ def browsing_monitoring_api(request):
     } for w in web_records]
 
     # Safety alerts
-    alerts = models.Alert.objects.filter(child=child).order_by('-created_at')[:10]
+    alerts = models.Alert.objects.filter(child=child, source="web").order_by('-created_at')[:10]
     alert_list = [{
         "alert_type": a.alert_type,
         "message": a.message,
@@ -1892,7 +2099,8 @@ def update_screen_limits(request):
     # aur bedtime active nahi hai, to lock hata do
     if child.is_locked and not is_bedtime(child):
         two_days_ago = timezone.now().date() - timedelta(days=1)
-        existing_usage = models.appUsage.objects.filter(child=child, date__gte=two_days_ago)
+        today = timezone.now().date()
+        existing_usage = models.appUsage.objects.filter(child=child, date=today)
         merged_existing = {}
         for u in existing_usage:
             pkg = u.package_name
@@ -2101,7 +2309,7 @@ def youtube_activity_api(request):
     alerts = models.Alert.objects.filter(
         child=child,
     ).filter(
-        models.Q(source='youtube') | models.Q(message__icontains='youtube')
+        Q(source='youtube') | Q(message__icontains='youtube')
     ).order_by('-created_at')[:10]
 
     alert_data = [{

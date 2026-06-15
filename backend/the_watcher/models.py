@@ -33,6 +33,7 @@ class child(models.Model):
     bedtime_end = models.TimeField(null=True, blank=True, default='07:00')
     bedtime_enabled = models.BooleanField(default=True)
     parent_unlocked = models.BooleanField(default=False)
+    parent_unlocked_at = models.DateTimeField(null=True, blank=True)
 
 
 # Pairing Code Model

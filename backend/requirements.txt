@@ -12,3 +12,6 @@ pydantic
 dotenv
 langchain_groq
 xgboost
+psycopg2-binary
+dj-database-url
+python-dotenv

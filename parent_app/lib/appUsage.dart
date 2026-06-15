@@ -271,18 +271,32 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
 
   // Backend category ko normalize karo, fallback local detection
   String resolveCategory(Map<String, dynamic> app) {
-    final backendCat = app['category']?.toString() ?? '';
+  final String pkg = (app['package_name'] ?? '').toLowerCase();
 
-    // Agar backend ne valid category di hai (Pending nahi, empty nahi)
-    if (backendCat.isNotEmpty &&
-        backendCat != 'Pending' &&
-        backendCat != 'Unknown') {
-      return _normalizeCategoryName(backendCat);
-    }
+  // Explicit package overrides — ML model galat category de raha hai inhe
+  if (pkg.contains('youtube')) return 'Entertainment';
+  if (pkg.contains('netflix')) return 'Entertainment';
+  if (pkg.contains('spotify')) return 'Entertainment';
+  if (pkg.contains('whatsapp')) return 'Chatting';
+  if (pkg.contains('telegram')) return 'Chatting';
+  if (pkg.contains('instagram')) return 'Social Media';
+  if (pkg.contains('facebook')) return 'Social Media';
+  if (pkg.contains('tiktok')) return 'Social Media';
+  if (pkg.contains('snapchat')) return 'Social Media';
+  if (pkg.contains('twitter')) return 'Social Media';
+  if (pkg.contains('roblox')) return 'Gaming';
+  if (pkg.contains('pubg')) return 'Gaming';
 
-    // Fallback — package name se local detect karo
-    return _localCategory(app['package_name'] ?? '');
+  final backendCat = app['category']?.toString() ?? '';
+
+  if (backendCat.isNotEmpty &&
+      backendCat != 'Pending' &&
+      backendCat != 'Unknown') {
+    return _normalizeCategoryName(backendCat);
   }
+
+  return _localCategory(pkg);
+}
 
   // ML model ke category names ko UI names pe map karo
   String _normalizeCategoryName(String cat) {
@@ -383,7 +397,67 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
     return "${hours}h ${remainingMins}m";
   }
 
-  Future<void> fetchUsageData() async {
+//   Future<void> fetchUsageData() async {
+//   setState(() => isLoading = true);
+//   try {
+//     final response = await http.get(
+//       Uri.parse('http://192.168.18.163:8000/get-child-usage/${widget.childId}/'),
+//       headers: {"Content-Type": "application/json"},
+//     );
+
+//     if (response.statusCode == 200) {
+//       final data = jsonDecode(response.body);
+//       List<dynamic> rawUsage = data['usage_data'];
+
+//       const skipKeywords = [
+//         'com.android', 'com.samsung', 'com.sec', 'com.google.android.permissioncontroller', 'com.example'
+//       ];
+
+//       const skipPackages = {
+//         'cn.wps.moffice_eng',
+//         'com.google.android.googlequicksearchbox',
+//         'com.samsung.android.incallui',
+//         'com.sec.android.gallery3d',
+//         'com.samsung.accessibility',
+//         'com.android.settings',
+//         'com.techlogix.mobilinkcustomer',
+//         'com.android.chrome', // agar browser show nahi karna
+//       };
+
+//       List<Map<String, dynamic>> filtered = rawUsage
+//           .where((app) {
+//             String pkg = (app['package_name'] ?? '').toLowerCase();
+//             int time = app['usage_time'] as int? ?? 0;
+
+//             if (time <= 0) return false;
+//             if (skipPackages.contains(pkg)) return false;
+//             for (final kw in skipKeywords) {
+//               if (pkg.contains(kw)) return false;
+//             }
+//             return true;
+//           })
+//           .map((app) => Map<String, dynamic>.from(app))
+//           .toList();
+
+//       filtered.sort((a, b) =>
+//           (b['usage_time'] as int).compareTo(a['usage_time'] as int));
+
+//       setState(() {
+//         usageData = filtered;
+//         isLoading = false;
+//       });
+//     } else {
+//       setState(() => isLoading = false);
+//     }
+//   } catch (e) {
+//     debugPrint("Error: $e");
+//     setState(() => isLoading = false);
+//   }
+// }
+
+
+
+Future<void> fetchUsageData() async {
   setState(() => isLoading = true);
   try {
     final response = await http.get(
@@ -395,13 +469,6 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
       final data = jsonDecode(response.body);
       List<dynamic> rawUsage = data['usage_data'];
 
-      const skipKeywords = [
-        'android', 'samsung', 'launcher', 'dialer',
-        'calculator', 'permissioncontroller', 'bixby',
-        'systemui', 'inputmethod', 'sec.android',
-        'com.example',
-      ];
-
       const skipPackages = {
         'cn.wps.moffice_eng',
         'com.google.android.googlequicksearchbox',
@@ -410,8 +477,15 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
         'com.samsung.accessibility',
         'com.android.settings',
         'com.techlogix.mobilinkcustomer',
-        'com.android.chrome', // agar browser show nahi karna
       };
+
+      const skipPrefixes = [
+        'com.android.',
+        'com.samsung.',
+        'com.sec.',
+        'com.google.android.permissioncontroller',
+        'com.example.',
+      ];
 
       List<Map<String, dynamic>> filtered = rawUsage
           .where((app) {
@@ -420,9 +494,11 @@ class _AppUsageMonitoringScreenState extends State<AppUsageMonitoringScreen> {
 
             if (time <= 0) return false;
             if (skipPackages.contains(pkg)) return false;
-            for (final kw in skipKeywords) {
-              if (pkg.contains(kw)) return false;
+
+            for (final prefix in skipPrefixes) {
+              if (pkg.startsWith(prefix)) return false;
             }
+
             return true;
           })
           .map((app) => Map<String, dynamic>.from(app))

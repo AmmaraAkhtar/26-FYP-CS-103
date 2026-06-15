@@ -284,13 +284,13 @@ private fun scheduleTick() {
             tickCount++
 
             if (deviceLocked) {
-                // Locked — sirf check karo, 3 sec pe
+                // Locked — sirf check karo, 500ms pe (fast relock backup)
                 if (!isLockActivityVisible()) {
                     Log.d("MONITOR_SERVICE", "Locked, LockActivity not visible — relaunching")
                     showLockNotification()
                 }
                 if (tickCount % 20 == 0) checkLockStatus()  // har 1 min pe backend check
-                handler.postDelayed(this, 3_000L)
+                handler.postDelayed(this, 500L)
             } else {
                 // Normal monitoring
                 if (tickCount % 5 == 0)  collectAndSendSms()

