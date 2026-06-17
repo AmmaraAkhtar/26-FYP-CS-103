@@ -285,7 +285,7 @@ class _YoutubeActivityScreenState extends State<YoutubeActivityScreen> {
     setState(() => isLoading = true);
     try {
       final res = await http.get(Uri.parse(
-        "http://192.168.18.163:8000/youtube-activity/?child_id=${widget.childId}&filter=$selectedFilter",
+        "http://10.13.45.141:8000/youtube-activity/?child_id=${widget.childId}&filter=$selectedFilter",
       ));
       if (res.statusCode == 200 && mounted) {
         setState(() {

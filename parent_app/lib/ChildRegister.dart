@@ -328,16 +328,16 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
-class profile extends StatefulWidget {
+class Childregister extends StatefulWidget {
   String email;
   String token;
-  profile({super.key, required this.email, required this.token});
+  Childregister({super.key, required this.email, required this.token});
 
   @override
-  State<profile> createState() => _EditprofileState();
+  State<Childregister> createState() => _EditprofileState();
 }
 
-class _EditprofileState extends State<profile> {
+class _EditprofileState extends State<Childregister> {
   String error = '';
 
   // Existing controllers
@@ -353,8 +353,8 @@ class _EditprofileState extends State<profile> {
       TextEditingController(text: "07:00");
   bool bedtimeEnabled = true;
 
-  Future<void> registerChild() async {
-    String link = 'http://192.168.18.163:8000/createChild/';
+ Future<void> registerChild() async {
+    String link = 'http://10.13.45.141:8000/createChild/';
     final url = Uri.parse(link);
 
     final response = await http.post(
@@ -375,6 +375,10 @@ class _EditprofileState extends State<profile> {
       }),
     );
 
+    // ── DEBUG ──
+    print("STATUS CODE: ${response.statusCode}");
+    print("RESPONSE BODY: ${response.body}");
+
     if (response.statusCode == 201) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Pairing Code is sent to your email")),
@@ -382,24 +386,63 @@ class _EditprofileState extends State<profile> {
       Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed to register child")),
+        SnackBar(content: Text("Failed: ${response.body}")),  // exact error dikhega
       );
     }
   }
 
   void register() async {
-    if (firstNameController.text.isEmpty ||
-        lastNameController.text.isEmpty ||
-        ageController.text.isEmpty ||
-        screenTimeController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all the fields")),
-      );
-    } else {
-      await registerChild();
-    }
+  if (firstNameController.text.isEmpty ||
+      lastNameController.text.isEmpty ||
+      ageController.text.isEmpty ||
+      screenTimeController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Please fill all the fields")),
+    );
+    return;
   }
 
+  // Age validation
+  int? age = int.tryParse(ageController.text);
+  if (age == null || age >= 18) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Child's age must be less than 18"),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  // // Bedtime validation
+  // if (bedtimeEnabled) {
+  //   final startParts = bedtimeStartController.text.split(':');
+  //   final endParts = bedtimeEndController.text.split(':');
+
+  //   final startMinutes =
+  //       int.parse(startParts[0]) * 60 + int.parse(startParts[1]);
+  //   final endMinutes =
+  //       int.parse(endParts[0]) * 60 + int.parse(endParts[1]);
+
+  //   // Start time hamesha end time se zyada honi chahiye
+  //   // Raat wala case handle karna hai: e.g. start=21:00, end=07:00
+  //   // Agar start < end ho (e.g. start=08:00, end=20:00) toh yeh invalid hai
+  //   final bool isOvernightValid = startMinutes > endMinutes;
+
+  //   if (!isOvernightValid) {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text(
+  //             "Bedtime start must be later than end time (e.g. 9 PM to 7 AM)"),
+  //         backgroundColor: Colors.red,
+  //       ),
+  //     );
+  //     return;
+  //   }
+  // }
+
+  await registerChild();
+}
   // Helper to open time picker and update a controller
   Future<void> _pickTime(
       BuildContext context, TextEditingController controller,
@@ -483,24 +526,20 @@ class _EditprofileState extends State<profile> {
                       right: 0,
                       child: Center(
                         child: CircleAvatar(
-                          radius: 100.r,
-                          backgroundColor: Colors.pink.shade100,
-                          backgroundImage:
-                              const AssetImage('assets/person.jpg'),
-                        ),
+                            radius: 100.r,
+                            backgroundColor: Colors.grey.shade300,
+                            child: Icon(
+                              Icons.person,
+                              size: 80.r,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
                       ),
                     ),
                   ],
                 ),
                 SizedBox(height: 60.h),
-                Text(
-                  "Change Picture",
-                  style: TextStyle(
-                    fontSize: 15.sp,
-                    color: const Color.fromARGB(255, 0, 142, 224),
-                  ),
-                ),
-                SizedBox(height: 30.h),
+              
 
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.w),

@@ -9,6 +9,7 @@ import os
 import itertools
 from django.utils import timezone
 from datetime import timedelta
+from langchain_openai import ChatOpenAI
 from ..utils  import send_alert #send_alert function from views.py file
 
 load_dotenv()
@@ -35,12 +36,19 @@ if not GROQ_KEYS:
 key_cycle = itertools.cycle(GROQ_KEYS)
 
 
-def get_llm():
+# def get_llm():
     
-    return ChatGroq(
-        model="llama-3.1-8b-instant",
+#     return ChatGroq(
+#         model="llama-3.1-8b-instant",
+#         temperature=0,
+#         groq_api_key=next(key_cycle),
+#     )
+
+def get_llm():
+    return ChatOpenAI(
+        model="gpt-5.4-mini",
         temperature=0,
-        groq_api_key=next(key_cycle),
+        api_key=os.getenv("OPENAI_API_KEY"),
     )
 
 llm = get_llm()

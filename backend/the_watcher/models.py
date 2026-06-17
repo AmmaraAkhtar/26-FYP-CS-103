@@ -71,7 +71,7 @@ class Alert(models.Model):
 # Web Usage Model
 class webUsage(models.Model):
     child = models.ForeignKey('child', on_delete=models.CASCADE)
-    usage_time = models.IntegerField(default = 0) 
+    # usage_time = models.IntegerField(default = 0) 
     url = models.URLField(max_length=500, null=True) 
     created_at = models.DateTimeField(auto_now_add=True)
     risk = models.CharField(max_length=20,null=True)

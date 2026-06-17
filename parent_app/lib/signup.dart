@@ -23,7 +23,8 @@ class _SignupState extends State<Signup> {
   String passwordError = "";
   String confirmPasswordError = "";
   String error_message = "";
-
+  bool _obscurePassword = true;
+bool _obscureConfirmPassword = true;  
   void validateUsername() {
     final value = _username.text.trim();
     final regex = RegExp(r'^[a-zA-Z0-9_]+$');
@@ -84,14 +85,57 @@ class _SignupState extends State<Signup> {
     });
   }
 
-  Future<void> signupRequest(
+  // Future<void> signupRequest(
+  //   String username,
+  //   String email,
+  //   String password,
+  // ) async {
+  //   //String link = 'http://127.0.0.1:8000/signup/';
+  //   print(">>> BEFORE API CALL");
+  //   String link = 'http://10.13.45.141:8000/signup/';
+  //   final url = Uri.parse(link);
+  //   try {
+  //     final response = await http.post(
+  //       url,
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: jsonEncode({
+  //         'username': username,
+  //         'email': email,
+  //         'password': password,
+  //       }),
+  //     );
+  //     print(">>> AFTER API CALL");
+  //     if (response.statusCode == 200) {
+  //       Navigator.push(
+  //         context,
+  //         MaterialPageRoute(
+  //           builder: (context) => OTP(email: email),
+  //         ),
+  //       );
+  //     } else {
+  //       var data = jsonDecode(response.body);
+  //       setState(() {
+  //         if (data is Map) {
+  //           error_message = data.values.join("\n");
+  //         } else {
+  //           error_message = data.toString();
+  //         }
+  //       });
+  //     }
+  //   } catch (e) {
+  //     setState(() {
+  //       error_message = "Network error: $e";
+  //     });
+  //   }
+  // }
+
+
+Future<void> signupRequest(
     String username,
     String email,
     String password,
   ) async {
-    //String link = 'http://127.0.0.1:8000/signup/';
-    print(">>> BEFORE API CALL");
-    String link = 'http://192.168.18.163:8000/signup/';
+    String link = 'http://10.13.45.141:8000/signup/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(
@@ -103,7 +147,7 @@ class _SignupState extends State<Signup> {
           'password': password,
         }),
       );
-      print(">>> AFTER API CALL");
+
       if (response.statusCode == 200) {
         Navigator.push(
           context,
@@ -111,23 +155,37 @@ class _SignupState extends State<Signup> {
             builder: (context) => OTP(email: email),
           ),
         );
-      } else {
-        var data = jsonDecode(response.body);
+      } else if (response.statusCode == 400) {
         setState(() {
-          if (data is Map) {
-            error_message = data.values.join("\n");
-          } else {
-            error_message = data.toString();
-          }
+          error_message = "This email or username is already registered.";
+        });
+      } else if (response.statusCode == 409) {
+        setState(() {
+          error_message = "An account with this email already exists. Please login.";
+        });
+      } else if (response.statusCode >= 500) {
+        setState(() {
+          error_message = "Server error. Please try again later.";
+        });
+      } else {
+        setState(() {
+          error_message = "Sign up failed. Please try again.";
         });
       }
     } catch (e) {
       setState(() {
-        error_message = "Network error: $e";
+        if (e.toString().contains('SocketException') ||
+            e.toString().contains('Connection refused') ||
+            e.toString().contains('Network')) {
+          error_message = "No internet connection. Please check and try again.";
+        } else if (e.toString().contains('TimeoutException')) {
+          error_message = "Connection timed out. Please try again.";
+        } else {
+          error_message = "Something went wrong. Please try again.";
+        }
       });
     }
   }
-
   void submit() async {
     print("BUTTON CLICKED");
     
@@ -277,92 +335,90 @@ print("Confirm error: $confirmPasswordError");
                   SizedBox(height: 20.h),
 
                   // Password
-                  SizedBox(
-                    width: 350.w,
-                    child: TextField(
-                      obscureText: true,
-                      controller: _password,
-                      decoration: InputDecoration(
-                        hintText: 'Enter Password',
-                        hintStyle: TextStyle(color: Color(0xFFbdbcbc), fontSize: 16.sp),
-                        errorText: passwordError.isEmpty ? null : passwordError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7.r),
-                          borderSide: BorderSide(color: Color(0xFFbdbcbc), width: 1.4.w),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.r),
-                          borderSide: BorderSide(color: Color(0xFF147CF4), width: 2.w),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(color: Colors.red, width: 2.w),
-                        ),
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(color: Colors.red, width: 2.w),
-                        ),
-                      ),
-                    ),
-                  ),
+                 // Password
+SizedBox(
+  width: 350.w,
+  child: TextField(
+    obscureText: _obscurePassword,
+    controller: _password,
+    decoration: InputDecoration(
+      hintText: 'Enter Password',
+      hintStyle: TextStyle(color: Color(0xFFbdbcbc), fontSize: 16.sp),
+      errorText: passwordError.isEmpty ? null : passwordError,
+      suffixIcon: IconButton(
+        icon: Icon(
+          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+          color: Colors.grey,
+        ),
+        onPressed: () {
+          setState(() {
+            _obscurePassword = !_obscurePassword;
+          });
+        },
+      ),
+      contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(7.r),
+        borderSide: BorderSide(color: Color(0xFFbdbcbc), width: 1.4.w),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.r),
+        borderSide: BorderSide(color: Color(0xFF147CF4), width: 2.w),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.r),
+        borderSide: BorderSide(color: Colors.red, width: 2.w),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.r),
+        borderSide: BorderSide(color: Colors.red, width: 2.w),
+      ),
+    ),
+  ),
+),
                   SizedBox(height: 20.h),
 
-                  // Confirm Password
-                  SizedBox(
-                    width: 350.w,
-                    child: TextField(
-                      obscureText: true,
-                      controller: _confirmPassword,
-                      decoration: InputDecoration(
-                        hintText: 'Confirm Password',
-                        hintStyle: TextStyle(color: Color(0xFFbdbcbc), fontSize: 16.sp),
-                        errorText: confirmPasswordError.isEmpty ? null : confirmPasswordError,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.r),
-                          borderSide: BorderSide(color: Color(0xFFbdbcbc), width: 1.4.w),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7.r),
-                          borderSide: BorderSide(color: Color(0xFF147CF4), width: 2.w),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(color: Colors.red, width: 2.w),
-                        ),
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(color: Colors.red, width: 2.w),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  SizedBox(height: 40.h),
-
-                  // Sign Up Button
-                  SizedBox(
-                    width: 285.w,
-                    height: 47.h,
-                    child: ElevatedButton(
-                      onPressed: () {
-                          print("BUTTON CLICKED");
-                              submit();
-                          }  , 
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        side: BorderSide(color: Color(0xFFEB9974), width: 2.w),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(40.r),
-                        ),
-                      ),
-                      child: Text(
-                        'Sign Up',
-                        style: TextStyle(fontSize: 22.sp, color: Color(0xFFE59885), fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
+                 // Confirm Password
+SizedBox(
+  width: 350.w,
+  child: TextField(
+    obscureText: _obscureConfirmPassword,
+    controller: _confirmPassword,
+    decoration: InputDecoration(
+      hintText: 'Confirm Password',
+      hintStyle: TextStyle(color: Color(0xFFbdbcbc), fontSize: 16.sp),
+      errorText: confirmPasswordError.isEmpty ? null : confirmPasswordError,
+      suffixIcon: IconButton(
+        icon: Icon(
+          _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+          color: Colors.grey,
+        ),
+        onPressed: () {
+          setState(() {
+            _obscureConfirmPassword = !_obscureConfirmPassword;
+          });
+        },
+      ),
+      contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.r),
+        borderSide: BorderSide(color: Color(0xFFbdbcbc), width: 1.4.w),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(7.r),
+        borderSide: BorderSide(color: Color(0xFF147CF4), width: 2.w),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.r),
+        borderSide: BorderSide(color: Colors.red, width: 2.w),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.r),
+        borderSide: BorderSide(color: Colors.red, width: 2.w),
+      ),
+    ),
+  ),
+),
                   SizedBox(height: 25.h),
 
                   Row(

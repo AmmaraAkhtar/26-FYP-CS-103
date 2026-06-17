@@ -49,7 +49,7 @@ class _Resetpassword2State extends State<Resetpassword2> {
   }
 
   Future<void> resetPasswordRequest(String email, String password) async {
-    String link = 'http://192.168.18.163:8000/resetPassword/';
+    String link = 'http://10.13.45.141:8000/resetPassword/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(

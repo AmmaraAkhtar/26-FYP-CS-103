@@ -19,10 +19,51 @@ class _loginState extends State<login> {
   String error_message = "";
   TextEditingController _email = TextEditingController();
   TextEditingController _password = TextEditingController();
+  bool _obscurePassword = true;
 
-  Future<void> loginRequest(String email, String password) async {
-    //String link = 'http://127.0.0.1:8000/login/';
-    String link = 'http://192.168.18.163:8000/login/';
+  // Future<void> loginRequest(String email, String password) async {
+  //   //String link = 'http://127.0.0.1:8000/login/';
+  //   String link = 'http://10.13.45.141:8000/login/';
+  //   final url = Uri.parse(link);
+  //   try {
+  //     final response = await http.post(
+  //       url,
+  //       headers: {'Content-Type': 'application/json'},
+  //       body: jsonEncode({'email': email, 'password': password}),
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       print('Login successful');
+  //       var data = jsonDecode(response.body);
+
+  // // Token extract
+  //     String accessToken = data['tokens']['access'];
+  //     String refreshToken = data['tokens']['refresh'];
+
+  //     print("Access Token: $accessToken");
+  //     print("Refresh Token: $refreshToken");
+  //       Navigator.push(
+  //         context,
+  //         MaterialPageRoute(builder: (context) => home(email: email,token: accessToken,)),
+  //       );
+  //     } else {
+  //       var data = jsonDecode(response.body);
+  //       setState(() {
+  //         if (data is Map) {
+  //           error_message = data.values.join("\n");
+  //         } else {
+  //           error_message = data.toString();
+  //         }
+  //       });
+  //     }
+  //   } catch (e) {
+  //     setState(() {
+  //       error_message = "Network error: $e";
+  //     });
+  //   }
+  // }
+Future<void> loginRequest(String email, String password) async {
+    String link = 'http://10.13.45.141:8000/login/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(
@@ -32,36 +73,49 @@ class _loginState extends State<login> {
       );
 
       if (response.statusCode == 200) {
-        print('Login successful');
         var data = jsonDecode(response.body);
-
-  // Token extract
-      String accessToken = data['tokens']['access'];
-      String refreshToken = data['tokens']['refresh'];
-
-      print("Access Token: $accessToken");
-      print("Refresh Token: $refreshToken");
+        String accessToken = data['tokens']['access'];
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => home(email: email,token: accessToken,)),
+          MaterialPageRoute(
+            builder: (context) => home(email: email, token: accessToken),
+          ),
         );
-      } else {
-        var data = jsonDecode(response.body);
+      } else if (response.statusCode == 401) {
         setState(() {
-          if (data is Map) {
-            error_message = data.values.join("\n");
-          } else {
-            error_message = data.toString();
-          }
+          error_message = "Incorrect email or password. Please try again.";
+        });
+      } else if (response.statusCode == 404) {
+        setState(() {
+          error_message = "Account not found. Please sign up first.";
+        });
+      } else if (response.statusCode == 400) {
+        setState(() {
+          error_message = "Please enter a valid email and password.";
+        });
+      } else if (response.statusCode >= 500) {
+        setState(() {
+          error_message = "Server error. Please try again later.";
+        });
+      } else {
+        setState(() {
+          error_message = "Login failed. Please try again.";
         });
       }
     } catch (e) {
       setState(() {
-        error_message = "Network error: $e";
+        if (e.toString().contains('SocketException') ||
+            e.toString().contains('Connection refused') ||
+            e.toString().contains('Network')) {
+          error_message = "No internet connection. Please check and try again.";
+        } else if (e.toString().contains('TimeoutException')) {
+          error_message = "Connection timed out. Please try again.";
+        } else {
+          error_message = "Something went wrong. Please try again.";
+        }
       });
     }
   }
-
   void validate_email() {
     String email = _email.text.trim();
     if (email.isEmpty) {
@@ -196,42 +250,86 @@ class _loginState extends State<login> {
                   SizedBox(height: 20.h),
 
                   // Password TextField
-                  SizedBox(
-                    width: 350.w,
-                    child: TextField(
-                      controller: _password,
-                      decoration: InputDecoration(
-                        hintText: 'Enter Your Password',
-                        errorText: password_error.isEmpty ? null : password_error,
+                  // SizedBox(
+                  //   width: 350.w,
+                  //   child: TextField(
+                  //     controller: _password,
+                  //     decoration: InputDecoration(
+                  //       hintText: 'Enter Your Password',
+                  //       errorText: password_error.isEmpty ? null : password_error,
                     
-                        hintStyle: TextStyle(
-                          color: Color(0xFFbdbcbc),
-                          fontSize: 16.sp,
-                        ),
+                  //       hintStyle: TextStyle(
+                  //         color: Color(0xFFbdbcbc),
+                  //         fontSize: 16.sp,
+                  //       ),
                         
-                        contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(7.r),
-                          borderSide: BorderSide(
-                            color: Color(0xFFbdbcbc),
-                            width: 1.4.w,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.r),
-                          borderSide: BorderSide(color: Color(0xFF147CF4), width: 2.w),
-                        ),
-                        errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(color: Colors.red, width: 2.w),
-                        ),
-                        focusedErrorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8.r),
-                          borderSide: BorderSide(color: Colors.red, width: 2.w),
-                        ),
-                      ),
-                    ),
-                  ),
+                  //       contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                  //       enabledBorder: OutlineInputBorder(
+                  //         borderRadius: BorderRadius.circular(7.r),
+                  //         borderSide: BorderSide(
+                  //           color: Color(0xFFbdbcbc),
+                  //           width: 1.4.w,
+                  //         ),
+                  //       ),
+                  //       focusedBorder: OutlineInputBorder(
+                  //         borderRadius: BorderRadius.circular(10.r),
+                  //         borderSide: BorderSide(color: Color(0xFF147CF4), width: 2.w),
+                  //       ),
+                  //       errorBorder: OutlineInputBorder(
+                  //         borderRadius: BorderRadius.circular(8.r),
+                  //         borderSide: BorderSide(color: Colors.red, width: 2.w),
+                  //       ),
+                  //       focusedErrorBorder: OutlineInputBorder(
+                  //         borderRadius: BorderRadius.circular(8.r),
+                  //         borderSide: BorderSide(color: Colors.red, width: 2.w),
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
+
+                  SizedBox(
+  width: 350.w,
+  child: TextField(
+    controller: _password,
+    obscureText: _obscurePassword,
+    decoration: InputDecoration(
+      hintText: 'Enter Your Password',
+      errorText: password_error.isEmpty ? null : password_error,
+      hintStyle: TextStyle(
+        color: Color(0xFFbdbcbc),
+        fontSize: 16.sp,
+      ),
+      suffixIcon: IconButton(
+        icon: Icon(
+          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+          color: Colors.grey,
+        ),
+        onPressed: () {
+          setState(() {
+            _obscurePassword = !_obscurePassword;
+          });
+        },
+      ),
+      contentPadding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(7.r),
+        borderSide: BorderSide(color: Color(0xFFbdbcbc), width: 1.4.w),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10.r),
+        borderSide: BorderSide(color: Color(0xFF147CF4), width: 2.w),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.r),
+        borderSide: BorderSide(color: Colors.red, width: 2.w),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8.r),
+        borderSide: BorderSide(color: Colors.red, width: 2.w),
+      ),
+    ),
+  ),
+),
                   SizedBox(height: 5.h),
 
                   // Forgot Password

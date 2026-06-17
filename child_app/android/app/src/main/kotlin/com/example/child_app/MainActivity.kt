@@ -1,6 +1,7 @@
 package com.example.child_app
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
@@ -17,21 +18,31 @@ class MainActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
+        requestOverlayPermission()
 
-        // If device is locked, push LockActivity on top and stay there.
-        // Use REORDER_TO_FRONT so if LockActivity already exists in the stack
-        // we just bring it forward — no duplicate instances, no flicker.
         if (MyForegroundService.isDeviceLocked) {
             val intent = Intent(this, LockActivity::class.java)
             intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
             startActivity(intent)
-            return   // stop here — don't set up channels until unlocked
+            return
         }
 
         MyAccessibilityService.channel = MethodChannel(
             flutterEngine!!.dartExecutor.binaryMessenger,
             "chat_reader_channel"
         )
+    }
+
+    private fun requestOverlayPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (!Settings.canDrawOverlays(this)) {
+                val intent = Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:$packageName")
+                )
+                startActivity(intent)
+            }
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -83,7 +94,7 @@ class MainActivity : FlutterActivity() {
                     val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
                     if (!pm.isIgnoringBatteryOptimizations(packageName)) {
                         val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
-                        intent.data = android.net.Uri.parse("package:$packageName")
+                        intent.data = Uri.parse("package:$packageName")
                         startActivity(intent)
                     } else {
                         result.success("Already ignoring")
@@ -94,7 +105,7 @@ class MainActivity : FlutterActivity() {
 
                 "startService" -> {
                     val childId = call.argument<Int>("child_id") ?: -1
-                    val intent  = Intent(this, MyForegroundService::class.java)
+                    val intent = Intent(this, MyForegroundService::class.java)
                     intent.putExtra("child_id", childId)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         startForegroundService(intent)
@@ -141,19 +152,22 @@ class MainActivity : FlutterActivity() {
         val intent = Intent()
         try {
             when {
-                manufacturer.contains("xiaomi")  -> intent.component = ComponentName("com.miui.securitycenter","com.miui.permcenter.autostart.AutoStartManagementActivity")
-                manufacturer.contains("oppo")    -> intent.component = ComponentName("com.coloros.safecenter","com.coloros.safecenter.permission.startup.StartupAppListActivity")
-                manufacturer.contains("vivo")    -> intent.component = ComponentName("com.vivo.permissionmanager","com.vivo.permissionmanager.activity.BgStartUpManagerActivity")
-                manufacturer.contains("samsung") -> intent.component = ComponentName("com.samsung.android.lool","com.samsung.android.sm.ui.battery.BatteryActivity")
-                manufacturer.contains("huawei")  -> intent.component = ComponentName("com.huawei.systemmanager","com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
-                manufacturer.contains("oneplus") -> intent.component = ComponentName("com.oneplus.security","com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity")
-                manufacturer.contains("asus")    -> {
-                    intent.component = ComponentName("com.asus.mobilemanager","com.asus.mobilemanager.entry.FunctionActivity")
+                manufacturer.contains("xiaomi") -> intent.component = ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")
+                manufacturer.contains("oppo") -> intent.component = ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")
+                manufacturer.contains("vivo") -> intent.component = ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")
+                manufacturer.contains("samsung") -> intent.component = ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")
+                manufacturer.contains("huawei") -> intent.component = ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
+                manufacturer.contains("oneplus") -> intent.component = ComponentName("com.oneplus.security", "com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity")
+                manufacturer.contains("asus") -> {
+                    intent.component = ComponentName("com.asus.mobilemanager", "com.asus.mobilemanager.entry.FunctionActivity")
                     intent.putExtra("pkg", packageName)
                     intent.putExtra("package", packageName)
                     intent.action = "com.asus.mobilemanager.AUTOSTART_TARGET"
                 }
-                else -> { openAppDetailsSettings(); return }
+                else -> {
+                    openAppDetailsSettings()
+                    return
+                }
             }
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             startActivity(intent)
@@ -166,11 +180,11 @@ class MainActivity : FlutterActivity() {
     private fun openAppDetailsSettings() {
         try {
             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-            intent.data = android.net.Uri.parse("package:$packageName")
+            intent.data = Uri.parse("package:$packageName")
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
             startActivity(intent)
         } catch (e: Exception) {
             Log.e("AUTOSTART", "Fallback also failed: ${e.message}")
         }
     }
-}
+}  

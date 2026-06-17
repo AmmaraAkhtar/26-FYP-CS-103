@@ -11,6 +11,9 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+<uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <uses-permission
         android:name="android.permission.PACKAGE_USAGE_STATS"
@@ -42,8 +45,12 @@
     android:exported="false"
     android:excludeFromRecents="true"
     android:taskAffinity=""
+    android:showOnLockScreen="true"
+    android:turnScreenOn="true"
+    android:screenOrientation="portrait"
     android:launchMode="singleTask"
     android:theme="@style/LaunchTheme" />
+    
 
         <meta-data
             android:name="flutterEmbedding"

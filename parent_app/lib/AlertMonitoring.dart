@@ -1236,7 +1236,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://192.168.18.163:8000/check-lock-status/?child_id=${widget.childId}'),
+            'http://10.13.45.141:8000/check-lock-status/?child_id=${widget.childId}'),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -1257,7 +1257,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://192.168.18.163:8000/fetch-alerts/?child_id=${widget.childId}'),
+            'http://10.13.45.141:8000/fetch-alerts/?child_id=${widget.childId}'),
       );
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -1850,7 +1850,7 @@ class _AlertMonitoringDashboardState extends State<AlertMonitoringDashboard> {
   Future<void> _unlockDevice() async {
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.18.163:8000/unlock-device/"),
+        Uri.parse("http://10.13.45.141:8000/unlock-device/"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"child_id": widget.childId}),
       );

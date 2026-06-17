@@ -35,7 +35,7 @@ class _MonitoringState extends State<Monitoring> {
   Future<void> unlockChildDevice(int childId) async {
     try {
       final response = await http.post(
-        Uri.parse("http://192.168.18.163:8000/unlock-device/"),
+        Uri.parse("http://10.13.45.141:8000/unlock-device/"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"child_id": childId}),
       );
@@ -60,7 +60,7 @@ class _MonitoringState extends State<Monitoring> {
     try {
       final response = await http.get(
         Uri.parse(
-            "http://192.168.18.163:8000/check-lock-status/?child_id=$childId"),
+            "http://10.13.45.141:8000/check-lock-status/?child_id=$childId"),
       );
 
       if (response.statusCode == 200) {
@@ -152,7 +152,7 @@ class _MonitoringState extends State<Monitoring> {
   Future<void> _deactivateChildAdmin(int childId) async {
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.18.163:8000/deactivate-admin/'),
+        Uri.parse('http://10.13.45.141:8000/deactivate-admin/'),
         headers: {
           'Authorization': 'Bearer ${widget.token}',
           'Content-Type': 'application/json',

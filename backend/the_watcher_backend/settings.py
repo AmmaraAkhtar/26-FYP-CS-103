@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-j69ho6wjs&bftw&n=5-$*u9x(gfz^j&@)_i8$9wrtrgjekt80m
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['example.com', '127.0.0.1','192.168.18.31','localhost', '10.13.21.166', '10.13.19.146','10.27.190.96','192.168.18.163','192.168.18.166']
+ALLOWED_HOSTS = ['example.com', '127.0.0.1','192.168.18.31','10.13.45.141','localhost', '10.13.21.166', '10.13.19.146','10.27.190.96','192.168.18.163','192.168.18.166']
 
 
 # Application definition
@@ -100,6 +100,7 @@ DATABASES = {
         conn_max_age=600,
         conn_health_checks=True,
     )
+    
 }
 
 # Password validation
@@ -137,7 +138,7 @@ REST_FRAMEWORK = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Karachi'
 
 USE_I18N = True
 

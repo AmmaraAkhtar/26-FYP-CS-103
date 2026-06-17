@@ -4,6 +4,7 @@ import "ChildRegister.dart";
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'profile.dart';
 
 class home extends StatefulWidget {
   String email;
@@ -76,7 +77,7 @@ class _homeState extends State<home> {
     //final url = Uri.parse(
     //'http://127.0.0.1:8000/fetchChildren/?parent_email=${widget.email}');
     final url = Uri.parse(
-      'http://192.168.18.163:8000/fetchChildren/?parent_email=${widget.email}',
+      'http://10.13.45.141:8000/fetchChildren/?parent_email=${widget.email}',
       
     );
     try {
@@ -124,62 +125,214 @@ Widget build(BuildContext context) {
       child: Column(
         children: [
           // Top section
-          Container(
-            width: 1.sw,
-            height: 294.h,
-            padding: EdgeInsets.all(20.w),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEB9974),
+          // Container(
+          //   width: 1.sw,
+          //   height: 294.h,
+          //   padding: EdgeInsets.all(20.w),
+          //   decoration: BoxDecoration(
+          //     color: const Color(0xFFEB9974),
+          //   ),
+          //   child: Column(
+          //     mainAxisAlignment: MainAxisAlignment.center,
+          //     children: [
+          //       CircleAvatar(
+          //         radius: 70.r,
+          //         backgroundImage: const NetworkImage(
+          //             "https://thumbs.dreamstime.com/b/d-cartoon-illustration-smiling-woman-short-brown-hair-wearing-red-mom-t-shirt-keywords-mother-demeanor-showing-female-417653140.jpg"),
+          //       ),
+          //       SizedBox(height: 5.h),
+          //       const Text(
+          //         "User",
+          //         style: TextStyle(
+          //           color: Colors.white,
+          //           fontSize: 20,
+          //         ),
+          //       ),
+          //       SizedBox(height: 19.h),
+          //       SizedBox(
+          //         width: 303.w,
+          //         height: 50.h,
+          //         child: TextField(
+          //           controller: searchController,
+          //           decoration: InputDecoration(
+          //             hintText: 'Search',
+          //             hintStyle: TextStyle(
+          //                 color: const Color.fromARGB(255, 189, 188, 188),
+          //                 fontSize: 16.sp),
+          //             prefixIcon: Image.asset("assets/Search.png"),
+          //             filled: true,
+          //             fillColor: Colors.white,
+          //             contentPadding: EdgeInsets.symmetric(horizontal: 8.w),
+          //             enabledBorder: OutlineInputBorder(
+          //               borderRadius: BorderRadius.circular(40.r),
+          //               borderSide: BorderSide(
+          //                   color: const Color.fromARGB(255, 189, 188, 188),
+          //                   width: 1.w),
+          //             ),
+          //             focusedBorder: OutlineInputBorder(
+          //               borderRadius: BorderRadius.circular(40.r),
+          //               borderSide:
+          //                   BorderSide(color: const Color(0xFF147CF4), width: 1.w),
+          //             ),
+          //           ),
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
+
+
+// Container(
+//   width: 1.sw,
+//   height: 294.h,
+//   padding: EdgeInsets.all(20.w),
+//   decoration: BoxDecoration(
+//     color: const Color(0xFFEB9974),
+//   ),
+//   child: Column(
+//     mainAxisAlignment: MainAxisAlignment.center,
+//     children: [
+//       // ── Refresh button top right ──
+//       Align(
+//         alignment: Alignment.topRight,
+//         child: IconButton(
+//           onPressed: () {
+//             fetchChildren();
+//           },
+//           icon: const Icon(
+//             Icons.refresh,
+//             color: Colors.white,
+//             size: 28,
+//           ),
+//         ),
+//       ),
+
+//       CircleAvatar(
+//         radius: 70.r,
+//         backgroundImage: const NetworkImage(
+//             "https://thumbs.dreamstime.com/b/d-cartoon-illustration-smiling-woman-short-brown-hair-wearing-red-mom-t-shirt-keywords-mother-demeanor-showing-female-417653140.jpg"),
+//       ),
+//       SizedBox(height: 5.h),
+//       const Text(
+//         "User",
+//         style: TextStyle(
+//           color: Colors.white,
+//           fontSize: 20,
+//         ),
+//       ),
+//       SizedBox(height: 19.h),
+//       SizedBox(
+//         width: 303.w,
+//         height: 50.h,
+//         child: TextField(
+//           controller: searchController,
+//           decoration: InputDecoration(
+//             hintText: 'Search',
+//             hintStyle: TextStyle(
+//                 color: const Color.fromARGB(255, 189, 188, 188),
+//                 fontSize: 16.sp),
+//             prefixIcon: Image.asset("assets/Search.png"),
+//             filled: true,
+//             fillColor: Colors.white,
+//             contentPadding: EdgeInsets.symmetric(horizontal: 8.w),
+//             enabledBorder: OutlineInputBorder(
+//               borderRadius: BorderRadius.circular(40.r),
+//               borderSide: BorderSide(
+//                   color: const Color.fromARGB(255, 189, 188, 188),
+//                   width: 1.w),
+//             ),
+//             focusedBorder: OutlineInputBorder(
+//               borderRadius: BorderRadius.circular(40.r),
+//               borderSide:
+//                   BorderSide(color: const Color(0xFF147CF4), width: 1.w),
+//             ),
+//           ),
+//         ),
+//       ),
+//     ],
+//   ),
+// ),
+
+
+Container(
+  width: 1.sw,
+  height: 320.h, // 294 se 320 karo
+  padding: EdgeInsets.only(left: 20.w, right: 20.w, bottom: 20.w),
+  decoration: const BoxDecoration(
+    color: Color(0xFFEB9974),
+  ),
+  child: Column(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      // ── Refresh button top right ──
+      Align(
+        alignment: Alignment.topRight,
+        child: IconButton(
+          onPressed: fetchChildren,
+          icon: const Icon(Icons.refresh, color: Colors.white, size: 28),
+        ),
+      ),
+
+    
+      GestureDetector(
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => profile(
+          token: widget.token,
+          email: widget.email,
+        ),
+      ),
+    );
+  },
+  child: CircleAvatar(
+    radius: 70.r,
+    backgroundColor: Colors.white,
+    child: Icon(
+      Icons.person,
+      size: 60.r,
+      color: Colors.grey.shade400,
+    ),
+  ),
+),
+      SizedBox(height: 5.h),
+      const Text(
+        "User",
+        style: TextStyle(color: Colors.white, fontSize: 20),
+      ),
+      SizedBox(height: 10.h),
+      SizedBox(
+        width: 303.w,
+        height: 50.h,
+        child: TextField(
+          controller: searchController,
+          decoration: InputDecoration(
+            hintText: 'Search',
+            hintStyle: TextStyle(
+                color: const Color.fromARGB(255, 189, 188, 188),
+                fontSize: 16.sp),
+            prefixIcon: Image.asset("assets/Search.png"),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: EdgeInsets.symmetric(horizontal: 8.w),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(40.r),
+              borderSide: BorderSide(
+                  color: const Color.fromARGB(255, 189, 188, 188),
+                  width: 1.w),
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  radius: 70.r,
-                  backgroundImage: const NetworkImage(
-                      "https://thumbs.dreamstime.com/b/d-cartoon-illustration-smiling-woman-short-brown-hair-wearing-red-mom-t-shirt-keywords-mother-demeanor-showing-female-417653140.jpg"),
-                ),
-                SizedBox(height: 5.h),
-                const Text(
-                  "User",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                  ),
-                ),
-                SizedBox(height: 19.h),
-                SizedBox(
-                  width: 303.w,
-                  height: 50.h,
-                  child: TextField(
-                    controller: searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search',
-                      hintStyle: TextStyle(
-                          color: const Color.fromARGB(255, 189, 188, 188),
-                          fontSize: 16.sp),
-                      prefixIcon: Image.asset("assets/Search.png"),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 8.w),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(40.r),
-                        borderSide: BorderSide(
-                            color: const Color.fromARGB(255, 189, 188, 188),
-                            width: 1.w),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(40.r),
-                        borderSide:
-                            BorderSide(color: const Color(0xFF147CF4), width: 1.w),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(40.r),
+              borderSide:
+                  BorderSide(color: const Color(0xFF147CF4), width: 1.w),
             ),
           ),
-
+        ),
+      ),
+    ],
+  ),
+),
           // Child List Header
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h),
@@ -199,17 +352,30 @@ Widget build(BuildContext context) {
                   width: 106.w,
                   height: 34.h,
                   child: ElevatedButton(
+                    // onPressed: () {
+                    //   Navigator.push(
+                    //       context,
+                    //       MaterialPageRoute(
+                    //         builder: (context) => profile(
+                    //           email: widget.email,
+                    //           token: widget.token,
+                    //         ),
+                    //       ));
+                    //       fetchChildren(); // wapas aane par list refresh
+                    // },
                     onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => profile(
-                              email: widget.email,
-                              token: widget.token,
-                            ),
-                          ));
-                          fetchChildren(); // wapas aane par list refresh
-                    },
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) =>  Childregister(
+        email: widget.email,
+        token: widget.token,
+      ),
+    ),
+  ).then((_) {
+    fetchChildren(); // wapas aane par automatically refresh
+  });
+},
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFEB9974),
                       shape: RoundedRectangleBorder(
@@ -261,18 +427,15 @@ Widget build(BuildContext context) {
                   child: Row(
                     children: [
                       // Image
-                      Container(
-                        width: 100.w,
-                        height: 100.w,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          image: DecorationImage(
-                            image: NetworkImage(child['image']),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-
+                      CircleAvatar(
+  radius: 50.r,
+  backgroundColor: Colors.grey.shade200,
+  child: Icon(
+    Icons.person,
+    size: 40.r,
+    color: Colors.grey.shade500,
+  ),
+),
                       SizedBox(width: 15.w),
 
                       // Child Info
@@ -336,12 +499,7 @@ Widget build(BuildContext context) {
                         ),
                       ),
 
-                      // Notification Icon
-                      Icon(
-                        Icons.notifications,
-                        color: Colors.red,
-                        size: 30.w,
-                      ),
+
                     ],
                   ),
                 ),

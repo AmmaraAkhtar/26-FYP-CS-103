@@ -12,6 +12,7 @@ import os
 import itertools
 from typing import Optional
 from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
+from langchain_openai import ChatOpenAI
 
 
 
@@ -38,12 +39,19 @@ if not GROQ_KEYS:
 key_cycle = itertools.cycle(GROQ_KEYS)
 
 
-def get_llm():
+# def get_llm():
     
-    return ChatGroq(
-        model="llama-3.3-70b-versatile",
+#     return ChatGroq(
+#         model="llama-3.3-70b-versatile",
+#         temperature=0,
+#         groq_api_key=next(key_cycle),
+#     )
+
+def get_llm():
+    return ChatOpenAI(
+        model="gpt-5.4-mini",
         temperature=0,
-        groq_api_key=next(key_cycle),
+        api_key=os.getenv("OPENAI_API_KEY"),
     )
 
 # def get_llm():
@@ -58,8 +66,8 @@ def get_llm():
 
 # Pydantic MOdel for Structured output from LLM
 class AgentDecision(BaseModel):
-    final_category: Literal["normal", "bullying", "hate", "suicide","violence", "sexual", "drugs_self_harm", "age_inappropriate", "safe"] = Field(
-        description="Actual category after full context analysis"
+    final_category: Literal["normal", "bullying", "hate", "suicide","violence", "sexual", "drugs_self_harm", "age_inappropriate", "safe","irrelevant"] = Field(
+        description="Actual category after full context analysis Use 'irrelevant' for names, numbers, timestamps, single words, or any text with no real conversational/content meaning."
     )
     risk_level: Literal["low", "medium", "high"] = Field(
         description="Risk level based on child age, history, pattern"
@@ -138,9 +146,8 @@ def chat_context_fetcher_node(state: ChatState) -> ChatState:
     }
 
 # Node1--------> LLM Reasoning Node
-
 def chat_reasoning_node(state: ChatState) -> ChatState:
-    
+
     # Chat history text
     if state.get("chat_history"):
         history_text = "\n".join([
@@ -149,7 +156,7 @@ def chat_reasoning_node(state: ChatState) -> ChatState:
         ])
         flagged_count = sum(
             1 for c in state["chat_history"]
-            if c["category"] in ["hate", "bullying", "suicide"]
+            if c["category"] in ["hate", "bullying", "suicide", "violence"]
         )
     else:
         history_text  = "  No history — this is the first message."
@@ -163,17 +170,8 @@ def chat_reasoning_node(state: ChatState) -> ChatState:
         ])
     else:
         alerts_text = "  No recent alerts sent to parent."
-    
-    is_content = state.get("content_type") == "content"
-    # history_qs = models.ChatMessage.objects.filter(child=child, app_name=state["app_name"])
-    # if is_content:
-    #         history_qs = history_qs.filter(sender="content")
-    # else:
-    #         history_qs = history_qs.exclude(sender="content")
 
-    # chat_history = list(
-    #         history_qs.order_by("-timestamp").values("message", "category", "risk", "timestamp")[:10]
-    #     )
+    is_content = state.get("content_type") == "content"
 
     if is_content:
         prompt = f"""You are an intelligent child safety agent. Your job is to assess 
@@ -195,6 +193,7 @@ App: {state['app_name']}
 
 ━━━ YOUR TASK ━━━
 Step 1 — Classify content:
+-Use 'irrelevant' for names, numbers, timestamps, single words, or any text with no real conversational/content meaning.
   - "safe"               → age-appropriate, educational, normal entertainment
   - "violence"           → fight content, gore, weapons, violent challenges
   - "sexual"             → sexual/suggestive content, nudity references
@@ -229,72 +228,111 @@ Step 5 — Alert Message (if warn/block/escalate):
 Reason step by step before giving your final answer."""
 
     else:
-
         prompt = f"""You are an intelligent child safety agent. Your job is to assess 
-    the risk of a chat message and decide what action to take.
-    Reason carefully using ALL context — do NOT follow fixed rules.
+the risk of a chat message and decide what action to take.
+Reason carefully using ALL context — do NOT follow fixed rules blindly.
 
-    ━━━ CHILD PROFILE ━━━
-    Age: {state['child_age']} years old
-    App: {state['app_name']}
+━━━ CHILD PROFILE ━━━
+Age: {state['child_age']} years old
+App: {state['app_name']}
 
-    Total messages today: {state['total_chats_today']}
+Total messages today: {state['total_chats_today']}
 
-    ━━━ CURRENT MESSAGE ━━━
-    "{state['message']}"
+━━━ CURRENT MESSAGE ━━━
+"{state['message']}"
 
+━━━ RECENT CHAT HISTORY (same app) ━━━
+Total flagged messages before: {flagged_count}
+Detail:
+{history_text}
 
+━━━ RECENT ALERTS SENT TO PARENT (last 24h) ━━━
+{alerts_text}
 
-    ━━━ RECENT CHAT HISTORY (same app) ━━━
-    Total flagged messages before: {flagged_count}
-    Detail:
-    {history_text}
+━━━ CRITICAL DEFAULT RULE ━━━
+"normal" is the DEFAULT category for casual conversation. Do not infer bullying, 
+hate, or violence from tone, slang, or casual rudeness alone — but DO flag clear, 
+explicit statements of intent to physically harm someone (e.g. "I will kill him", 
+"I'll break his face/teeth", "I'll slap him"), even if phrased casually or in anger, 
+in Roman Urdu or English. Words like "maarna", "thapar", "jaan se maar dena", 
+"mun torna", "jaan nikalna" used about a SPECIFIC real person are violent threat 
+language and must NOT be waved away as harmless venting — venting about an 
+inanimate thing/situation ("mar dunga is exam ko") is different from a threat 
+aimed at a person ("us ko jaan se mar dena hai").
 
-    ━━━ RECENT ALERTS SENT TO PARENT (last 24h) ━━━
-    {alerts_text}
+━━━ STEP 1 — CLASSIFY MESSAGE ━━━
+- "irrelevant" → just a name, number, timestamp, emoji-only, single word with 
+  no context (e.g. "Ammara", "12:45", "5", "Ali Raza", "ok", "lol")
 
-    ━━━ YOUR TASK ━━━
-    Step 1 — Classify message:
-    - "normal"   → casual conversation, school talk, family, fun
-    - "bullying" → threats, insults, harassment, peer pressure
-    - "hate"     → hate speech, discrimination, offensive language
-    - "suicide"  → self-harm mentions, suicidal thoughts, hopelessness
+- "normal" → casual conversation, school talk, family, jokes, friendly teasing, 
+  sarcasm, gaming trash-talk between friends, mild swearing without targeted 
+  intent to harm, venting frustration about a situation (not a person).
+  Examples that ARE normal (do NOT flag these):
+    • "yar tu kitna pagal hai" (friendly banter)
+    • "chup kar yar" / "bakwas band kar" (casual annoyance)
+    • "mar dunga is exam ko" (frustration about exam, not a threat to a person)
+    • Roman Urdu slang used casually between peers without malicious intent
 
-    Step 2 — Assess Risk:
-    Decide risk_level as "low", "medium", or "high" based on:
-    - Child's age (younger = stricter)
-    - ML initial signal (starting point only)
-    - Flagged messages before (pattern = more serious)
-    - Context of message (Roman Urdu / mixed language)
+- - "violence" → ONLY flag if ALL THREE conditions are true:
+  1. Specific named/identified real person as target (not a situation/object)
+  2. Clear, unambiguous intent to physically harm (not venting or hyperbole)
+  3. Message sounds like an actual plan, NOT just frustration expression
+  
+  Common Pakistani casual phrases that are NOT violence:
+  • "maar dunga yaar" / "pitai karunga" between friends = friendly banter
+  • "us ko dekh lunga" = vague, non-threatening
+  • "nikal teri" / "band kar" = dismissal, not threat
+  • Anger venting in heat of moment without specific target context
 
-    Step 3 — Decide Action:
-    - "allow" → Safe, just log
-    - "warn"  → Notify parent but allow
-    - "block" → Block app immediately + alert parent
+- "bullying" → repeated targeting of the same person with intent to demean, 
+  exclude, humiliate, or coerce — without necessarily a physical-harm threat.
 
-    Step 4 — Consider:
-    - Would another alert cause alert fatigue?
-    - Is child's age making this more serious?
-    - First time vs repeated pattern?
-    - Roman Urdu context — "mar dunga" in anger vs real threat?
-    - Properly analyze mixed language — "hate" words in slang vs actual hate speech?
+- "hate" → hate speech targeting race, religion, ethnicity, gender, disability — 
+  NOT casual slang words used loosely without discriminatory intent.
 
-    Step 5 — Alert Message:
-    If action is warn/block/escalate, write alert_message for parent:
-    - 3 sentences max
-    - Sentence 1: what was detected (category + app name)
-    - Sentence 2: why concerning based on THIS child's pattern
-    - Sentence 3: one clear action parent can take right now
-    - Calm tone, simple English, no jargon
-    If action is allow, set alert_message to null.
+- "suicide" → genuine self-harm ideation, hopelessness, suicidal statements about 
+  ONESELF — not frustration phrases like "i'll die if i fail this test."
 
-    NOTE: ML only sees the text surface. It does NOT know child's age, 
-    history, or patterns. Your job is to use ALL context above to make 
-    a smarter decision.
-    A "hate" flagged message might be normal slang for a 17-year-old.
-    A "normal" message after 5 bullying messages is more concerning.
+━━━ STEP 2 — ASSESS RISK ━━━
+Decide risk_level as "low", "medium", or "high" based on:
+- Child's age (younger = stricter)
+- Whether the threat/statement is specific and directed at a real person vs vague venting
+- Flagged messages before (repeated pattern = more serious)
+- Context of message (Roman Urdu / mixed language / sarcasm)
 
-    Reason step by step before giving your final answer."""
+━━━ STEP 3 — DECIDE ACTION ━━━
+- "allow"    → Safe, just log
+- "warn"     → Notify parent but allow
+- "block"    → Block app immediately + alert parent
+- "escalate" → Repeated or severe violent threats, suicide risk, 
+                — immediate parent alert + lock
+
+━━━ STEP 4 — SELF-CHECK BEFORE FINALIZING ━━━
+Ask yourself:
+1. "Is this an ACTUAL threat or just how Pakistani kids talk to friends?"
+2. "Would this same phrase, said out loud between two friends, 
+   make a bystander call the police — or just roll their eyes?"
+3. "Is there a SPECIFIC target + SPECIFIC plan, or just emotional venting?"
+
+DEFAULT TO NORMAL if you're unsure. False positives destroy parent trust.
+A missed casual message is less harmful than constant false alerts.
+
+━━━ STEP 5 — ALERT MESSAGE ━━━
+If action is warn/block/escalate, write alert_message for parent:
+- 3 sentences max
+- Sentence 1: what was detected (category + app name)
+- Sentence 2: why concerning based on THIS child's pattern
+- Sentence 3: one clear action parent can take right now
+- Calm tone, simple English, no jargon
+If action is allow, set alert_message to null.
+
+NOTE: ML only sees the text surface. It does NOT know child's age, history, or 
+patterns, intent, or tone. Your job is to use ALL context above plus common sense 
+about how real kids actually talk, to correctly separate harmless banter from 
+genuine threats — and never let casual phrasing hide a real threat of violence.
+
+Reason step by step, explicitly stating which Step 4 self-check answer led to 
+your final category, before giving your final answer."""
 
     try:
         llm = get_llm()
@@ -314,7 +352,7 @@ Reason step by step before giving your final answer."""
 
     except Exception as e:
         print(f"Chat LLM Error: {e} — using ML fallback")
-        action = "warn" if state.get("ml_category") in ["hate", "bullying", "suicide"] else "allow"
+        action = "warn" if state.get("ml_category") in ["hate", "bullying", "suicide", "violence"] else "allow"
         return {
             **state,
             "final_category":    state.get("ml_category") or "normal",
@@ -325,6 +363,167 @@ Reason step by step before giving your final answer."""
             "alert_message":     None,
             "should_send_alert": action in ["warn", "block", "escalate"],
         }
+
+# def chat_reasoning_node(state: ChatState) -> ChatState:
+    
+#     # Chat history text
+#     if state.get("chat_history"):
+#         history_text = "\n".join([
+#             f"  - [{c['category']}] {c['message'][:60]}"
+#             for c in state["chat_history"]
+#         ])
+#         flagged_count = sum(
+#             1 for c in state["chat_history"]
+#             if c["category"] in ["hate", "bullying", "suicide"]
+#         )
+#     else:
+#         history_text  = "  No history — this is the first message."
+#         flagged_count = 0
+
+#     # Alerts text
+#     if state.get("recent_alerts"):
+#         alerts_text = "\n".join([
+#             f"  - {a['alert_type']}: {a['message'][:80]}..."
+#             for a in state["recent_alerts"]
+#         ])
+#     else:
+#         alerts_text = "  No recent alerts sent to parent."
+    
+#     is_content = state.get("content_type") == "content"
+#     # history_qs = models.ChatMessage.objects.filter(child=child, app_name=state["app_name"])
+#     # if is_content:
+#     #         history_qs = history_qs.filter(sender="content")
+#     # else:
+#     #         history_qs = history_qs.exclude(sender="content")
+
+#     # chat_history = list(
+#     #         history_qs.order_by("-timestamp").values("message", "category", "risk", "timestamp")[:10]
+#     #     )
+
+#     if is_content:
+#         prompt = f"""You are an intelligent child safety agent. Your job is to assess 
+# the risk of a chat message and decide what action to take.
+# Reason carefully using ALL context — do NOT follow fixed rules blindly.
+
+# ━━━ CHILD PROFILE ━━━
+# Age: {state['child_age']} years old
+# App: {state['app_name']}
+
+# Total messages today: {state['total_chats_today']}
+
+# ━━━ CURRENT MESSAGE ━━━
+# "{state['message']}"
+
+# ━━━ RECENT CHAT HISTORY (same app) ━━━
+# Total flagged messages before: {flagged_count}
+# Detail:
+# {history_text}
+
+# ━━━ RECENT ALERTS SENT TO PARENT (last 24h) ━━━
+# {alerts_text}
+
+# ━━━ CRITICAL DEFAULT RULE ━━━
+# "normal" is the DEFAULT category. Only move away from "normal" if there is 
+# CLEAR, SPECIFIC evidence of harm in THIS message. Do not infer bullying, hate, 
+# or suicide from tone, slang, or casual rudeness alone. When in doubt, classify 
+# as "normal" — false alarms cause alert fatigue and erode parent trust.
+
+# ━━━ STEP 1 — CLASSIFY MESSAGE ━━━
+# - "irrelevant" → just a name, number, timestamp, emoji-only, single word with 
+#   no context (e.g. "Ammara", "12:45", "5", "Ali Raza", "ok", "lol")
+
+# - "normal" → casual conversation, school talk, family, jokes, friendly teasing, 
+#   sarcasm, gaming trash-talk between friends, mild swearing without targeted 
+#   intent to harm, venting frustration about a situation (not a person).
+#   Examples that ARE normal (do NOT flag these):
+#     • "yar tu kitna pagal hai" (friendly banter)
+#     • "chup kar yar" / "bakwas band kar" (casual annoyance)
+#     • "mar dunga is exam ko" (frustration about exam, not a threat to a person)
+#     • "tu loser hai" said in joking gameplay context with friends
+#     • Roman Urdu slang used casually between peers without malicious intent
+
+# - "bullying" → REQUIRES at least one of:
+#     • Repeated targeting of the SAME person with intent to demean/exclude
+#     • Direct threat of physical harm to a specific person
+#     • Deliberate humiliation, mocking appearance/family/disability with intent to hurt
+#     • Coercion, blackmail, or peer pressure to harm self or others
+#     • Clear power imbalance (group vs individual, older vs younger) with hostile intent
+#   A single rude/sarcastic remark between friends is NOT bullying.
+
+# - "hate" → hate speech targeting race, religion, ethnicity, gender, disability — 
+#   NOT casual slang words used loosely without discriminatory intent.
+
+# - "suicide" → genuine self-harm ideation, hopelessness, suicidal statements about 
+#   ONESELF — not frustration phrases like "i'll die if i fail this test."
+
+# ━━━ STEP 2 — ASSESS RISK ━━━
+# Decide risk_level as "low", "medium", or "high" based on:
+# - Child's age (younger = stricter)
+# - ML initial signal (starting point only, NOT the final word)
+# - Flagged messages before (pattern = more serious) — BUT do not let history bias 
+#   push a genuinely normal message into a flagged category. History affects 
+#   RISK LEVEL of an already-flagged message, not whether to flag a normal one.
+# - Context of message (Roman Urdu / mixed language / sarcasm)
+
+# ━━━ STEP 3 — DECIDE ACTION ━━━
+# - "allow" → Safe, just log
+# - "warn"  → Notify parent but allow
+# - "block" → Block app immediately + alert parent
+
+# ━━━ STEP 4 — SELF-CHECK BEFORE FINALIZING ━━━
+# Before answering, ask yourself:
+# 1. "If a reasonable parent read this message with full context, would THEY 
+#    call this bullying/hate/suicide, or just normal kid talk?"
+# 2. "Am I flagging this because of the actual content, or because of tone/slang/
+#    history bias?"
+# 3. "Is there a specific target and clear harmful intent, or just venting/joking?"
+# If you cannot point to a SPECIFIC phrase that proves harmful intent, default to "normal".
+
+# ━━━ STEP 5 — ALERT MESSAGE ━━━
+# If action is warn/block/escalate, write alert_message for parent:
+# - 3 sentences max
+# - Sentence 1: what was detected (category + app name)
+# - Sentence 2: why concerning based on THIS child's pattern
+# - Sentence 3: one clear action parent can take right now
+# - Calm tone, simple English, no jargon
+# If action is allow, set alert_message to null.
+
+# NOTE: ML only sees the text surface. It does NOT know child's age, history, or 
+# patterns, intent, or tone. Your job is to use ALL context above plus common sense 
+# about how real kids actually talk to each other, to avoid over-flagging normal 
+# conversation as harmful.
+
+# Reason step by step, explicitly stating which Step 4 self-check answer led to 
+# your final category, before giving your final answer."""
+#     try:
+#         llm = get_llm()
+#         llm_with_structure = llm.with_structured_output(AgentDecision)
+#         decision = llm_with_structure.invoke([HumanMessage(content=prompt)])
+
+#         return {
+#             **state,
+#             "final_category":    decision.final_category,
+#             "risk_level":        decision.risk_level,
+#             "action":            decision.action,
+#             "reasoning":         decision.reasoning,
+#             "urgency":           decision.urgency,
+#             "alert_message":     decision.alert_message,
+#             "should_send_alert": decision.action in ["warn", "block", "escalate"],
+#         }
+
+#     except Exception as e:
+#         print(f"Chat LLM Error: {e} — using ML fallback")
+#         action = "warn" if state.get("ml_category") in ["hate", "bullying", "suicide"] else "allow"
+#         return {
+#             **state,
+#             "final_category":    state.get("ml_category") or "normal",
+#             "risk_level":        "medium" if action == "warn" else "low",
+#             "action":            action,
+#             "reasoning":         f"LLM unavailable. ML fallback: {state.get('ml_category')}",
+#             "urgency":           "medium" if action == "warn" else "low",
+#             "alert_message":     None,
+#             "should_send_alert": action in ["warn", "block", "escalate"],
+#         }
 # # Node3--------> Alert Composer Node
 # def chat_alert_composer_node(state: ChatState) -> ChatState:
 #     if state["action"] == "allow":
