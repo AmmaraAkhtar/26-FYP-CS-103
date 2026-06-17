@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dashborad_model.dart';
 
 class DashboardService {
-  static const String baseUrl = "http://10.13.45.141:8000";
+  static const String baseUrl = "https://the-watcher-backend.onrender.com";
 
   static Future<DashboardSummary?> getSummary(int childId) async {
     final response = await http.get(

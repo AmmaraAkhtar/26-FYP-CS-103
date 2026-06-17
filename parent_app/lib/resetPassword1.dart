@@ -34,7 +34,7 @@ class _Resetpassword1State extends State<Resetpassword1> {
   }
 
   Future<void> emailcheckRequest(String email) async {
-    String link = 'http://10.13.45.141:8000/checkEmail/';
+    String link = 'https://the-watcher-backend.onrender.com/checkEmail/';
     final url = Uri.parse(link);
     try {
       final response = await http.post(

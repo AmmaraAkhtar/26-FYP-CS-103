@@ -342,7 +342,7 @@ class _EditprofileState extends State<Editprofile> {
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
     try {
-      final url = Uri.parse('http://10.13.45.141:8000/getProfile/');
+      final url = Uri.parse('https://the-watcher-backend.onrender.com/getProfile/');
       final res = await http.get(url, headers: {
         'Authorization': 'Bearer ${widget.token}',
         'Content-Type': 'application/json',
@@ -370,7 +370,7 @@ class _EditprofileState extends State<Editprofile> {
 
     setState(() => _isLoading = true);
     try {
-      final url = Uri.parse('http://10.13.45.141:8000/updateProfile/');
+      final url = Uri.parse('https://the-watcher-backend.onrender.com/updateProfile/');
       final body = <String, dynamic>{
         'username': usernameController.text.trim(),
         'phone':    phoneController.text.trim(),

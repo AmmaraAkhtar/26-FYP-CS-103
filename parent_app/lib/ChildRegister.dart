@@ -354,7 +354,7 @@ class _EditprofileState extends State<Childregister> {
   bool bedtimeEnabled = true;
 
  Future<void> registerChild() async {
-    String link = 'http://10.13.45.141:8000/createChild/';
+    String link = 'https://the-watcher-backend.onrender.com/createChild/';
     final url = Uri.parse(link);
 
     final response = await http.post(
