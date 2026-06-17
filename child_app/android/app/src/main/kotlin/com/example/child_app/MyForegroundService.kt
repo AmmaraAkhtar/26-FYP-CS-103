@@ -90,7 +90,7 @@ class MyForegroundService : Service() {
 
         Thread {
             try {
-                val url = "http://192.168.18.163:8000/check-lock-status/?child_id=$childId"
+                val url = "https://the-watcher-backend.onrender.com/check-lock-status/?child_id=$childId"
                 val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 10000
@@ -137,7 +137,7 @@ class MyForegroundService : Service() {
                 val json = JSONObject().apply { put("child_id", childId) }
                 val body = json.toString().toRequestBody("application/json".toMediaType())
                 val request = Request.Builder()
-                    .url("http://192.168.18.163:8000/lock-device/")
+                    .url("https://the-watcher-backend.onrender.com/lock-device/")
                     .post(body).build()
                 httpClient.newCall(request).execute().use {
                     Log.d("MONITOR_SERVICE", "Lock persisted | ${it.code}")
@@ -381,7 +381,7 @@ class MyForegroundService : Service() {
         }
         val body = json.toString().toRequestBody("application/json".toMediaType())
         val request = Request.Builder()
-            .url("http://192.168.18.163:8000/sendalert/")
+            .url("https://the-watcher-backend.onrender.com/sendalert/")
             .post(body).build()
         httpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -404,7 +404,7 @@ class MyForegroundService : Service() {
         }
         val body = json.toString().toRequestBody("application/json".toMediaType())
         val request = Request.Builder()
-            .url("http://192.168.18.163:8000/heartbeat/")
+            .url("https://the-watcher-backend.onrender.com/heartbeat/")
             .post(body).build()
         httpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
@@ -463,7 +463,7 @@ class MyForegroundService : Service() {
 
         val body = json.toString().toRequestBody("application/json".toMediaType())
         val request = Request.Builder()
-            .url("http://192.168.18.163:8000/appdata/")
+            .url("https://the-watcher-backend.onrender.com/appdata/")
             .post(body).build()
 
         httpClient.newCall(request).enqueue(object : Callback {
@@ -544,7 +544,7 @@ class MyForegroundService : Service() {
         }
         val body = json.toString().toRequestBody("application/json".toMediaType())
         val request = Request.Builder()
-            .url("http://192.168.18.163:8000/collectchat/")
+            .url("https://the-watcher-backend.onrender.com/collectchat/")
             .post(body).build()
         httpClient.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {

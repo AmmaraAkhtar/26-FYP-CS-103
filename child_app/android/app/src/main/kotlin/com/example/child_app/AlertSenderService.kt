@@ -56,7 +56,7 @@ class AlertSenderService : Service() {
             .toRequestBody("application/json; charset=utf-8".toMediaType())
 
         val request = Request.Builder()
-            .url("http://192.168.18.163:8000/sendalert/")
+            .url("https://the-watcher-backend.onrender.com/sendalert/")
             .post(body)
             .build()
 
