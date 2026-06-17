@@ -167,6 +167,10 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = '22ntucs1145amnaali@gmail.com'  # your Gmail address
 EMAIL_HOST_PASSWORD = 'zexnvpugkerpehvg'         # Gmail app password
 
+
+print("EMAIL_HOST =", EMAIL_HOST)
+print("EMAIL_PORT =", EMAIL_PORT)
+print("EMAIL_USER =", EMAIL_HOST_USER)
 # Temporary testing
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
