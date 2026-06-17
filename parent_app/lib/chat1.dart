@@ -235,7 +235,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 
-const String kChatBaseUrl = "http://10.13.45.141:8000";
+const String kChatBaseUrl = "https://the-watcher-backend.onrender.com";
 
 // Models 
 

@@ -461,7 +461,7 @@ Future<void> fetchUsageData() async {
   setState(() => isLoading = true);
   try {
     final response = await http.get(
-      Uri.parse('http://10.13.45.141:8000/get-child-usage/${widget.childId}/'),
+      Uri.parse('https://the-watcher-backend.onrender.com/get-child-usage/${widget.childId}/'),
       headers: {"Content-Type": "application/json"},
     );
 

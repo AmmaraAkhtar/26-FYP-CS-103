@@ -203,7 +203,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 
-const String kBaseUrl = "http://10.13.45.141:8000";
+const String kBaseUrl = "https://the-watcher-backend.onrender.com";
 
 class ScreenTimeLimitScreen extends StatefulWidget {
   final int childId;
