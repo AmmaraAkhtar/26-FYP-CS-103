@@ -1,11 +1,10 @@
-django 
-djangorestframework 
+django
+djangorestframework
 djangorestframework-simplejwt
 django-cors-headers
 scikit-learn
 pandas
 numpy
-
 langchain
 langgraph
 pydantic==1.10.21
@@ -14,11 +13,7 @@ langchain_groq
 xgboost
 psycopg2-binary
 dj-database-url
-python-dotenv
 gunicorn
 langchain_openai
-gunicorn
 whitenoise
-dj-database-url
-psycopg2-binary
 langchain_huggingface
