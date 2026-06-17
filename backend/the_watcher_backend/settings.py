@@ -100,6 +100,7 @@ DATABASES = {
         conn_max_age=600,
         conn_health_checks=True,
     )
+    
 }
 
 # Password validation
@@ -137,7 +138,7 @@ REST_FRAMEWORK = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Karachi'
 
 USE_I18N = True
 

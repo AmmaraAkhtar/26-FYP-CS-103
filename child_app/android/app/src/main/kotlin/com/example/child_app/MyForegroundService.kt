@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
 import android.util.Log
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
@@ -39,6 +40,7 @@ class MyForegroundService : Service() {
     companion object {
     var isDeviceLocked = false
     var childIdStatic = -1  // LockActivity access ke liye
+    var isLockActivityInForeground = false
 }
 
     private val handler = Handler(Looper.getMainLooper())
@@ -53,20 +55,26 @@ class MyForegroundService : Service() {
 
     private var deviceLocked = false
 
+    // ── Partial wake lock — Doze mode mein CPU ko sone se rokta hai
+    // taake Handler.postDelayed() timers apne actual schedule (60s) ke
+    // kareeb fire hon, na ke OS ke marzi se 3-7 minute delay ho jaye ──
+    private var wakeLock: PowerManager.WakeLock? = null
+
     //  Unlock Receiver 
     private val unlockReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action == "com.example.child_app.UNLOCK") {
-                deviceLocked = false
-                isDeviceLocked = false
-                // Lock notification cancel karo
-                val nm = getSystemService(NotificationManager::class.java)
-                nm.cancel(99)
-                Log.d("MONITOR_SERVICE", "Unlock broadcast received")
+    override fun onReceive(context: Context?, intent: Intent?) {
+        if (intent?.action == "com.example.child_app.UNLOCK") {
+            deviceLocked = false
+            isDeviceLocked = false
+            handler.post {
+                LockOverlayManager.hide(this@MyForegroundService)  // ← this@MyForegroundService
             }
+            val nm = getSystemService(NotificationManager::class.java)
+            nm.cancel(99)
+            Log.d("MONITOR_SERVICE", "Unlock broadcast received")
         }
     }
-
+}
     //  Screen/Close Receiver — jab Close All ya screen on ho 
     private val screenReceiver = object : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
@@ -86,22 +94,27 @@ class MyForegroundService : Service() {
                 val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 10000
+                connection.readTimeout = 10000
 
                 val response = connection.inputStream.bufferedReader().readText()
                 val json = JSONObject(response)
                 val shouldLock = json.getBoolean("is_locked")
+                Log.d("MONITOR_SERVICE", "[LOCK_CHECK] shouldLock=$shouldLock | deviceLocked(local)=$deviceLocked | isDeviceLocked(companion)=$isDeviceLocked")
 
                 if (shouldLock && !deviceLocked) {
                     deviceLocked = true
                     isDeviceLocked = true
                     handler.post { lockDevice() }
                 } else if (!shouldLock && deviceLocked) {
-                    deviceLocked = false
-                    isDeviceLocked = false
-                    val nm = getSystemService(NotificationManager::class.java)
-                    nm.cancel(99)
-                    val unlockIntent = Intent("com.example.child_app.UNLOCK")
-                    sendBroadcast(unlockIntent)
+                     deviceLocked = false
+    isDeviceLocked = false
+    handler.post {
+        LockOverlayManager.hide(this@MyForegroundService)  // ← this@MyForegroundService
+    }
+    val nm = getSystemService(NotificationManager::class.java)
+    nm.cancel(99)
+    val unlockIntent = Intent("com.example.child_app.UNLOCK")
+    sendBroadcast(unlockIntent)
                 }
 
             } catch (e: Exception) {
@@ -111,30 +124,53 @@ class MyForegroundService : Service() {
     }
 
     //  lockDevice
-    fun lockDevice() {
-        if (childId != -1) {
-            Thread {
-                try {
-                    val json = JSONObject().apply { put("child_id", childId) }
-                    val body = json.toString().toRequestBody("application/json".toMediaType())
-                    val request = Request.Builder()
-                        .url("http://192.168.18.163:8000/lock-device/")
-                        .post(body).build()
-                    httpClient.newCall(request).execute().use {
-                        Log.d("MONITOR_SERVICE", "Lock persisted | ${it.code}")
-                    }
-                } catch (e: Exception) {
-                    Log.e("MONITOR_SERVICE", "Lock persist failed: ${e.message}")
+    
+            fun lockDevice() {
+    Log.d("MONITOR_SERVICE", "[LOCK_DEVICE] ENTERED")
+    deviceLocked = true
+    isDeviceLocked = true
+
+    // Persist to backend
+    if (childId != -1) {
+        Thread {
+            try {
+                val json = JSONObject().apply { put("child_id", childId) }
+                val body = json.toString().toRequestBody("application/json".toMediaType())
+                val request = Request.Builder()
+                    .url("http://192.168.18.163:8000/lock-device/")
+                    .post(body).build()
+                httpClient.newCall(request).execute().use {
+                    Log.d("MONITOR_SERVICE", "Lock persisted | ${it.code}")
                 }
-            }.start()
-        }
-
-        deviceLocked = true
-        isDeviceLocked = true
-
-        handler.post { showLockNotification() }
+            } catch (e: Exception) {
+                Log.e("MONITOR_SERVICE", "Lock persist failed: ${e.message}")
+            }
+        }.start()
     }
 
+    handler.post {
+        // Show overlay immediately — works even from background
+        if (android.provider.Settings.canDrawOverlays(this)) {
+            LockOverlayManager.show(this)
+        }
+        showLockNotification()
+
+        // Backup direct launch — apps holding the overlay (SYSTEM_ALERT_WINDOW)
+        // permission are exempt from background-activity-start restrictions,
+        // so this works even if the full-screen-intent notification gets
+        // silently downgraded/ignored by the OS (common on Android 13/14+
+        // or when USE_FULL_SCREEN_INTENT isn't granted).
+        try {
+            val directIntent = Intent(this, LockActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            }
+            startActivity(directIntent)
+            Log.d("MONITOR_SERVICE", "Direct LockActivity start fired")
+        } catch (e: Exception) {
+            Log.e("MONITOR_SERVICE", "Direct LockActivity start failed: ${e.message}")
+        }
+    }
+}
     // showLockNotification 
     
 
@@ -143,6 +179,7 @@ class MyForegroundService : Service() {
         
 
     private fun showLockNotification() {
+        Log.d("MONITOR_SERVICE", "[SHOW_LOCK] ENTERED")
     val lockIntent = Intent(this, LockActivity::class.java).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
     }
@@ -176,11 +213,7 @@ class MyForegroundService : Service() {
 
     getSystemService(NotificationManager::class.java).notify(99, notification)
 
-    try {
-        startActivity(lockIntent)
-    } catch (e: Exception) {
-        Log.e("MONITOR_SERVICE", "Direct start failed: ${e.message}")
-    }
+    
 }
 
     // isLockActivityVisible 
@@ -226,6 +259,22 @@ class MyForegroundService : Service() {
                 .build()
 
         startForeground(1, notification)
+
+        // ── Acquire partial wake lock so background tick timers keep
+        // firing close to schedule even when the screen is off / Doze kicks in ──
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            wakeLock = pm.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "ChildApp::MonitorWakeLock"
+            )
+            wakeLock?.setReferenceCounted(false)
+            wakeLock?.acquire(12 * 60 * 60 * 1000L) // 12h safety timeout
+            Log.d("MONITOR_SERVICE", "WakeLock acquired")
+        } catch (e: Exception) {
+            Log.e("MONITOR_SERVICE", "WakeLock acquire failed: ${e.message}")
+        }
+
         Log.d("MONITOR_SERVICE", "Service Created")
     }
 
@@ -278,23 +327,26 @@ class MyForegroundService : Service() {
     scheduleTick()
 }
 
-private fun scheduleTick() {
+
+                
+                    private fun scheduleTick() {
     handler.post(object : Runnable {
         override fun run() {
             tickCount++
 
             if (deviceLocked) {
-                // Locked — sirf check karo, 500ms pe (fast relock backup)
-                if (!isLockActivityVisible()) {
-                    Log.d("MONITOR_SERVICE", "Locked, LockActivity not visible — relaunching")
+                if (!LockOverlayManager.isShowing) {
+                    Log.d("MONITOR_SERVICE", "Overlay not showing — reshowing")
+                    if (android.provider.Settings.canDrawOverlays(this@MyForegroundService)) {
+                        LockOverlayManager.show(this@MyForegroundService)
+                    }
                     showLockNotification()
                 }
-                if (tickCount % 20 == 0) checkLockStatus()  // har 1 min pe backend check
-                handler.postDelayed(this, 500L)
+                if (tickCount % 20 == 0) checkLockStatus()
+                handler.postDelayed(this, 150L)
             } else {
-                // Normal monitoring
                 if (tickCount % 5 == 0)  collectAndSendSms()
-                if (tickCount % 15 == 0) fetchAndSendData()
+                if (tickCount % 5 == 0) fetchAndSendData()
                 if (tickCount % 2 == 0)  checkLockStatus()
                 if (tickCount % 10 == 0) { sendHeartbeat(); checkAccessibilityStatus() }
                 if (tickCount >= 1440)   tickCount = 0
@@ -303,7 +355,8 @@ private fun scheduleTick() {
         }
     })
 }
-
+                    
+   
     // Accessibility 
     private fun isAccessibilityServiceEnabled(): Boolean {
         val enabledServices = Settings.Secure.getString(
@@ -521,6 +574,17 @@ private fun scheduleTick() {
     override fun onDestroy() {
         try { unregisterReceiver(unlockReceiver) } catch (_: Exception) {}
         try { unregisterReceiver(screenReceiver) } catch (_: Exception) {}
+
+        // ── Release wake lock to avoid leaking it ──
+        try {
+            if (wakeLock?.isHeld == true) {
+                wakeLock?.release()
+                Log.d("MONITOR_SERVICE", "WakeLock released")
+            }
+        } catch (e: Exception) {
+            Log.e("MONITOR_SERVICE", "WakeLock release failed: ${e.message}")
+        }
+
         super.onDestroy()
         Log.d("MONITOR_SERVICE", "Service destroyed - Restarting...")
 

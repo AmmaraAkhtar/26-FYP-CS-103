@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.decorators import api_view,permission_classes
 from django.contrib.auth import authenticate
 import random
+from urllib.parse import urlparse
 from . import models
 from django.db.models import Sum
 from .app_agent.graph import app_agent
@@ -15,6 +16,7 @@ from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import timedelta
+from django.db import transaction
 import pickle
 from .ml_service import ml_service
 from .utils import preprocess_app_name
@@ -231,6 +233,29 @@ def createChild_api(request):
         screen_time_limit = serializer.validated_data['screen_time_limit']
         parent_email = request.data.get('parent_email')
         user = User.objects.filter(email=parent_email).first()
+        bedtime_start = serializer.validated_data.get('bedtime_start')
+        bedtime_end   = serializer.validated_data.get('bedtime_end')
+        if bedtime_start and bedtime_end:
+            # Parse if string
+            def _parse(val):
+                if isinstance(val, dt_time):
+                    return val
+                if isinstance(val, str):
+                    try:
+                        parts = val.split(':')
+                        return dt_time(int(parts[0]), int(parts[1]))
+                    except:
+                        return None
+                return None
+
+            bs = _parse(bedtime_start)
+            be = _parse(bedtime_end)
+
+            if bs and be:
+                is_valid, err_msg = validate_bedtime(bs, be)
+                if not is_valid:
+                    return Response({"error": err_msg}, status=400)
+    
         pairing_code = generate_unique_code()
         print(pairing_code)
         if models.child.objects.filter(firstname=firstname,lastname=lastname,parent=user).exists():
@@ -239,6 +264,8 @@ def createChild_api(request):
         child = models.child.objects.create(firstname=firstname, lastname=lastname, age=age, screen_time_limit=screen_time_limit,parent = user,pairingCode=pairing_code,bedtime_start=serializer.validated_data.get('bedtime_start', '21:00'),   
     bedtime_end=serializer.validated_data.get('bedtime_end', '07:00'),       
     bedtime_enabled=serializer.validated_data.get('bedtime_enabled', True),)
+        
+    
         models.pairingCode.objects.create(pairing_code=pairing_code,parent=user,child=child)    
         send_code(parent_email, pairing_code)
         return Response({
@@ -344,56 +371,44 @@ def fetchChildren_api(request):
 #             model = pickle.load(f)
 #     return model
 
-# Collect data for app usage monitoring 
+# Collect data for app usage monitoring
+
 
 @api_view(['POST'])
 def collectAppUsageData_Api(request):
     try:
         print("app API calling")
 
-
         if not request.data:
-                return Response({"message": "No data received"}, status=200)
+            return Response({"message": "No data received"}, status=200)
 
         serializer = AppUsageSerializer(data=request.data)
         print(request.data)
-        
+
         if serializer.is_valid():
             validated_data = serializer.validated_data
-            # usage_data = validated_data["usage_data"]
             usage_data = validated_data.get("usage_data", [])
 
             if not usage_data:
                 return Response({"message": "Empty usage data"}, status=200)
-            
-            #app_names = [app["package_name"] for app in usage_data]
-            
-            app_names = [preprocess_app_name(app["package_name"]) for app in usage_data]
-
-            # ML prediction
-            # model = get_model()
-            #category_predictions = app_model.predict(app_names)
-            category_predictions = ml_service.predict(app_names)
-
-            result = []
 
             child_id = validated_data["child_id"]
             child = models.child.objects.get(id=child_id)
 
-            today =  timezone.now().date()
+            today = timezone.now().date()
             now_time = timezone.localtime().time()
-            # REset on midnight
-            if now_time < dt_time(0, 5):  # raat 12:00-12:05 ke beech
-                    models.child.objects.filter(parent_unlocked=True).update(parent_unlocked=False)
-            
+
+            # Reset parent_unlocked at midnight
+            if now_time < dt_time(0, 5):
+                models.child.objects.filter(parent_unlocked=True).update(parent_unlocked=False)
+
+            # Bedtime check — sab se pehle
             if is_bedtime(child):
                 child.is_locked = True
                 child.save()
                 return Response({"is_locked": True, "reason": "bedtime"}, status=200)
-            
 
-            # Strictly applying screen time limit — agar limit exceed ho jati hai toh chahe koi bhi app use kar raha ho, device ko lock kar do. Isse parents ko ek strong signal milega ki limit important hai, aur unnecessary alerts se bhi bachenge.
-            two_days_ago = timezone.now().date() - timedelta(days=1)
+            # Screen time limit check
             existing_usage = models.appUsage.objects.filter(child=child, date=today)
             merged_existing = {}
             for u in existing_usage:
@@ -401,17 +416,11 @@ def collectAppUsageData_Api(request):
                 if pkg not in merged_existing or u.usage_time > merged_existing[pkg]:
                     merged_existing[pkg] = u.usage_time
             total_usage_today = sum(merged_existing.values())  # seconds
-
             screen_limit_seconds = child.screen_time_limit * 60
 
-            # if total_usage_today >= screen_limit_seconds:
-            #     child.is_locked = True
-            #     child.save()
-            #     return Response({"is_locked": True, "reason": "bedtime"}, status=200)
             if total_usage_today >= screen_limit_seconds:
                 if child.parent_unlocked and child.parent_unlocked_at:
                     elapsed = (timezone.now() - child.parent_unlocked_at).total_seconds()
-                    # Parent ne unlock kiya tha — 30 min grace period check karo
                     if elapsed < 30 * 60:
                         pass  # Grace period — lock mat karo
                     else:
@@ -420,203 +429,237 @@ def collectAppUsageData_Api(request):
                         child.is_locked = True
                         child.save()
                         return Response({"is_locked": True, "reason": "screen_limit_after_grace"}, status=200)
-                    # Grace period mein hai — lock mat karo
                 else:
                     child.is_locked = True
                     child.save()
                     return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
-            
+
+            # ── ML Batch Prediction (confidence ke saath) ──
+            app_names = [preprocess_app_name(app["package_name"]) for app in usage_data]
+            prediction_results = ml_service.predict_with_confidence_batch(app_names)
+            category_predictions = [r["predicted_class"] for r in prediction_results]
+            confidence_scores   = [r["confidence"]      for r in prediction_results]
+
+            # ── Constants ──
             SKIP_PACKAGES = {
-            'com.android', 'android',
-            'com.samsung.android.app.galaxyfinder',
-            'com.samsung.android.bixby.agent',
-            'com.google.android.permissioncontroller',
-            'com.sec.android.app.launcher',
-            'com.samsung.android.dialer',
-            'com.example.child_app',
-        }
+                'com.android', 'android',
+                'com.samsung.android.app.galaxyfinder',
+                'com.samsung.android.bixby.agent',
+                'com.google.android.permissioncontroller',
+                'com.sec.android.app.launcher',
+                'com.samsung.android.dialer',
+                'com.example.child_app',
+            }
+
             AGENT_CATEGORIES = {"Social", "Sensitive", "Games", "Entertainment"}
+
+            # Confidence thresholds per category
+            # Games confusion matrix mein sabse zyada misclassify ho raha tha — strict rakha
+            CLASS_THRESHOLDS = {
+                "Games":         0.80,
+                "Social":        0.65,
+                "Entertainment": 0.65,
+                "Sensitive":     0.60,
+            }
+
             KNOWN_CATEGORIES = {
-    # ── Social Media ──
-    'instagram': 'Social',
-    'facebook': 'Social',
-    'tiktok': 'Social',
-    'snapchat': 'Social',
-    'twitter': 'Social',
-    'pinterest': 'Social',
-    'linkedin': 'Social',
-    'discord': 'Social',
-    'tumblr': 'Social',
-    'reddit': 'Social',
-    'bereal': 'Social',
+                # ── Social Media ──
+                'instagram': 'Social',
+                'facebook': 'Social',
+                'tiktok': 'Social',
+                'snapchat': 'Social',
+                'twitter': 'Social',
+                'pinterest': 'Social',
+                'linkedin': 'Social',
+                'discord': 'Social',
+                'tumblr': 'Social',
+                'reddit': 'Social',
+                'bereal': 'Social',
 
-    # ── Chatting ──
-    'whatsapp': 'Social',
-    'telegram': 'Social',
-    'signal': 'Social',
-    'skype': 'Social',
-    'imo': 'Social',
-    'viber': 'Social',
-    'messenger': 'Social',
-    'wechat': 'Social',
-    'line': 'Social',
+                # ── Chatting ──
+                'whatsapp': 'Social',
+                'telegram': 'Social',
+                'signal': 'Social',
+                'skype': 'Social',
+                'imo': 'Social',
+                'viber': 'Social',
+                'messenger': 'Social',
+                'wechat': 'Social',
+                'line': 'Social',
 
-    # ── Entertainment ──
-    'youtube': 'Entertainment',
-    'netflix': 'Entertainment',
-    'spotify': 'Entertainment',
-    'twitch': 'Entertainment',
-    'dailymotion': 'Entertainment',
-    'vimeo': 'Entertainment',
-    'soundcloud': 'Entertainment',
-    'primevideo': 'Entertainment',
-    'hotstar': 'Entertainment',
-    'disneyplus': 'Entertainment',
-    'hulu': 'Entertainment',
-    'tving': 'Entertainment',
-    'bigo': 'Entertainment',
-    'likee': 'Entertainment',
-    'mxtakatak': 'Entertainment',
-    'resso': 'Entertainment',
-    'jiosaavn': 'Entertainment',
-    'gaana': 'Entertainment',
+                # ── Entertainment ──
+                'youtube': 'Entertainment',
+                'netflix': 'Entertainment',
+                'spotify': 'Entertainment',
+                'twitch': 'Entertainment',
+                'dailymotion': 'Entertainment',
+                'vimeo': 'Entertainment',
+                'soundcloud': 'Entertainment',
+                'primevideo': 'Entertainment',
+                'hotstar': 'Entertainment',
+                'disneyplus': 'Entertainment',
+                'hulu': 'Entertainment',
+                'tving': 'Entertainment',
+                'bigo': 'Entertainment',
+                'likee': 'Entertainment',
+                'mxtakatak': 'Entertainment',
+                'resso': 'Entertainment',
+                'jiosaavn': 'Entertainment',
+                'gaana': 'Entertainment',
 
-    # ── Games ──
-    'roblox': 'Games',
-    'pubg': 'Games',
-    'freefire': 'Games',
-    'free.fire': 'Games',
-    'callofduty': 'Games',
-    'fortnite': 'Games',
-    'minecraft': 'Games',
-    'subway': 'Games',
-    'candycrush': 'Games',
-    'clashofclans': 'Games',
-    'brawlstars': 'Games',
-    'clashroyale': 'Games',
-    'mobilelegends': 'Games',
-    'hillclimb': 'Games',
-    'templerun': 'Games',
-    'angrybirds': 'Games',
-    'amongus': 'Games',
-    'fingersoft': 'Games',
-    'supercell': 'Games',
-    'miniclip': 'Games',
-    'gameloft': 'Games',
-    'eaplay': 'Games',
-    'fifamobile': 'Games',
-    'efootball': 'Games',
-    'ludo': 'Games',
-    'carrompool': 'Games',
-    '8ballpool': 'Games',
-    'gta': 'Games',
-    'battleground': 'Games',
-    'fpsshooter': 'Games',
-    'wordgame': 'Games',
-    'solitaire': 'Games',
+                # ── Games ──
+                'roblox': 'Games',
+                'pubg': 'Games',
+                'freefire': 'Games',
+                'free.fire': 'Games',
+                'callofduty': 'Games',
+                'fortnite': 'Games',
+                'minecraft': 'Games',
+                'subway': 'Games',
+                'candycrush': 'Games',
+                'clashofclans': 'Games',
+                'brawlstars': 'Games',
+                'clashroyale': 'Games',
+                'mobilelegends': 'Games',
+                'hillclimb': 'Games',
+                'templerun': 'Games',
+                'angrybirds': 'Games',
+                'amongus': 'Games',
+                'fingersoft': 'Games',
+                'supercell': 'Games',
+                'miniclip': 'Games',
+                'gameloft': 'Games',
+                'eaplay': 'Games',
+                'fifamobile': 'Games',
+                'efootball': 'Games',
+                'ludo': 'Games',
+                'carrompool': 'Games',
+                '8ballpool': 'Games',
+                'gta': 'Games',
+                'battleground': 'Games',
+                'fpsshooter': 'Games',
+                'wordgame': 'Games',
+                'solitaire': 'Games',
 
-    # ── Education ──
-    'duolingo': 'Education',
-    'kahoot': 'Education',
-    'quizlet': 'Education',
-    'coursera': 'Education',
-    'udemy': 'Education',
-    'khan': 'Education',
-    'brainly': 'Education',
-    'photomath': 'Education',
-    'mathway': 'Education',
-    'grammarly': 'Education',
-    'dictionary': 'Education',
-    'encyclopedia': 'Education',
-    'google.classroom': 'Education',
-    'edmodo': 'Education',
-    'byju': 'Education',
+                # ── Education ──
+                'duolingo': 'Education',
+                'kahoot': 'Education',
+                'quizlet': 'Education',
+                'coursera': 'Education',
+                'udemy': 'Education',
+                'khan': 'Education',
+                'brainly': 'Education',
+                'photomath': 'Education',
+                'mathway': 'Education',
+                'grammarly': 'Education',
+                'dictionary': 'Education',
+                'encyclopedia': 'Education',
+                'google.classroom': 'Education',
+                'edmodo': 'Education',
+                'byju': 'Education',
 
-    # ── Tools / Browsers ──
-    'chrome': 'Tools',
-    'firefox': 'Tools',
-    'opera': 'Tools',
-    'brave': 'Tools',
-    'uc.browser': 'Tools',
-    'ucbrowser': 'Tools',
-    'duckduckgo': 'Tools',
-    'gmail': 'Tools',
-    'outlook': 'Tools',
-    'yahoo': 'Tools',
-    'maps': 'Tools',
-    'calculator': 'Tools',
-    'clock': 'Tools',
-    'calendar': 'Tools',
-    'camera': 'Tools',
-    'gallery': 'Tools',
-    'filemanager': 'Tools',
-    'files': 'Tools',
-    'drive': 'Tools',
-    'dropbox': 'Tools',
-    'onedrive': 'Tools',
-    'translate': 'Tools',
-    'weather': 'Tools',
-    'flashlight': 'Tools',
-    'compass': 'Tools',
-    'scanner': 'Tools',
-    'pdf': 'Tools',
-    'notepad': 'Tools',
-    'notes': 'Tools',
-    'reminder': 'Tools',
-    'contacts': 'Tools',
+                # ── Tools / Browsers ──
+                'chrome': 'Tools',
+                'firefox': 'Tools',
+                'opera': 'Tools',
+                'brave': 'Tools',
+                'uc.browser': 'Tools',
+                'ucbrowser': 'Tools',
+                'duckduckgo': 'Tools',
+                'gmail': 'Tools',
+                'outlook': 'Tools',
+                'yahoo': 'Tools',
+                'maps': 'Tools',
+                'calculator': 'Tools',
+                'clock': 'Tools',
+                'calendar': 'Tools',
+                'camera': 'Tools',
+                'gallery': 'Tools',
+                'filemanager': 'Tools',
+                'files': 'Tools',
+                'drive': 'Tools',
+                'dropbox': 'Tools',
+                'onedrive': 'Tools',
+                'translate': 'Tools',
+                'weather': 'Tools',
+                'flashlight': 'Tools',
+                'compass': 'Tools',
+                'scanner': 'Tools',
+                'pdf': 'Tools',
+                'notepad': 'Tools',
+                'notes': 'Tools',
+                'reminder': 'Tools',
+                'contacts': 'Tools',
 
-    # ── Pakistan Specific ──
-    'jazzcash': 'Tools',
-    'easypaisa': 'Tools',
-    'daraz': 'Tools',
-    'foodpanda': 'Tools',
-    'careem': 'Tools',
-    'uber': 'Tools',
-    'bykea': 'Tools',
-    'ptcl': 'Tools',
-    'ufone': 'Tools',
-    'telenor': 'Tools',
-    'zong': 'Tools',
-    'mobilink': 'Tools',
-    'jazz': 'Tools',
-    'hbl': 'Tools',
-    'meezan': 'Tools',
-    'ubl': 'Tools',
-    'mcb': 'Tools',
-    'alfalahhbank': 'Tools',
-    'pakwheels': 'Tools',
-    'zameen': 'Tools',
-    'olx': 'Tools',
-    'imdb': 'Entertainment',
-    'arynews': 'Entertainment',
-    'geo': 'Entertainment',
-    'samaa': 'Entertainment',
-    'dawn': 'Education',
-    'express': 'Entertainment',
+                # ── Pakistan Specific ──
+                'jazzcash': 'Tools',
+                'easypaisa': 'Tools',
+                'daraz': 'Tools',
+                'foodpanda': 'Tools',
+                'careem': 'Tools',
+                'uber': 'Tools',
+                'bykea': 'Tools',
+                'ptcl': 'Tools',
+                'ufone': 'Tools',
+                'telenor': 'Tools',
+                'zong': 'Tools',
+                'mobilink': 'Tools',
+                'jazz': 'Tools',
+                'hbl': 'Tools',
+                'meezan': 'Tools',
+                'ubl': 'Tools',
+                'mcb': 'Tools',
+                'alfalahhbank': 'Tools',
+                'pakwheels': 'Tools',
+                'zameen': 'Tools',
+                'olx': 'Tools',
+                'imdb': 'Entertainment',
+                'arynews': 'Entertainment',
+                'geo': 'Entertainment',
+                'samaa': 'Entertainment',
+                'dawn': 'Education',
+                'express': 'Entertainment',
 
-    # ── Sensitive ──
-    'vpn': 'Sensitive',
-    'tor': 'Sensitive',
-    'proxy': 'Sensitive',
-    'hider': 'Sensitive',
-    'incognito': 'Sensitive',
-    'privatebrowser': 'Sensitive',
-    'darkweb': 'Sensitive',
-    'onion': 'Sensitive',
-}
+                # ── Sensitive ──
+                'vpn': 'Sensitive',
+                'tor': 'Sensitive',
+                'proxy': 'Sensitive',
+                'hider': 'Sensitive',
+                'incognito': 'Sensitive',
+                'privatebrowser': 'Sensitive',
+                'darkweb': 'Sensitive',
+                'onion': 'Sensitive',
+            }
+
+            result = []
+
             for i, app in enumerate(usage_data):
-                category = category_predictions[i]
-                package  = app["package_name"]
+                package    = app["package_name"]
                 usage_time = app["usage_time"]
+                category   = category_predictions[i]
+                confidence = confidence_scores[i]
 
-                # Override if known app
+                # ── KNOWN_CATEGORIES override ──
+                known_override = False
                 for keyword, forced_cat in KNOWN_CATEGORIES.items():
                     if keyword in package:
                         category = forced_cat
+                        known_override = True
                         break
 
+                # ── System apps aur zero-usage skip ──
+                if usage_time == 0 or package in SKIP_PACKAGES:
+                    result.append({
+                        "package_name":  package,
+                        "usage_time":    usage_time,
+                        "category":      category,
+                        "action":        "allow",
+                        "reasoning":     "Skipped — system app or zero usage",
+                        "alert_message": None,
+                    })
+                    continue
+
                 # ── DUPLICATE CHECK ──
-                # Aaj ka same package already save hai?
                 existing = models.appUsage.objects.filter(
                     child=child,
                     package_name=package,
@@ -624,132 +667,558 @@ def collectAppUsageData_Api(request):
                 ).first()
 
                 if existing:
-                    # Agar usage time same hai — bilkul duplicate, skip karo
                     if existing.usage_time == usage_time:
                         print(f"DUPLICATE — skipping {package}")
                         result.append({
-                            "package_name": package,
-                            "usage_time":   usage_time,
-                            "category":     category,
-                            "action":       existing.action,
-                            "reasoning":    "Duplicate — already processed today",
+                            "package_name":  package,
+                            "usage_time":    usage_time,
+                            "category":      category,
+                            "action":        "allow",
+                            "reasoning":     "Duplicate — already processed today",
                             "alert_message": None,
                         })
                         continue
 
-                    # Usage time badh gayi — sirf update karo, agent mat chalao
                     if usage_time <= existing.usage_time:
                         print(f"SAME OR LESS USAGE — skipping {package}")
                         continue
 
-                    # Agar usage time significantly badhi hai (10+ minutes) tabhi agent chalao
                     time_diff_mins = (usage_time - existing.usage_time) / 60
-                    if time_diff_mins < 10:
+                    if time_diff_mins < 3:
                         print(f"MINOR INCREASE ({time_diff_mins:.1f} min) — skipping agent for {package}")
                         existing.usage_time = usage_time
                         existing.save()
                         result.append({
-                            "package_name": package,
-                            "usage_time":   usage_time,
-                            "category":     category,
-                            "action":       existing.action,
-                            "reasoning":    "Minor usage update — no re-analysis",
+                            "package_name":  package,
+                            "usage_time":    usage_time,
+                            "category":      category,
+                            "action":        "allow",
+                            "reasoning":     "Minor usage update — no re-analysis",
                             "alert_message": None,
                         })
                         continue
 
-
-
-                
-
-                # System apps aur zero-usage apps skip karne ke liye simple rule — inhe allow kar dete hain bina agent ko involve kiye, taki unnecessary processing na ho.
-                if app["usage_time"] == 0 or package in SKIP_PACKAGES:
-                    result.append({
-                        "package_name": package,
-                        "usage_time":   app["usage_time"],
-                        "category":     category,
-                        "action":       "allow",
-                        "reasoning":    "Skipped — system app or zero usage",
-                        "alert_message": None,
-                    })
-                    continue
-                
-
-                # Sirf meaningful categories par agent chalao
+                # ── Education / Tools — agent ki zaroorat nahi ──
                 if category not in AGENT_CATEGORIES:
-                    # Education, Tools — simple allow, no LLM needed
                     models.appUsage.objects.create(
                         child=child,
                         package_name=package,
-                        usage_time=app["usage_time"],
+                        usage_time=usage_time,
                         category=category,
                         risk="allow",
                         action="allow",
-                        date=timezone.now().date()
+                        date=today,
                     )
                     result.append({
-                        "package_name": package,
-                        "usage_time":   app["usage_time"],
-                        "category":     category,
-                        "action":       "allow",
-                        "reasoning":    "Education/Tools — allowed by default",
+                        "package_name":  package,
+                        "usage_time":    usage_time,
+                        "category":      category,
+                        "action":        "allow",
+                        "reasoning":     "Education/Tools — allowed by default",
                         "alert_message": None,
                     })
                     continue
 
+                # ── CONFIDENCE CHECK — sirf ML predictions ke liye ──
+                # Known apps (KNOWN_CATEGORIES se override hue) pe confidence check nahi —
+                # unka category already trusted hai
+                if not known_override:
+                    threshold = CLASS_THRESHOLDS.get(category, 0.65)
+                    if confidence < threshold:
+                        print(f"LOW CONFIDENCE ({confidence:.0%}) — skipping agent for {package} [{category}]")
+                        models.appUsage.objects.create(
+                            child=child,
+                            package_name=package,
+                            usage_time=usage_time,
+                            category=category,
+                            risk="allow",
+                            action="allow",
+                            date=today,
+                        )
+                        result.append({
+                            "package_name":  package,
+                            "usage_time":    usage_time,
+                            "category":      category,
+                            "action":        "allow",
+                            "reasoning":     f"Low ML confidence ({confidence:.0%}) — agent skipped",
+                            "alert_message": None,
+                        })
+                        continue
+
+                # ── AGENT INVOKE — high confidence risky category ──
+                print(f"AGENT TRIGGER — {package} [{category}] confidence: {confidence:.0%}")
 
                 initial_state = {
-                "package_name":   app["package_name"],
-                "usage_time":     app["usage_time"],
-                "ml_category":    category_predictions[i],
-                "child_id":       child_id,
-                
+                    "package_name":      package,
+                    "usage_time":        usage_time,
+                    "ml_category":       category_predictions[i],
+                    "child_id":          child_id,
+                    "child_age":         None,
+                    "screen_limit_mins": child.screen_time_limit,
+                    "usage_history":     None,
+                    "recent_alerts":     None,
+                    "total_usage_today": None,
+                    "action":            None,
+                    "reasoning":         None,
+                    "alert_message":     None,
+                    "should_send_alert": None,
+                }
 
-                # Baaki sab None — agent ne ye sbb data fill krna hai 
-                "child_age": None, "screen_limit_mins": child.screen_time_limit,
-                "usage_history": None, "recent_alerts": None,
-                "total_usage_today": None, "action": None,
-                "reasoning": None, "alert_message": None,
-                "should_send_alert": None,
-            }
-                
-                # thread_id = child_id — isi se memory maintain hogi per child
-                # config = {"configurable": {"thread_id": f"child_{child_id}"}}
-                # final = app_agent.invoke(initial_state, config=config) ## Invoking the agent with the initial state and config. Agent will process through the graph and return the final state with action, reasoning, alert message, etc.
                 final = app_agent.invoke(initial_state)
-                # save with prediction
+
                 models.appUsage.objects.create(
-                child=child,
-                package_name=app["package_name"],
-                usage_time=app["usage_time"],
-                category=category_predictions[i],
-                risk=final["action"],       # action hi risk hai ab
-                action=final["action"],
-                date=timezone.now().date()
-            )
-                if final["action"] == "Block" or final["action"] == "Escalate":
+                    child=child,
+                    package_name=package,
+                    usage_time=usage_time,
+                    category=category_predictions[i],
+                    risk=final["action"],
+                    action=final["action"],
+                    date=today,
+                )
+
+                if final["action"] in ("Block", "Escalate"):
                     child.is_locked = True
                     child.save()
 
                 result.append({
-                    "package_name":  app["package_name"],
-                    "usage_time":    app["usage_time"],
+                    "package_name":  package,
+                    "usage_time":    usage_time,
                     "category":      category_predictions[i],
                     "action":        final["action"],
-                    "reasoning":     final["reasoning"],    
+                    "reasoning":     final["reasoning"],
                     "alert_message": final["alert_message"],
                 })
-                print(f"App: {app['package_name']}, Category: {category_predictions[i]}, Risk: {final['action']}, Action: {final['action']},reasoning: {final['reasoning']}, Alert: {final['alert_message']}")
-                
+
+                print(
+                    f"App: {package} | Category: {category_predictions[i]} | "
+                    f"Confidence: {confidence:.0%} | Action: {final['action']} | "
+                    f"Reasoning: {final['reasoning']} | Alert: {final['alert_message']}"
+                )
+
             return Response({
                 "message": "Data saved successfully",
-                "predictions": result
+                "predictions": result,
             })
 
         return Response(serializer.errors, status=400)
+
     except Exception as e:
         print("Backend error:", e)
         return Response({"error": str(e)}, status=500)
+
+
+
+
+
+
+
+
+
+
+# @api_view(['POST'])
+# def collectAppUsageData_Api(request):
+#     try:
+#         print("app API calling")
+
+
+#         if not request.data:
+#                 return Response({"message": "No data received"}, status=200)
+
+#         serializer = AppUsageSerializer(data=request.data)
+#         print(request.data)
+        
+#         if serializer.is_valid():
+#             validated_data = serializer.validated_data
+#             # usage_data = validated_data["usage_data"]
+#             usage_data = validated_data.get("usage_data", [])
+
+#             if not usage_data:
+#                 return Response({"message": "Empty usage data"}, status=200)
+            
+#             #app_names = [app["package_name"] for app in usage_data]
+            
+#             app_names = [preprocess_app_name(app["package_name"]) for app in usage_data]
+
+            # ML prediction
+            # model = get_model()
+            #category_predictions = app_model.predict(app_names)
+            # category_predictions = ml_service.predict(app_names)
+
+#             result = []
+
+#             child_id = validated_data["child_id"]
+#             child = models.child.objects.get(id=child_id)
+
+#             today =  timezone.now().date()
+#             now_time = timezone.localtime().time()
+#             # REset on midnight
+#             if now_time < dt_time(0, 5):  # raat 12:00-12:05 ke beech
+#                     models.child.objects.filter(parent_unlocked=True).update(parent_unlocked=False)
+            
+#             if is_bedtime(child):
+#                 child.is_locked = True
+#                 child.save()
+#                 return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+            
+
+#             # Strictly applying screen time limit — agar limit exceed ho jati hai toh chahe koi bhi app use kar raha ho, device ko lock kar do. Isse parents ko ek strong signal milega ki limit important hai, aur unnecessary alerts se bhi bachenge.
+#             two_days_ago = timezone.now().date() - timedelta(days=1)
+#             existing_usage = models.appUsage.objects.filter(child=child, date=today)
+#             merged_existing = {}
+#             for u in existing_usage:
+#                 pkg = u.package_name
+#                 if pkg not in merged_existing or u.usage_time > merged_existing[pkg]:
+#                     merged_existing[pkg] = u.usage_time
+#             total_usage_today = sum(merged_existing.values())  # seconds
+
+#             screen_limit_seconds = child.screen_time_limit * 60
+
+#             # if total_usage_today >= screen_limit_seconds:
+#             #     child.is_locked = True
+#             #     child.save()
+#             #     return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+#             if total_usage_today >= screen_limit_seconds:
+#                 if child.parent_unlocked and child.parent_unlocked_at:
+#                     elapsed = (timezone.now() - child.parent_unlocked_at).total_seconds()
+#                     # Parent ne unlock kiya tha — 30 min grace period check karo
+#                     if elapsed < 30 * 60:
+#                         pass  # Grace period — lock mat karo
+#                     else:
+#                         child.parent_unlocked = False
+#                         child.parent_unlocked_at = None
+#                         child.is_locked = True
+#                         child.save()
+#                         return Response({"is_locked": True, "reason": "screen_limit_after_grace"}, status=200)
+#                     # Grace period mein hai — lock mat karo
+#                 else:
+#                     child.is_locked = True
+#                     child.save()
+#                     return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
+            
+#             SKIP_PACKAGES = {
+#             'com.android', 'android',
+#             'com.samsung.android.app.galaxyfinder',
+#             'com.samsung.android.bixby.agent',
+#             'com.google.android.permissioncontroller',
+#             'com.sec.android.app.launcher',
+#             'com.samsung.android.dialer',
+#             'com.example.child_app',
+#         }
+#             AGENT_CATEGORIES = {"Social", "Sensitive", "Games", "Entertainment"}
+#             KNOWN_CATEGORIES = {
+#     # ── Social Media ──
+#     'instagram': 'Social',
+#     'facebook': 'Social',
+#     'tiktok': 'Social',
+#     'snapchat': 'Social',
+#     'twitter': 'Social',
+#     'pinterest': 'Social',
+#     'linkedin': 'Social',
+#     'discord': 'Social',
+#     'tumblr': 'Social',
+#     'reddit': 'Social',
+#     'bereal': 'Social',
+
+#     # ── Chatting ──
+#     'whatsapp': 'Social',
+#     'telegram': 'Social',
+#     'signal': 'Social',
+#     'skype': 'Social',
+#     'imo': 'Social',
+#     'viber': 'Social',
+#     'messenger': 'Social',
+#     'wechat': 'Social',
+#     'line': 'Social',
+
+#     # ── Entertainment ──
+#     'youtube': 'Entertainment',
+#     'netflix': 'Entertainment',
+#     'spotify': 'Entertainment',
+#     'twitch': 'Entertainment',
+#     'dailymotion': 'Entertainment',
+#     'vimeo': 'Entertainment',
+#     'soundcloud': 'Entertainment',
+#     'primevideo': 'Entertainment',
+#     'hotstar': 'Entertainment',
+#     'disneyplus': 'Entertainment',
+#     'hulu': 'Entertainment',
+#     'tving': 'Entertainment',
+#     'bigo': 'Entertainment',
+#     'likee': 'Entertainment',
+#     'mxtakatak': 'Entertainment',
+#     'resso': 'Entertainment',
+#     'jiosaavn': 'Entertainment',
+#     'gaana': 'Entertainment',
+
+#     # ── Games ──
+#     'roblox': 'Games',
+#     'pubg': 'Games',
+#     'freefire': 'Games',
+#     'free.fire': 'Games',
+#     'callofduty': 'Games',
+#     'fortnite': 'Games',
+#     'minecraft': 'Games',
+#     'subway': 'Games',
+#     'candycrush': 'Games',
+#     'clashofclans': 'Games',
+#     'brawlstars': 'Games',
+#     'clashroyale': 'Games',
+#     'mobilelegends': 'Games',
+#     'hillclimb': 'Games',
+#     'templerun': 'Games',
+#     'angrybirds': 'Games',
+#     'amongus': 'Games',
+#     'fingersoft': 'Games',
+#     'supercell': 'Games',
+#     'miniclip': 'Games',
+#     'gameloft': 'Games',
+#     'eaplay': 'Games',
+#     'fifamobile': 'Games',
+#     'efootball': 'Games',
+#     'ludo': 'Games',
+#     'carrompool': 'Games',
+#     '8ballpool': 'Games',
+#     'gta': 'Games',
+#     'battleground': 'Games',
+#     'fpsshooter': 'Games',
+#     'wordgame': 'Games',
+#     'solitaire': 'Games',
+
+#     # ── Education ──
+#     'duolingo': 'Education',
+#     'kahoot': 'Education',
+#     'quizlet': 'Education',
+#     'coursera': 'Education',
+#     'udemy': 'Education',
+#     'khan': 'Education',
+#     'brainly': 'Education',
+#     'photomath': 'Education',
+#     'mathway': 'Education',
+#     'grammarly': 'Education',
+#     'dictionary': 'Education',
+#     'encyclopedia': 'Education',
+#     'google.classroom': 'Education',
+#     'edmodo': 'Education',
+#     'byju': 'Education',
+
+#     # ── Tools / Browsers ──
+#     'chrome': 'Tools',
+#     'firefox': 'Tools',
+#     'opera': 'Tools',
+#     'brave': 'Tools',
+#     'uc.browser': 'Tools',
+#     'ucbrowser': 'Tools',
+#     'duckduckgo': 'Tools',
+#     'gmail': 'Tools',
+#     'outlook': 'Tools',
+#     'yahoo': 'Tools',
+#     'maps': 'Tools',
+#     'calculator': 'Tools',
+#     'clock': 'Tools',
+#     'calendar': 'Tools',
+#     'camera': 'Tools',
+#     'gallery': 'Tools',
+#     'filemanager': 'Tools',
+#     'files': 'Tools',
+#     'drive': 'Tools',
+#     'dropbox': 'Tools',
+#     'onedrive': 'Tools',
+#     'translate': 'Tools',
+#     'weather': 'Tools',
+#     'flashlight': 'Tools',
+#     'compass': 'Tools',
+#     'scanner': 'Tools',
+#     'pdf': 'Tools',
+#     'notepad': 'Tools',
+#     'notes': 'Tools',
+#     'reminder': 'Tools',
+#     'contacts': 'Tools',
+
+#     # ── Pakistan Specific ──
+#     'jazzcash': 'Tools',
+#     'easypaisa': 'Tools',
+#     'daraz': 'Tools',
+#     'foodpanda': 'Tools',
+#     'careem': 'Tools',
+#     'uber': 'Tools',
+#     'bykea': 'Tools',
+#     'ptcl': 'Tools',
+#     'ufone': 'Tools',
+#     'telenor': 'Tools',
+#     'zong': 'Tools',
+#     'mobilink': 'Tools',
+#     'jazz': 'Tools',
+#     'hbl': 'Tools',
+#     'meezan': 'Tools',
+#     'ubl': 'Tools',
+#     'mcb': 'Tools',
+#     'alfalahhbank': 'Tools',
+#     'pakwheels': 'Tools',
+#     'zameen': 'Tools',
+#     'olx': 'Tools',
+#     'imdb': 'Entertainment',
+#     'arynews': 'Entertainment',
+#     'geo': 'Entertainment',
+#     'samaa': 'Entertainment',
+#     'dawn': 'Education',
+#     'express': 'Entertainment',
+
+#     # ── Sensitive ──
+#     'vpn': 'Sensitive',
+#     'tor': 'Sensitive',
+#     'proxy': 'Sensitive',
+#     'hider': 'Sensitive',
+#     'incognito': 'Sensitive',
+#     'privatebrowser': 'Sensitive',
+#     'darkweb': 'Sensitive',
+#     'onion': 'Sensitive',
+# }
+#             for i, app in enumerate(usage_data):
+#                 category = category_predictions[i]
+#                 package  = app["package_name"]
+#                 usage_time = app["usage_time"]
+
+#                 # Override if known app
+#                 for keyword, forced_cat in KNOWN_CATEGORIES.items():
+#                     if keyword in package:
+#                         category = forced_cat
+#                         break
+
+#                 # ── DUPLICATE CHECK ──
+#                 # Aaj ka same package already save hai?
+#                 existing = models.appUsage.objects.filter(
+#                     child=child,
+#                     package_name=package,
+#                     date=today,
+#                 ).first()
+
+#                 if existing:
+#                     # Agar usage time same hai — bilkul duplicate, skip karo
+#                     if existing.usage_time == usage_time:
+#                         print(f"DUPLICATE — skipping {package}")
+#                         result.append({
+#                             "package_name": package,
+#                             "usage_time":   usage_time,
+#                             "category":     category,
+#                             "action":       existing.action,
+#                             "reasoning":    "Duplicate — already processed today",
+#                             "alert_message": None,
+#                         })
+#                         continue
+
+#                     # Usage time badh gayi — sirf update karo, agent mat chalao
+#                     if usage_time <= existing.usage_time:
+#                         print(f"SAME OR LESS USAGE — skipping {package}")
+#                         continue
+
+#                     # Agar usage time significantly badhi hai (10+ minutes) tabhi agent chalao
+#                     time_diff_mins = (usage_time - existing.usage_time) / 60
+#                     if time_diff_mins < 10:
+#                         print(f"MINOR INCREASE ({time_diff_mins:.1f} min) — skipping agent for {package}")
+#                         existing.usage_time = usage_time
+#                         existing.save()
+#                         result.append({
+#                             "package_name": package,
+#                             "usage_time":   usage_time,
+#                             "category":     category,
+#                             "action":       existing.action,
+#                             "reasoning":    "Minor usage update — no re-analysis",
+#                             "alert_message": None,
+#                         })
+#                         continue
+
+
+
+                
+
+#                 # System apps aur zero-usage apps skip karne ke liye simple rule — inhe allow kar dete hain bina agent ko involve kiye, taki unnecessary processing na ho.
+#                 if app["usage_time"] == 0 or package in SKIP_PACKAGES:
+#                     result.append({
+#                         "package_name": package,
+#                         "usage_time":   app["usage_time"],
+#                         "category":     category,
+#                         "action":       "allow",
+#                         "reasoning":    "Skipped — system app or zero usage",
+#                         "alert_message": None,
+#                     })
+#                     continue
+                
+
+#                 # Sirf meaningful categories par agent chalao
+#                 if category not in AGENT_CATEGORIES:
+#                     # Education, Tools — simple allow, no LLM needed
+#                     models.appUsage.objects.create(
+#                         child=child,
+#                         package_name=package,
+#                         usage_time=app["usage_time"],
+#                         category=category,
+#                         risk="allow",
+#                         action="allow",
+#                         date=timezone.now().date()
+#                     )
+#                     result.append({
+#                         "package_name": package,
+#                         "usage_time":   app["usage_time"],
+#                         "category":     category,
+#                         "action":       "allow",
+#                         "reasoning":    "Education/Tools — allowed by default",
+#                         "alert_message": None,
+#                     })
+#                     continue
+
+
+#                 initial_state = {
+#                 "package_name":   app["package_name"],
+#                 "usage_time":     app["usage_time"],
+#                 "ml_category":    category_predictions[i],
+#                 "child_id":       child_id,
+                
+
+#                 # Baaki sab None — agent ne ye sbb data fill krna hai 
+#                 "child_age": None, "screen_limit_mins": child.screen_time_limit,
+#                 "usage_history": None, "recent_alerts": None,
+#                 "total_usage_today": None, "action": None,
+#                 "reasoning": None, "alert_message": None,
+#                 "should_send_alert": None,
+#             }
+                
+#                 # thread_id = child_id — isi se memory maintain hogi per child
+#                 # config = {"configurable": {"thread_id": f"child_{child_id}"}}
+#                 # final = app_agent.invoke(initial_state, config=config) ## Invoking the agent with the initial state and config. Agent will process through the graph and return the final state with action, reasoning, alert message, etc.
+#                 final = app_agent.invoke(initial_state)
+#                 # save with prediction
+#                 models.appUsage.objects.create(
+#                 child=child,
+#                 package_name=app["package_name"],
+#                 usage_time=app["usage_time"],
+#                 category=category_predictions[i],
+#                 risk=final["action"],       # action hi risk hai ab
+#                 action=final["action"],
+#                 date=timezone.now().date()
+#             )
+#                 if final["action"] == "Block" or final["action"] == "Escalate":
+#                     child.is_locked = True
+#                     child.save()
+
+#                 result.append({
+#                     "package_name":  app["package_name"],
+#                     "usage_time":    app["usage_time"],
+#                     "category":      category_predictions[i],
+#                     "action":        final["action"],
+#                     "reasoning":     final["reasoning"],    
+#                     "alert_message": final["alert_message"],
+#                 })
+#                 print(f"App: {app['package_name']}, Category: {category_predictions[i]}, Risk: {final['action']}, Action: {final['action']},reasoning: {final['reasoning']}, Alert: {final['alert_message']}")
+                
+#             return Response({
+#                 "message": "Data saved successfully",
+#                 "predictions": result
+#             })
+
+#         return Response(serializer.errors, status=400)
+#     except Exception as e:
+#         print("Backend error:", e)
+#         return Response({"error": str(e)}, status=500)
 
 # Alerts Api (Creation + Sending)
 @api_view(['POST'])
@@ -809,11 +1278,14 @@ def get_risk(category):
 @api_view(['POST'])
 def unlock_device(request):
     child_id = request.data.get("child_id")
+    print(f"[UNLOCK_DEVICE_API] called with child_id={child_id}")
     child = models.child.objects.get(id=child_id)
     child.is_locked = False
     child.parent_unlocked = True  # ← parent ne manually unlock kiya
     child.parent_unlocked_at = timezone.now()
     child.save()
+    print(f"[UNLOCK_DEVICE_API] is_locked=False, parent_unlocked=True, "
+          f"parent_unlocked_at={child.parent_unlocked_at}")
     return Response({"message": "Device Unlocked"})
 
 # api to send data to parent app 
@@ -857,100 +1329,363 @@ def get_child_usage(request, child_id):
         "timestamp": timezone.now(),
     }, status=200)
 
+
+def normalize_url_for_dedup(url):
+    """Sirf domain + path rakho — query params aur hash hata do"""
+    try:
+        parsed = urlparse(url.lower().strip())
+        # sirf scheme + domain + path — query/fragment ignore
+        normalized = f"{parsed.scheme}://{parsed.netloc}{parsed.path}".rstrip('/')
+        return normalized
+    except:
+        return url.lower().strip()
+
 # API to collect web usage data
+
+
+
+
+# @api_view(['POST'])
+# def collect_web_usage(request):
+#     print("Web API Called")
+
+#     serializer = WebUsageDataSerializer(data=request.data)
+#     if not serializer.is_valid():
+#         print("SERIALIZER ERRORS:", serializer.errors)
+#         return Response(serializer.errors, status=400)
+
+#     child_id = request.data.get('child_id')
+#     raw_url  = request.data.get('url', '')
+
+#     # ── Junk filter ──
+#     JUNK_KEYWORDS = ["verifying", "loading", "connecting", "about:blank", "chrome://", "..."]
+#     if any(kw in raw_url.lower() for kw in JUNK_KEYWORDS):
+#         print(f"JUNK URL rejected: {raw_url}")
+#         return Response({"status": "ignored"}, status=200)
+
+#     url = clean_url(raw_url)
+#     print("Cleaned URL:", url)
+#     if not url:
+#         return Response({"status": "ignored"}, status=200)
+
+#     # ── Child fetch — PEHLE karo ──
+#     try:
+#         child_obj = models.child.objects.get(id=child_id)
+#     except models.child.DoesNotExist:
+#         return Response({"error": "Child not found"}, status=404)
+
+#     # ── Bedtime check ──
+#     if is_bedtime(child_obj):
+#         child_obj.is_locked = True
+#         child_obj.save()
+#         return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+
+#     # ── Duplicate check — normalized URL se ──
+#     def normalize_url_for_dedup(u):
+#         try:
+#             parsed = urlparse(u.lower().strip())
+#             return f"{parsed.scheme}://{parsed.netloc}{parsed.path}".rstrip('/')
+#         except:
+#             return u.lower().strip()
+
+#     normalized_url = normalize_url_for_dedup(url)
+#     two_min_ago = timezone.now() - timedelta(minutes=2)
+
+#     recent_records = models.webUsage.objects.filter(
+#         child=child_obj,
+#         date=timezone.now().date(),
+#         created_at__gte=two_min_ago
+#     )
+#     for record in recent_records:
+#         if normalize_url_for_dedup(record.url) == normalized_url:
+#             print(f"DUPLICATE URL — skipping: {url}")
+#             return Response({"status": "duplicate"}, status=200)
+
+#     # ── ML Prediction ──
+#     ml_result  = web_ml_service.predict_with_confidence(url)
+#     prediction = ml_result["prediction"]
+#     confidence = ml_result["confidence"]
+#     safe_prob  = ml_result["all_probs"]["safe"]
+
+#     print(f"WEB PREDICTION: {prediction} | confidence: {confidence:.0%} | safe: {safe_prob:.0%}")
+
+#     # ── Fast path — clearly safe ──
+#     if prediction == 0 and safe_prob >= 0.80:
+#         models.webUsage.objects.create(
+#             child=child_obj, url=url, usage_time=0,
+#             risk="Low", action="Allow", category="Safe",
+#             date=timezone.now().date(),
+#         )
+#         print(f"FAST PATH SAFE: {url}")
+#         return Response({
+#             "status": "completed", "ml_prediction": prediction,
+#             "confidence": confidence, "action": "Allow",
+#             "risk_level": "Low",
+#             "reasoning": f"Model confident URL is safe ({safe_prob:.0%})",
+#         }, status=200)
+
+#     # ── DB Save (agent process karega) ──
+#     web_obj = models.webUsage.objects.create(
+#         child=child_obj, url=url, usage_time=0,
+#         risk="Pending", action="Pending", category="Pending",
+#         date=timezone.now().date(),
+#     )
+
+#     # ── Agent invoke ──
+#     try:
+#         result = web_graph.invoke({
+#             "child_id":      int(child_id),
+#             "url":           url,
+#             "ml_prediction": prediction,
+#             "ml_confidence": confidence,
+#             "web_usage_id":  web_obj.id,
+#         })
+#         print(f"Agent done — action: {result.get('action')}, risk: {result.get('risk_level')}")
+
+#         if result.get("action", "").lower() in ["block", "escalate"]:
+#             child_obj.is_locked = True
+#             child_obj.save()
+
+#         return Response({
+#             "status":        "completed",
+#             "ml_prediction": prediction,
+#             "confidence":    confidence,
+#             "action":        result.get("action"),
+#             "risk_level":    result.get("risk_level"),
+#             "reasoning":     result.get("reasoning"),
+#         }, status=200)
+
+#     except Exception as e:
+#         print(f"Agent Error: {traceback.format_exc()}")
+#         return Response({
+#             "status":        "processing",
+#             "ml_prediction": prediction,
+#             "confidence":    confidence,
+#             "message":       "Agent is analyzing in background",
+#         }, status=200)
+
+
+
 
 @api_view(['POST'])
 def collect_web_usage(request):
     print("Web API Called")
-    print("request.body (raw):", request.body)
 
     serializer = WebUsageDataSerializer(data=request.data)
+    if not serializer.is_valid():
+        print("SERIALIZER ERRORS:", serializer.errors)
+        return Response(serializer.errors, status=400)
 
-    if serializer.is_valid():
-        
-        child_id = request.data.get('child_id')
-        url = request.data.get('url')
+    child_id = request.data.get('child_id')
+    raw_url  = request.data.get('url', '')
 
-        # Removing Junk keyword 
-        JUNK_KEYWORDS = ["verifying", "loading", "connecting", "about:blank", "chrome://", "..."]
-        raw_url = request.data.get("url", "").lower()
-        if any(kw in raw_url for kw in JUNK_KEYWORDS):
-            print(f"JUNK URL rejected: {raw_url}")
-            return Response({"status": "ignored"}, status=200)
-        
-        url = clean_url(request.data.get("url"))
-        print("Cleaned URL:", url)
+    # ── Junk filter ──
+    JUNK_KEYWORDS = ["verifying", "loading", "connecting", "about:blank", "chrome://", "..."]
+    if any(kw in raw_url.lower() for kw in JUNK_KEYWORDS):
+        print(f"JUNK URL rejected: {raw_url}")
+        return Response({"status": "ignored"}, status=200)
 
-        if not url:
-            print("IGNORED URL:", url)
-            return Response({"status": "ignored"}, status=200)
+    url = clean_url(raw_url)
+    print("Cleaned URL:", url)
+    if not url:
+        return Response({"status": "ignored"}, status=200)
 
+    def normalize_url_for_dedup(u):
         try:
-            child_obj = models.child.objects.get(id=child_id)
+            parsed = urlparse(u.lower().strip())
+            normalized = f"{parsed.scheme}://{parsed.netloc}{parsed.path}".rstrip('/')
+            print(f"  [DEDUP] Input: {u!r}  →  Normalized: {normalized!r}")
+            return normalized
+        except:
+            return u.lower().strip()
+
+    normalized_url = normalize_url_for_dedup(url)
+
+    with transaction.atomic():
+        try:
+            child_obj = models.child.objects.select_for_update().get(id=child_id)
         except models.child.DoesNotExist:
             return Response({"error": "Child not found"}, status=404)
 
-
-        # Bedtime check — agar child ka bedtime chal raha hai, toh URL ko ignore kar do. Isse unnecessary alerts aur processing se bachenge.
         if is_bedtime(child_obj):
             child_obj.is_locked = True
             child_obj.save()
             return Response({"is_locked": True, "reason": "bedtime"}, status=200)
-        #  DUPLICATE CHECK (same URL last 2 minute mein already save hai?)
 
-        recent_duplicate = models.webUsage.objects.filter(
+        two_min_ago = timezone.now() - timedelta(minutes=2)
+        recent_records = models.webUsage.objects.filter(
             child=child_obj,
-            url=url,
             date=timezone.now().date(),
-            created_at__gte=timezone.now() - timedelta(minutes=2)
-        ).exists()
+            created_at__gte=two_min_ago
+        )
 
-        if recent_duplicate:
-            print(f"DUPLICATE URL — skipping: {url}")
-            return Response({"status": "duplicate"}, status=200)
+        # ── DEBUG: print all recent records ──
+        print(f"  [DEDUP] Checking against {recent_records.count()} recent records:")
+        for record in recent_records:
+            rec_normalized = normalize_url_for_dedup(record.url)
+            match = rec_normalized == normalized_url
+            print(f"    DB url: {record.url!r}")
+            print(f"    DB normalized: {rec_normalized!r}")
+            print(f"    Incoming normalized: {normalized_url!r}")
+            print(f"    MATCH: {match}")
+            if match:
+                print(f"DUPLICATE FOUND — skipping: {url}")
+                return Response({"status": "duplicate"}, status=200)
 
-        print(f"Saving - Child ID: {child_id}, URL: {url}")
-        prediction = web_ml_service.predict(url)
+        print(f"  [DEDUP] No duplicate found — creating new record")
+        web_obj = models.webUsage.objects.create(
+            child=child_obj, url=url, 
+            risk="Pending", action="Pending", category="Pending",
+            date=timezone.now().date(),
+        )
 
-        print("WEB PREDICTION:", prediction)
+    ml_result  = web_ml_service.predict_with_confidence(url)
+    prediction = ml_result["prediction"]
+    confidence = ml_result["confidence"]
+    safe_prob  = ml_result["all_probs"]["safe"]
 
-        if prediction == 1:
-            risk = "High"
-            action = "Block"
-            category = "Malicious"
-        else:
-            risk = "Low"
-            action = "Allow"
-            category = "Safe"
+    print(f"WEB PREDICTION: {prediction} | confidence: {confidence:.0%} | safe: {safe_prob:.0%}")
 
-        # Agent baad mein risk aur action update karega
-        web_obj=models.webUsage.objects.create(
-        child=child_obj,
-        url=url,
-        usage_time=0,
-        risk="Pending",
-        action="Pending",
-        category="Pending",
-        date=timezone.now().date())
-        print(f"Web usage saved - Child ID: {child_id}, URL: {url}, Risk: {risk}, Action: {action}")
-        #  Agent ko background thread mein chalao
-        # Warna API slow ho jayegi kyunki agent ko reasoning ke liye thoda time lag sakta hai, aur humein response jaldi dena hai taki user experience acha rahe.
-        # config = {"configurable": {"thread_id": f"web_child_{child_id}"}}
-        try:
-            result= web_graph.invoke({"child_id":int(child_id),"url":url,"ml_prediction": prediction,"web_usage_id":  web_obj.id,})
-            print(f"Agent completed for child {child_id}, url {url}, prediction {prediction},risk {risk}, action {action}")
-            if result.get("action", "").lower() in ["block", "escalate"]:
-                child_obj.is_locked = True
-                child_obj.save()
-            return Response({"status":"completed", "ml_prediction": prediction,"action":result.get("action"),"risk_level":result.get("risk_level"),"reasoning":result.get("reasoning"), }, status=200)
-        except Exception as e:
-            print(f"Agent Error: {traceback.format_exc()}")
+    if prediction == 0 and safe_prob >= 0.80:
+        web_obj.risk     = "Low"
+        web_obj.action   = "Allow"
+        web_obj.category = "Safe"
+        web_obj.save()
+        print(f"FAST PATH SAFE: {url}")
+        return Response({
+            "status":        "completed",
+            "ml_prediction": prediction,
+            "confidence":    confidence,
+            "action":        "Allow",
+            "risk_level":    "Low",
+            "reasoning":     f"Model confident URL is safe ({safe_prob:.0%})",
+        }, status=200)
+
+    try:
+        result = web_graph.invoke({
+            "child_id":      int(child_id),
+            "url":           url,
+            "ml_prediction": prediction,
+            "ml_confidence": confidence,
+            "web_usage_id":  web_obj.id,
+        })
+        print(f"Agent done — action: {result.get('action')}, risk: {result.get('risk_level')}")
+
+        if result.get("action", "").lower() in ["block", "escalate"]:
+            child_obj.is_locked = True
+            child_obj.save()
+
+        return Response({
+            "status":        "completed",
+            "ml_prediction": prediction,
+            "confidence":    confidence,
+            "action":        result.get("action"),
+            "risk_level":    result.get("risk_level"),
+            "reasoning":     result.get("reasoning"),
+        }, status=200)
+
+    except Exception as e:
+        print(f"Agent Error: {traceback.format_exc()}")
+        return Response({
+            "status":        "processing",
+            "ml_prediction": prediction,
+            "confidence":    confidence,
+            "message":       "Agent is analyzing in background",
+        }, status=200)
 
 
-            return Response({"status":"processing","ml_prediction": prediction,"message": "Agent is analyzing in background"}, status=200)
+# @api_view(['POST'])
+# def collect_web_usage(request):
+#     print("Web API Called")
+#     print("request.body (raw):", request.body)
 
-    print("SERIALIZER ERRORS:", serializer.errors)
-    return Response(serializer.errors, status=400)
+#     serializer = WebUsageDataSerializer(data=request.data)
+
+#     if serializer.is_valid():
+        
+#         child_id = request.data.get('child_id')
+#         url = request.data.get('url')
+
+#         # Removing Junk keyword 
+#         JUNK_KEYWORDS = ["verifying", "loading", "connecting", "about:blank", "chrome://", "..."]
+#         raw_url = request.data.get("url", "").lower()
+#         if any(kw in raw_url for kw in JUNK_KEYWORDS):
+#             print(f"JUNK URL rejected: {raw_url}")
+#             return Response({"status": "ignored"}, status=200)
+        
+#         url = clean_url(request.data.get("url"))
+#         print("Cleaned URL:", url)
+
+#         if not url:
+#             print("IGNORED URL:", url)
+#             return Response({"status": "ignored"}, status=200)
+
+#         try:
+#             child_obj = models.child.objects.get(id=child_id)
+#         except models.child.DoesNotExist:
+#             return Response({"error": "Child not found"}, status=404)
+
+
+#         # Bedtime check — agar child ka bedtime chal raha hai, toh URL ko ignore kar do. Isse unnecessary alerts aur processing se bachenge.
+#         if is_bedtime(child_obj):
+#             child_obj.is_locked = True
+#             child_obj.save()
+#             return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+#         #  DUPLICATE CHECK (same URL last 2 minute mein already save hai?)
+
+#         recent_duplicate = models.webUsage.objects.filter(
+#             child=child_obj,
+#             url=url,
+#             date=timezone.now().date(),
+#             created_at__gte=timezone.now() - timedelta(minutes=2)
+#         ).exists()
+
+#         if recent_duplicate:
+#             print(f"DUPLICATE URL — skipping: {url}")
+#             return Response({"status": "duplicate"}, status=200)
+
+#         print(f"Saving - Child ID: {child_id}, URL: {url}")
+#         prediction = web_ml_service.predict(url)
+
+#         print("WEB PREDICTION:", prediction)
+
+#         if prediction == 1:
+#             risk = "High"
+#             action = "Block"
+#             category = "Malicious"
+#         else:
+#             risk = "Low"
+#             action = "Allow"
+#             category = "Safe"
+
+#         # Agent baad mein risk aur action update karega
+#         web_obj=models.webUsage.objects.create(
+#         child=child_obj,
+#         url=url,
+#         usage_time=0,
+#         risk="Pending",
+#         action="Pending",
+#         category="Pending",
+#         date=timezone.now().date())
+#         print(f"Web usage saved - Child ID: {child_id}, URL: {url}, Risk: {risk}, Action: {action}")
+#         #  Agent ko background thread mein chalao
+#         # Warna API slow ho jayegi kyunki agent ko reasoning ke liye thoda time lag sakta hai, aur humein response jaldi dena hai taki user experience acha rahe.
+#         # config = {"configurable": {"thread_id": f"web_child_{child_id}"}}
+#         try:
+#             result= web_graph.invoke({"child_id":int(child_id),"url":url,"ml_prediction": prediction,"web_usage_id":  web_obj.id,})
+#             print(f"Agent completed for child {child_id}, url {url}, prediction {prediction},risk {risk}, action {action}")
+#             if result.get("action", "").lower() in ["block", "escalate"]:
+#                 child_obj.is_locked = True
+#                 child_obj.save()
+#             return Response({"status":"completed", "ml_prediction": prediction,"action":result.get("action"),"risk_level":result.get("risk_level"),"reasoning":result.get("reasoning"), }, status=200)
+#         except Exception as e:
+#             print(f"Agent Error: {traceback.format_exc()}")
+
+
+#             return Response({"status":"processing","ml_prediction": prediction,"message": "Agent is analyzing in background"}, status=200)
+
+#     print("SERIALIZER ERRORS:", serializer.errors)
+#     return Response(serializer.errors, status=400)
 
 # URL cleaning Function
 
@@ -1349,23 +2084,34 @@ def check_lock_status(request):
     child_id = request.query_params.get('child_id')
     try:
         child = models.child.objects.get(id=child_id)
+        print(f"[LOCK_CHECK] child_id={child_id} | is_locked(DB)={child.is_locked} | "
+              f"parent_unlocked={child.parent_unlocked} | parent_unlocked_at={child.parent_unlocked_at}")
+
 
         # Bedtime always wins
         if is_bedtime(child):
+            print(f"[LOCK_CHECK] bedtime active -> forcing lock")
             child.is_locked = True
             child.parent_unlocked = False
             child.parent_unlocked_at = None
             child.save()
             return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+        # (agar parent ne manually re-lock kar diya hai to grace period override nahi karna)
+        if child.is_locked:
+            return Response({"is_locked": True, "reason": "manual_lock"}, status=200)
 
         # Grace period check — time-based (30 min from unlock time)
         if child.parent_unlocked and child.parent_unlocked_at:
+
             elapsed = timezone.now() - child.parent_unlocked_at
+            print(f"[LOCK_CHECK] grace period active | elapsed={elapsed.total_seconds()}s")
             if elapsed.total_seconds() < 30 * 60:
+                print(f"[LOCK_CHECK] WITHIN grace period -> returning is_locked=False (DB is_locked was {child.is_locked})")
                 # Grace period mein hai — lock mat karo
                 return Response({"is_locked": False})
             else:
                 # 30 min guzar gaye — grace khatam, reset karo
+                print(f"[LOCK_CHECK] grace period EXPIRED -> resetting parent_unlocked")
                 child.parent_unlocked = False
                 child.parent_unlocked_at = None
                 child.save()
@@ -1380,21 +2126,26 @@ def check_lock_status(request):
                 merged[pkg] = u.usage_time
         total_usage_today = sum(merged.values())
         screen_limit_seconds = child.screen_time_limit * 60
+        print(f"[LOCK_CHECK] usage_today={total_usage_today}s | limit={screen_limit_seconds}s | "
+              f"is_locked(DB before final check)={child.is_locked}")
 
         print(f"Lock check — used: {total_usage_today}s, limit: {screen_limit_seconds}s")
 
         if total_usage_today >= screen_limit_seconds:
+            print(f"[LOCK_CHECK] usage exceeded -> locking")
             child.is_locked = True
             child.save()
             return Response({"is_locked": True, "reason": "screen_limit"}, status=200)
 
         # Usage limit cross nahi hui, unlock karo agar locked tha
         if child.is_locked:
+            print(f"[LOCK_CHECK] usage OK but is_locked=True in DB -> unlocking (THIS MIGHT BE THE BUG)")
             child.is_locked = False
             child.save()
-
+        print(f"[LOCK_CHECK] FINAL RESPONSE is_locked={child.is_locked}")
         return Response({"is_locked": child.is_locked})
     except models.child.DoesNotExist:
+        print(f"[LOCK_CHECK] child_id={child_id} not found")
         return Response({"is_locked": False})
     
 # api to lock the device from child side, jab ML model ya agent detect kare ki risky activity ho rahi hai, toh wo device ko lock karne ke liye is API ko call karega, taki parent ko pata chal jaye ki risky activity detect hui hai, aur device lock bhi ho jaye taki child uss activity ko continue na kar sake. Is API ko call karne se DB mein is_locked=True save hoga, taki checkLockStatus() API reboot ke baad bhi correct status return kare.
@@ -1406,203 +2157,25 @@ def lock_device(request):
     Persists is_locked=True to DB so checkLockStatus() restores it after reboot.
     """
     child_id = request.data.get('child_id')
+    print(f"[LOCK_DEVICE_API] called with child_id={child_id}")
     if not child_id:
         return Response({"error": "child_id required"}, status=400)
     try:
         child = models.child.objects.get(id=child_id)
+        print(f"[LOCK_DEVICE_API] before save: is_locked={child.is_locked}, "
+              f"parent_unlocked={child.parent_unlocked}, parent_unlocked_at={child.parent_unlocked_at}")
         child.is_locked = True
+        child.parent_unlocked = False
+        child.parent_unlocked_at = None
+        print(f"[LOCK_DEVICE_API] after save: is_locked={child.is_locked} -> SAVED TO DB")
         child.save()
         return Response({"status": "locked"}, status=200)
     except models.child.DoesNotExist:
+        print(f"[LOCK_DEVICE_API] child_id={child_id} not found")
         return Response({"error": "Child not found"}, status=404)
 
-
+ ###----------- phle ye wali api chal rhy thy--------------------
 # APi to collect chat messages from child app. Jab bhi child app mein koi naya chat message detect hota hai, chahe wo WhatsApp ho, Messenger ho, ya koi aur chat app, toh wo is API ko call karega message details ke saath, taki backend us message ko analyze kar sake risk ke liye, aur agar zarurat pade toh parent ko alert bhej sake. Is API mein hum kuch basic filters bhi laga sakte hain jaise ki chote messages ko ignore karna, ya system messages ko ignore karna, taki unnecessary processing na ho.
-# @api_view(['POST'])
-# def collect_chat(request):
-#     print("Chat API Called")
-
-#     serializer = ChatMessageSerializer(data=request.data)
-#     if not serializer.is_valid():
-#         return Response(serializer.errors, status=400)
-
-#     child_id      = request.data.get('child_id')
-#     app_name      = request.data.get('app_name', '')
-#     sender        = request.data.get('sender', 'unknown')
-#     message       = request.data.get('message', '')
-#     timestamp_str = request.data.get('timestamp')
-
-#     # ── FILTER 1: Too short ──
-#     if not message or len(message.strip()) < 5:
-#         return Response({"status": "ignored"}, status=200)
-
-#     # ── FILTER 2: UI Noise ──
-#     UI_NOISE = {
-#         "voice call", "video call", "missed voice call",
-#         "missed video call", "tap to call back", "no answer",
-#         "call back", "photo", "video", "document", "audio",
-#         "sticker", "gif", "location", "contact",
-#         "this message was deleted", "you deleted this message",
-#         "announcements", "explore", "missed call",
-#     }
-#     msg_lower = message.lower().strip()
-
-#     if msg_lower in UI_NOISE:
-#         return Response({"status": "ignored_noise"}, status=200)
-
-#     if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
-#         return Response({"status": "ignored_date"}, status=200)
-
-#     if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
-#         return Response({"status": "ignored_date"}, status=200)
-
-#     if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
-#         return Response({"status": "ignored_duration"}, status=200)
-
-#     if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
-#         return Response({"status": "ignored_phone"}, status=200)
-
-#     if "pinned a message" in msg_lower:
-#         return Response({"status": "ignored_system"}, status=200)
-
-#     # ── FILTER 3: Child exist ──
-#     try:
-#         child_obj = models.child.objects.get(id=child_id)
-#     except models.child.DoesNotExist:
-#         return Response({"error": "Child not found"}, status=404)
-
-#     print(f"Chat — Child: {child_id} | App: {app_name} | Msg: {message}")
-
-#     if is_bedtime(child_obj):
-#         child_obj.is_locked = True
-#         child_obj.save()
-#         return Response({"is_locked": True, "reason": "bedtime"}, status=200)
-
-#     # ── Timestamp parse ──
-#     try:
-#         msg_time = make_aware(datetime.fromisoformat(timestamp_str))
-#     except:
-#         msg_time = timezone.now()
-
-#     # ── FILTER 4: Historical ──
-#     time_diff = timezone.now() - msg_time
-#     is_historical = time_diff.total_seconds() > 300
-
-#     # ── FILTER 5: Duplicate ──
-#     existing = models.ChatMessage.objects.filter(
-#         child=child_obj,
-#         app_name=app_name,
-#         message=message,
-#         sender=sender,
-#     ).filter(
-#         timestamp__gte=timezone.now() - timedelta(minutes=10)
-#     ).exists()
-
-#     if existing:
-#         print("DUPLICATE — skipping")
-#         return Response({"status": "duplicate"}, status=200)
-
-#     # ── DB Save ──
-#     try:
-#         chat_obj = models.ChatMessage.objects.create(
-#             child     = child_obj,
-#             app_name  = app_name,
-#             sender    = sender,
-#             message   = message,
-#             timestamp = msg_time,
-#             category  = "historical" if is_historical else "Pending",
-#             risk      = "Low"        if is_historical else "Pending",
-#             action    = "Allow"      if is_historical else "Pending",
-#         )
-#         print(f"Chat saved ID: {chat_obj.id}")
-#     except Exception as e:
-#         print(f"DB Save Error: {e}")
-#         return Response({"status": "db_error"}, status=200)
-
-#     # ── Historical message — agent mat chalao ──
-#     if is_historical:
-#         return Response({
-#             "status":  "historical",
-#             "chat_id": chat_obj.id,
-#         }, status=200)
-
-#     # ── ML Prediction (ML + Groq verification for sensitive) ──
-#     try:
-#         ml_category = chat_ml_service.predict(message)
-#     except Exception as e:
-#         print(f"Chat ML Error: {e}")
-#         ml_category = "normal"
-
-#     print(f"FINAL ML CATEGORY: {ml_category}")
-
-#     # ── Fast-path: normal messages ──
-#     if ml_category == "normal":
-#         chat_obj.category = "normal"
-#         chat_obj.risk     = "Low"
-#         chat_obj.action   = "Allow"
-#         chat_obj.save()
-#         return Response({
-#             "status":   "processed",
-#             "chat_id":  chat_obj.id,
-#             "category": "normal",
-#             "action":   "Allow"
-#         }, status=200)
-
-#     # ── Sensitive (hate/bullying/suicide) → LLM agent for nuanced action ──
-#     try:
-#         result = chat_agent.invoke({
-#             "child_id":    int(child_id),
-#             "app_name":    app_name,
-#             "message":     message,
-#             "sender":      sender,
-#             "chat_obj_id": chat_obj.id,
-#             "ml_category": ml_category,
-
-#             "child_age":         None,
-#             "screen_limit_mins": None,
-#             "recent_alerts":     None,
-#             "chat_history":      None,
-#             "total_chats_today": None,
-#             "final_category":    None,
-#             "action":            None,
-#             "reasoning":         None,
-#             "risk_level":        None,
-#             "urgency":           None,
-#             "alert_message":     None,
-#             "should_send_alert": None,
-#         })
-
-#         print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}")
-#         if result.get("action", "").lower() in ["block", "escalate"]:
-#             child_obj.is_locked = True
-#             child_obj.save()
-
-#         return Response({
-#             "status":     "processed",
-#             "chat_id":    chat_obj.id,
-#             "category":   result.get("final_category", ml_category),
-#             "action":     result.get("action"),
-#             "risk_level": result.get("risk_level"),
-#         }, status=200)
-
-#     except Exception as e:
-#         print(f"Chat Agent Error: {traceback.format_exc()}")
-#         # Fallback agar agent fail ho jaye
-#         if ml_category == "suicide":
-#             chat_obj.risk, chat_obj.action = "High", "Escalate"
-#             child_obj.is_locked = True
-#             child_obj.save()
-#         else:
-#             chat_obj.risk, chat_obj.action = "Medium", "Warn"
-#         chat_obj.category = ml_category
-#         chat_obj.save()
-#         return Response({
-#             "status":   "saved",
-#             "chat_id":  chat_obj.id,
-#             "category": ml_category,
-#             "action":   chat_obj.action,
-#         }, status=200)
-
 @api_view(['POST'])
 def collect_chat(request):
     print("Chat API Called")
@@ -1617,54 +2190,38 @@ def collect_chat(request):
     message       = request.data.get('message', '')
     timestamp_str = request.data.get('timestamp')
 
-    is_content = (sender == "content")
-
     # ── FILTER 1: Too short ──
-    min_len = 5 if not is_content else 4
-    if not message or len(message.strip()) < min_len:
+    if not message or len(message.strip()) < 5:
         return Response({"status": "ignored"}, status=200)
 
-    # ── FILTER 2: UI Noise — sirf chat ke liye ──
-    if not is_content:
-        UI_NOISE = {
-            "voice call", "video call", "missed voice call",
-            "missed video call", "tap to call back", "no answer",
-            "call back", "photo", "video", "document", "audio",
-            "sticker", "gif", "location", "contact",
-            "this message was deleted", "you deleted this message",
-            "announcements", "explore", "missed call",
-        }
-        msg_lower = message.lower().strip()
+    # ── FILTER 2: UI Noise ──
+    UI_NOISE = {
+        "voice call", "video call", "missed voice call",
+        "missed video call", "tap to call back", "no answer",
+        "call back", "photo", "video", "document", "audio",
+        "sticker", "gif", "location", "contact",
+        "this message was deleted", "you deleted this message",
+        "announcements", "explore", "missed call",
+    }
+    msg_lower = message.lower().strip()
 
-        if msg_lower in UI_NOISE:
-            return Response({"status": "ignored_noise"}, status=200)
-        
-        if is_content:
-                CONTENT_NOISE = {"like", "save", "share", "comment", "subscribe", "follow",
-    "more", "less", "ad", "sponsored", "shorts", "summary",
-    "music", "play", "news", "gaming", "months", "learning",
-    "fashion", "beauty", "podcasts", "live", "explore",
-    "youtube playables", "instant games, no downloads",
-    "breaking news", "television series", "weather forecasting",
-    "pakistani dramas", "cricket highlights", "fitness workouts", "cooking recipes",
-    "travel vlogs", "unboxing videos", "technology reviews", "educational content", "comedy sketches", "music videos",}
-                if message.lower().strip() in CONTENT_NOISE:
-                    return Response({"status": "ignored_noise"}, status=200)
+    if msg_lower in UI_NOISE:
+        return Response({"status": "ignored_noise"}, status=200)
 
-        if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
-            return Response({"status": "ignored_date"}, status=200)
+    if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
+        return Response({"status": "ignored_date"}, status=200)
 
-        if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
-            return Response({"status": "ignored_date"}, status=200)
+    if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
+        return Response({"status": "ignored_date"}, status=200)
 
-        if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
-            return Response({"status": "ignored_duration"}, status=200)
+    if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
+        return Response({"status": "ignored_duration"}, status=200)
 
-        if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
-            return Response({"status": "ignored_phone"}, status=200)
+    if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
+        return Response({"status": "ignored_phone"}, status=200)
 
-        if "pinned a message" in msg_lower:
-            return Response({"status": "ignored_system"}, status=200)
+    if "pinned a message" in msg_lower:
+        return Response({"status": "ignored_system"}, status=200)
 
     # ── FILTER 3: Child exist ──
     try:
@@ -1672,7 +2229,7 @@ def collect_chat(request):
     except models.child.DoesNotExist:
         return Response({"error": "Child not found"}, status=404)
 
-    print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
+    print(f"Chat — Child: {child_id} | App: {app_name} | Msg: {message}")
 
     if is_bedtime(child_obj):
         child_obj.is_locked = True
@@ -1685,22 +2242,18 @@ def collect_chat(request):
     except:
         msg_time = timezone.now()
 
-    # ── FILTER 4: Historical — sirf chat ke liye strict, content ke liye relaxed ──
+    # ── FILTER 4: Historical ──
     time_diff = timezone.now() - msg_time
-    if is_content:
-        is_historical = False  # content ko ALWAYS analyze karo, historical skip mat karo
-    else:
-        is_historical = time_diff.total_seconds() > 300
+    is_historical = time_diff.total_seconds() > 300
 
     # ── FILTER 5: Duplicate ──
-    dup_window = timedelta(minutes=10) if not is_content else timedelta(minutes=30)
     existing = models.ChatMessage.objects.filter(
         child=child_obj,
         app_name=app_name,
         message=message,
         sender=sender,
     ).filter(
-        timestamp__gte=timezone.now() - dup_window
+        timestamp__gte=timezone.now() - timedelta(minutes=10)
     ).exists()
 
     if existing:
@@ -1724,33 +2277,36 @@ def collect_chat(request):
         print(f"DB Save Error: {e}")
         return Response({"status": "db_error"}, status=200)
 
+    # ── Historical message — agent mat chalao ──
     if is_historical:
-        return Response({"status": "historical", "chat_id": chat_obj.id}, status=200)
+        return Response({
+            "status":  "historical",
+            "chat_id": chat_obj.id,
+        }, status=200)
 
-    # ── Content ke liye seedha agent (ML skip — ML chat-trained hai, content pe accurate nahi) ──
-    if is_content:
-        ml_category = "content"
-    else:
-        try:
-            ml_category = chat_ml_service.predict(message)
-        except Exception as e:
-            print(f"Chat ML Error: {e}")
-            ml_category = "normal"
+    # ── ML Prediction (ML + Groq verification for sensitive) ──
+    try:
+        ml_category = chat_ml_service.predict(message)
+    except Exception as e:
+        print(f"Chat ML Error: {e}")
+        ml_category = "normal"
 
-        print(f"FINAL ML CATEGORY: {ml_category}")
+    print(f"FINAL ML CATEGORY: {ml_category}")
 
-        # Fast-path: normal chat messages
-        if ml_category == "normal":
-            chat_obj.category = "normal"
-            chat_obj.risk     = "Low"
-            chat_obj.action   = "Allow"
-            chat_obj.save()
-            return Response({
-                "status": "processed", "chat_id": chat_obj.id,
-                "category": "normal", "action": "Allow"
-            }, status=200)
+    # ── Fast-path: normal messages ──
+    if ml_category == "normal":
+        chat_obj.category = "normal"
+        chat_obj.risk     = "Low"
+        chat_obj.action   = "Allow"
+        chat_obj.save()
+        return Response({
+            "status":   "processed",
+            "chat_id":  chat_obj.id,
+            "category": "normal",
+            "action":   "Allow"
+        }, status=200)
 
-    # ── Agent invoke (chat ke liye sensitive cases, content ke liye sab) ──
+    # ── Sensitive (hate/bullying/suicide) → LLM agent for nuanced action ──
     try:
         result = chat_agent.invoke({
             "child_id":    int(child_id),
@@ -1759,7 +2315,6 @@ def collect_chat(request):
             "sender":      sender,
             "chat_obj_id": chat_obj.id,
             "ml_category": ml_category,
-            "content_type": "content" if is_content else "chat",  # NAYA
 
             "child_age":         None,
             "screen_limit_mins": None,
@@ -1790,6 +2345,7 @@ def collect_chat(request):
 
     except Exception as e:
         print(f"Chat Agent Error: {traceback.format_exc()}")
+        # Fallback agar agent fail ho jaye
         if ml_category == "suicide":
             chat_obj.risk, chat_obj.action = "High", "Escalate"
             child_obj.is_locked = True
@@ -1799,13 +2355,456 @@ def collect_chat(request):
         chat_obj.category = ml_category
         chat_obj.save()
         return Response({
-            "status": "saved", "chat_id": chat_obj.id,
-            "category": ml_category, "action": chat_obj.action,
+            "status":   "saved",
+            "chat_id":  chat_obj.id,
+            "category": ml_category,
+            "action":   chat_obj.action,
         }, status=200)
 
+# @api_view(['POST'])
+# def collect_chat(request):
+#     print("Chat API Called")
+
+#     serializer = ChatMessageSerializer(data=request.data)
+#     if not serializer.is_valid():
+#         return Response(serializer.errors, status=400)
+
+#     child_id      = request.data.get('child_id')
+#     app_name      = request.data.get('app_name', '')
+#     sender        = request.data.get('sender', 'unknown')
+#     message       = request.data.get('message', '')
+#     timestamp_str = request.data.get('timestamp')
+
+#     is_content = (sender == "content")
+
+#     # ── FILTER 1: Too short ──
+#     min_len = 5 if not is_content else 4
+#     if not message or len(message.strip()) < min_len:
+#         return Response({"status": "ignored"}, status=200)
+
+#     # ── FILTER 2: UI Noise — sirf chat ke liye ──
+#     if not is_content:
+#         UI_NOISE = {
+#             "voice call", "video call", "missed voice call",
+#             "missed video call", "tap to call back", "no answer",
+#             "call back", "photo", "video", "document", "audio",
+#             "sticker", "gif", "location", "contact",
+#             "this message was deleted", "you deleted this message",
+#             "announcements", "explore", "missed call",
+#         }
+#         msg_lower = message.lower().strip()
+
+#         if msg_lower in UI_NOISE:
+#             return Response({"status": "ignored_noise"}, status=200)
+        
+#         if is_content:
+#                 CONTENT_NOISE = {"like", "save", "share", "comment", "subscribe", "follow",
+#     "more", "less", "ad", "sponsored", "shorts", "summary",
+#     "music", "play", "news", "gaming", "months", "learning",
+#     "fashion", "beauty", "podcasts", "live", "explore",
+#     "youtube playables", "instant games, no downloads",
+#     "breaking news", "television series", "weather forecasting",
+#     "pakistani dramas", "cricket highlights", "fitness workouts", "cooking recipes",
+#     "travel vlogs", "unboxing videos", "technology reviews", "educational content", "comedy sketches", "music videos",}
+#                 if message.lower().strip() in CONTENT_NOISE:
+#                     return Response({"status": "ignored_noise"}, status=200)
+
+#         if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
+#             return Response({"status": "ignored_date"}, status=200)
+
+#         if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
+#             return Response({"status": "ignored_date"}, status=200)
+
+#         if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
+#             return Response({"status": "ignored_duration"}, status=200)
+
+#         if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
+#             return Response({"status": "ignored_phone"}, status=200)
+
+#         if "pinned a message" in msg_lower:
+#             return Response({"status": "ignored_system"}, status=200)
+
+#     # ── FILTER 3: Child exist ──
+#     try:
+#         child_obj = models.child.objects.get(id=child_id)
+#     except models.child.DoesNotExist:
+#         return Response({"error": "Child not found"}, status=404)
+
+#     print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
+
+#     if is_bedtime(child_obj):
+#         child_obj.is_locked = True
+#         child_obj.save()
+#         return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+
+#     # ── Timestamp parse ──
+#     try:
+#         msg_time = make_aware(datetime.fromisoformat(timestamp_str))
+#     except:
+#         msg_time = timezone.now()
+
+#     # ── FILTER 4: Historical — sirf chat ke liye strict, content ke liye relaxed ──
+#     time_diff = timezone.now() - msg_time
+#     if is_content:
+#         is_historical = False  # content ko ALWAYS analyze karo, historical skip mat karo
+#     else:
+#         is_historical = time_diff.total_seconds() > 300
+
+#     # ── FILTER 5: Duplicate ──
+#     dup_window = timedelta(minutes=10) if not is_content else timedelta(minutes=30)
+#     existing = models.ChatMessage.objects.filter(
+#         child=child_obj,
+#         app_name=app_name,
+#         message=message,
+#         sender=sender,
+#     ).filter(
+#         timestamp__gte=timezone.now() - dup_window
+#     ).exists()
+
+#     if existing:
+#         print("DUPLICATE — skipping")
+#         return Response({"status": "duplicate"}, status=200)
+
+#     # ── DB Save ──
+#     try:
+#         chat_obj = models.ChatMessage.objects.create(
+#             child     = child_obj,
+#             app_name  = app_name,
+#             sender    = sender,
+#             message   = message,
+#             timestamp = msg_time,
+#             category  = "historical" if is_historical else "Pending",
+#             risk      = "Low"        if is_historical else "Pending",
+#             action    = "Allow"      if is_historical else "Pending",
+#         )
+#         print(f"Chat saved ID: {chat_obj.id}")
+#     except Exception as e:
+#         print(f"DB Save Error: {e}")
+#         return Response({"status": "db_error"}, status=200)
+
+#     if is_historical:
+#         return Response({"status": "historical", "chat_id": chat_obj.id}, status=200)
+
+#     # ── Content ke liye seedha agent (ML skip — ML chat-trained hai, content pe accurate nahi) ──
+#     if is_content:
+#         ml_category = "content"
+#     else:
+#         try:
+#             ml_category = chat_ml_service.predict(message)
+#         except Exception as e:
+#             print(f"Chat ML Error: {e}")
+#             ml_category = "normal"
+
+#         print(f"FINAL ML CATEGORY: {ml_category}")
+
+#         # Fast-path: normal chat messages
+#         if ml_category == "normal":
+#             chat_obj.category = "normal"
+#             chat_obj.risk     = "Low"
+#             chat_obj.action   = "Allow"
+#             chat_obj.save()
+#             return Response({
+#                 "status": "processed", "chat_id": chat_obj.id,
+#                 "category": "normal", "action": "Allow"
+#             }, status=200)
+
+#     # ── Agent invoke (chat ke liye sensitive cases, content ke liye sab) ──
+#     try:
+#         result = chat_agent.invoke({
+#             "child_id":    int(child_id),
+#             "app_name":    app_name,
+#             "message":     message,
+#             "sender":      sender,
+#             "chat_obj_id": chat_obj.id,
+#             "ml_category": ml_category,
+#             "content_type": "content" if is_content else "chat",  # NAYA
+
+#             "child_age":         None,
+#             "screen_limit_mins": None,
+#             "recent_alerts":     None,
+#             "chat_history":      None,
+#             "total_chats_today": None,
+#             "final_category":    None,
+#             "action":            None,
+#             "reasoning":         None,
+#             "risk_level":        None,
+#             "urgency":           None,
+#             "alert_message":     None,
+#             "should_send_alert": None,
+#         })
+
+#         print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}")
+#         if result.get("action", "").lower() in ["block", "escalate"]:
+#             child_obj.is_locked = True
+#             child_obj.save()
+
+#         return Response({
+#             "status":     "processed",
+#             "chat_id":    chat_obj.id,
+#             "category":   result.get("final_category", ml_category),
+#             "action":     result.get("action"),
+#             "risk_level": result.get("risk_level"),
+#         }, status=200)
+
+#     except Exception as e:
+#         print(f"Chat Agent Error: {traceback.format_exc()}")
+#         if ml_category == "suicide":
+#             chat_obj.risk, chat_obj.action = "High", "Escalate"
+#             child_obj.is_locked = True
+#             child_obj.save()
+#         else:
+#             chat_obj.risk, chat_obj.action = "Medium", "Warn"
+#         chat_obj.category = ml_category
+#         chat_obj.save()
+#         return Response({
+#             "status": "saved", "chat_id": chat_obj.id,
+#             "category": ml_category, "action": chat_obj.action,
+#         }, status=200)
 
 
-# Api to send data on dashboard home page, jaha parent ko child ki summary dikhani hai, jaise ki total screen time, app usage summary, YouTube usage, blocked websites, suspicious chats, etc. Taaki parent ko ek quick overview mil jaye child ki activities ka, bina alag alag APIs call kiye.
+# @api_view(['POST'])
+# def collect_chat(request):
+#     print("Chat API Called")
+
+#     serializer = ChatMessageSerializer(data=request.data)
+#     if not serializer.is_valid():
+#         return Response(serializer.errors, status=400)
+
+#     child_id      = request.data.get('child_id')
+#     app_name      = request.data.get('app_name', '')
+#     sender        = request.data.get('sender', 'unknown')
+#     message       = request.data.get('message', '')
+#     timestamp_str = request.data.get('timestamp')
+
+#     is_content = (sender == "content")
+#     GENERIC_SENDERS = {"unknown", "content"}  # accessibility service kabhi kabhi same msg ko dono label se bhejta hai
+
+#     # ── FILTER 1: Too short ──
+#     min_len = 5 if not is_content else 4
+#     if not message or len(message.strip()) < min_len:
+#         return Response({"status": "ignored"}, status=200)
+
+#     # ── FILTER 2: UI Noise ──
+#     if not is_content:
+#         UI_NOISE = {
+#             "voice call", "video call", "missed voice call",
+#             "missed video call", "tap to call back", "no answer",
+#             "call back", "photo", "video", "document", "audio",
+#             "sticker", "gif", "location", "contact",
+#             "this message was deleted", "you deleted this message",
+#             "announcements", "explore", "missed call","message...", "replied to themself", "replied to yourself",
+#         }
+#         msg_lower = message.lower().strip()
+
+#         if msg_lower in UI_NOISE:
+#             return Response({"status": "ignored_noise"}, status=200)
+
+#         if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
+#             return Response({"status": "ignored_date"}, status=200)
+
+#         if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
+#             return Response({"status": "ignored_date"}, status=200)
+
+#         if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
+#             return Response({"status": "ignored_duration"}, status=200)
+
+#         if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
+#             return Response({"status": "ignored_phone"}, status=200)
+
+#         if "pinned a message" in msg_lower:
+#             return Response({"status": "ignored_system"}, status=200)
+#     else:
+#         CONTENT_NOISE = {
+#             "like", "save", "share", "comment", "subscribe", "follow",
+#             "more", "less", "ad", "sponsored", "shorts", "summary",
+#             "music", "play", "news", "gaming", "months", "learning",
+#             "fashion", "beauty", "podcasts", "live", "explore",
+#             "youtube playables", "instant games, no downloads",
+#             "breaking news", "television series", "weather forecasting",
+#             "pakistani dramas", "cricket highlights", "fitness workouts",
+#             "cooking recipes", "travel vlogs", "unboxing videos",
+#             "technology reviews", "educational content", "comedy sketches",
+#             "music videos",
+#         }
+#         if message.lower().strip() in CONTENT_NOISE:
+#             return Response({"status": "ignored_noise"}, status=200)
+
+#     # ── FILTER 3-5: child fetch + lock check + bedtime + dedup + save —
+#     # transaction.atomic() + select_for_update() taki concurrent burst
+#     # requests ek dusre ko duplicate na bana sakein (collect_web_usage jaisa
+#     # fix, jo wahan pehle se hai) ──
+#     with transaction.atomic():
+#         try:
+#             child_obj = models.child.objects.select_for_update().get(id=child_id)
+#         except models.child.DoesNotExist:
+#             return Response({"error": "Child not found"}, status=404)
+
+#         print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
+
+#         # Device already locked — koi naya processing/relock attempt ki zaroorat nahi
+#         if child_obj.is_locked:
+#             print("DEVICE ALREADY LOCKED — skipping chat processing")
+#             return Response({"status": "ignored_locked", "is_locked": True}, status=200)
+
+#         if is_bedtime(child_obj):
+#             child_obj.is_locked = True
+#             child_obj.save()
+#             return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+
+#         try:
+#             msg_time = make_aware(datetime.fromisoformat(timestamp_str))
+#         except:
+#             msg_time = timezone.now()
+
+#         time_diff = timezone.now() - msg_time
+#         is_historical = False if is_content else time_diff.total_seconds() > 300
+
+#         # dup_window = timedelta(minutes=10) if not is_content else timedelta(minutes=30)
+#         dup_window = timedelta(minutes=30) if not is_content else timedelta(hours=1)
+
+#         if sender in GENERIC_SENDERS:
+#             # unknown/content dono ek dusre ke against dedup karo
+#             existing = models.ChatMessage.objects.filter(
+#                 child=child_obj, app_name=app_name, message=message,
+#                 sender__in=GENERIC_SENDERS,
+#             ).filter(timestamp__gte=timezone.now() - dup_window).exists()
+#         else:
+#             existing = models.ChatMessage.objects.filter(
+#                 child=child_obj, app_name=app_name, message=message, sender=sender,
+#             ).filter(timestamp__gte=timezone.now() - dup_window).exists()
+
+#         if existing:
+#             print("DUPLICATE — skipping")
+#             return Response({"status": "duplicate"}, status=200)
+
+#         try:
+#             chat_obj = models.ChatMessage.objects.create(
+#                 child     = child_obj,
+#                 app_name  = app_name,
+#                 sender    = sender,
+#                 message   = message,
+#                 timestamp = msg_time,
+#                 category  = "historical" if is_historical else "Pending",
+#                 risk      = "Low"        if is_historical else "Pending",
+#                 action    = "Allow"      if is_historical else "Pending",
+#             )
+#             print(f"Chat saved ID: {chat_obj.id}")
+#         except Exception as e:
+#             print(f"DB Save Error: {e}")
+#             return Response({"status": "db_error"}, status=200)
+#     # ── transaction ends — row lock released, ML/agent ke slow calls iske bahar ──
+
+#     if is_historical:
+#         return Response({"status": "historical", "chat_id": chat_obj.id}, status=200)
+
+#     # ── ML Prediction — chat_ml_service.predict_with_confidence() ke sath compatible ──
+#     ml_confidence = None
+#     ml_source     = None
+
+#     if is_content:
+#         ml_category = "content"
+#     else:
+#         try:
+#             ml_result     = chat_ml_service.predict_with_confidence(message)
+#             ml_category   = ml_result["category"]
+#             ml_confidence = ml_result["confidence"]
+#             ml_source     = ml_result["source"]
+#         except Exception as e:
+#             print(f"Chat ML Error: {e}")
+#             ml_category   = "normal"
+#             ml_confidence = 0.0
+#             ml_source     = "error"
+
+#         print(f"FINAL ML CATEGORY: {ml_category} | confidence: {ml_confidence} | source: {ml_source}")
+
+#         if ml_category == "normal":
+#             chat_obj.category = "normal"
+#             chat_obj.risk     = "Low"
+#             chat_obj.action   = "Allow"
+#             chat_obj.save()
+#             return Response({
+#                 "status":     "processed",
+#                 "chat_id":    chat_obj.id,
+#                 "category":   "normal",
+#                 "action":     "Allow",
+#                 "confidence": ml_confidence,
+#                 "source":     ml_source,
+#             }, status=200)
+
+#     # ── Agent invoke ──
+#     try:
+#         result = chat_agent.invoke({
+#             "child_id":      int(child_id),
+#             "app_name":      app_name,
+#             "message":       message,
+#             "sender":        sender,
+#             "chat_obj_id":   chat_obj.id,
+#             "ml_category":   ml_category,
+#             "ml_confidence": ml_confidence,
+#             "content_type":  "content" if is_content else "chat",
+
+#             "child_age":         None,
+#             "screen_limit_mins": None,
+#             "recent_alerts":     None,
+#             "chat_history":      None,
+#             "total_chats_today": None,
+#             "final_category":    None,
+#             "action":            None,
+#             "reasoning":         None,
+#             "risk_level":        None,
+#             "urgency":           None,
+#             "alert_message":     None,
+#             "should_send_alert": None,
+#         })
+
+#         print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}")
+
+#         action_lower = (result.get("action") or "").lower()
+#         if action_lower in ["block", "escalate"]:
+#             # Re-fetch fresh — ML/Groq call ke dauran parent ne unlock kiya ho sakta hai
+#             fresh_child = models.child.objects.get(id=child_obj.id)
+#             in_grace = (
+#                 fresh_child.parent_unlocked and fresh_child.parent_unlocked_at and
+#                 (timezone.now() - fresh_child.parent_unlocked_at).total_seconds() < 30 * 60
+#             )
+#             is_critical = (
+#                 (result.get("final_category") or ml_category) == "suicide"
+#                 or (result.get("risk_level") or "").lower() == "high"
+#             )
+#             if in_grace and not is_critical:
+#                 print("GRACE PERIOD ACTIVE — flagged but NOT re-locking (non-critical)")
+#             else:
+#                 fresh_child.is_locked = True
+#                 fresh_child.save()
+
+#         return Response({
+#             "status":     "processed",
+#             "chat_id":    chat_obj.id,
+#             "category":   result.get("final_category", ml_category),
+#             "action":     result.get("action"),
+#             "risk_level": result.get("risk_level"),
+#             "confidence": ml_confidence,
+#         }, status=200)
+
+#     except Exception as e:
+#         print(f"Chat Agent Error: {traceback.format_exc()}")
+#         if ml_category == "suicide":
+#             chat_obj.risk, chat_obj.action = "High", "Escalate"
+#             child_obj.is_locked = True
+#             child_obj.save()
+#         else:
+#             chat_obj.risk, chat_obj.action = "Medium", "Warn"
+#         chat_obj.category = ml_category
+#         chat_obj.save()
+#         return Response({
+#             "status":     "saved",
+#             "chat_id":    chat_obj.id,
+#             "category":   ml_category,
+#             "action":     chat_obj.action,
+#             "confidence": ml_confidence,
+#         }, status=200)
+
+# # Api to send data on dashboard home page, jaha parent ko child ki summary dikhani hai, jaise ki total screen time, app usage summary, YouTube usage, blocked websites, suspicious chats, etc. Taaki parent ko ek quick overview mil jaye child ki activities ka, bina alag alag APIs call kiye.
 
 
 @api_view(['GET'])
@@ -1941,7 +2940,7 @@ def browsing_monitoring_api(request):
 
     web_list = [{
         "title": w.url,
-        "time_spent": w.usage_time,
+        # "time_spent": w.usage_time,
         "category": w.category,
         "blocked": w.action == 'Block',
         "reasoning": w.reasoning,
@@ -2037,6 +3036,41 @@ def report_device_status(request):
 
 
 # GET - fetch current limits + category usage (for display only)
+# @api_view(['GET'])
+# def get_screen_limits(request):
+#     child_id = request.query_params.get('child_id')
+#     try:
+#         child = models.child.objects.get(id=child_id)
+#     except models.child.DoesNotExist:
+#         return Response({"error": "Child not found"}, status=404)
+
+#     today = timezone.now().date()
+
+#     # Sirf aaj ka data — categories aur total usage ke liye
+#     usage_qs = models.appUsage.objects.filter(child=child, date=today)
+#     merged = {}
+#     for u in usage_qs:
+#         pkg = u.package_name
+#         if pkg not in merged or u.usage_time > merged[pkg]["usage_time"]:
+#             merged[pkg] = {"usage_time": u.usage_time, "category": u.category}
+
+#     category_usage = {"Social": 0, "Entertainment": 0, "Games": 0}
+#     for data in merged.values():
+#         cat = data["category"]
+#         if cat in category_usage:
+#             category_usage[cat] += data["usage_time"]
+
+#     total_usage = sum(v["usage_time"] for v in merged.values())
+
+#     return Response({
+#         "screen_time_limit": child.screen_time_limit,
+#         "total_usage_seconds": total_usage,
+#         "bedtime_start": str(child.bedtime_start) if child.bedtime_start else None,
+#         "bedtime_end": str(child.bedtime_end) if child.bedtime_end else None,
+#         "category_usage_seconds": category_usage,
+#         'bedtime_enabled': child.bedtime_enabled,
+#     }, status=200)
+
 @api_view(['GET'])
 def get_screen_limits(request):
     child_id = request.query_params.get('child_id')
@@ -2045,9 +3079,8 @@ def get_screen_limits(request):
     except models.child.DoesNotExist:
         return Response({"error": "Child not found"}, status=404)
 
-    today = timezone.now().date()
+    today = timezone.now().date()  # sirf today — yesterday inflate karta tha
 
-    # Sirf aaj ka data — categories aur total usage ke liye
     usage_qs = models.appUsage.objects.filter(child=child, date=today)
     merged = {}
     for u in usage_qs:
@@ -2055,24 +3088,82 @@ def get_screen_limits(request):
         if pkg not in merged or u.usage_time > merged[pkg]["usage_time"]:
             merged[pkg] = {"usage_time": u.usage_time, "category": u.category}
 
-    category_usage = {"Social": 0, "Entertainment": 0, "Games": 0}
-    for data in merged.values():
-        cat = data["category"]
-        if cat in category_usage:
-            category_usage[cat] += data["usage_time"]
+    # Backend → Flutter category name mapping
+    CATEGORY_MAP = {
+        "Social":        "Social Media",
+        "Games":         "Gaming",
+        "Entertainment": "Entertainment",
+        "Education":     "Education",
+        "Tools":         "Tools",
+        "Sensitive":     "Sensitive",
+    }
 
-    total_usage = sum(v["usage_time"] for v in merged.values())
+    category_usage = {
+        "Social Media":  0,
+        "Gaming":        0,
+        "Entertainment": 0,
+    }
+
+    total_usage = 0
+    for data in merged.values():
+        t       = data["usage_time"]
+        total_usage += t
+        raw_cat = data["category"] or ""
+        mapped  = CATEGORY_MAP.get(raw_cat, raw_cat)
+        if mapped in category_usage:
+            category_usage[mapped] += t
 
     return Response({
-        "screen_time_limit": child.screen_time_limit,
-        "total_usage_seconds": total_usage,
-        "bedtime_start": str(child.bedtime_start) if child.bedtime_start else None,
-        "bedtime_end": str(child.bedtime_end) if child.bedtime_end else None,
-        "category_usage_seconds": category_usage,
-        'bedtime_enabled': child.bedtime_enabled,
+        "screen_time_limit":      child.screen_time_limit,
+        "total_usage_seconds":    total_usage,   # sirf today
+        "bedtime_start":          str(child.bedtime_start) if child.bedtime_start else None,
+        "bedtime_end":            str(child.bedtime_end)   if child.bedtime_end   else None,
+        "category_usage_seconds": category_usage,          # Flutter keys
+        "bedtime_enabled":        child.bedtime_enabled,
     }, status=200)
 
+
+
+def is_bedtime(child):
+    if not child.bedtime_enabled:
+        return False
+
+    if not child.bedtime_start or not child.bedtime_end:
+        return False
+
+    start = child.bedtime_start
+    end   = child.bedtime_end
+
+    if isinstance(start, str):
+        try:
+            parts = start.split(':')
+            start = dt_time(int(parts[0]), int(parts[1]))
+        except (ValueError, IndexError):
+            return False
+
+    if isinstance(end, str):
+        try:
+            parts = end.split(':')
+            end = dt_time(int(parts[0]), int(parts[1]))
+        except (ValueError, IndexError):
+            return False
+
+    now = timezone.localtime().time()
+    print(f"[BEDTIME] now={now} | start={start} | end={end}")
+
+    if start > end:  # overnight (e.g. 21:00 - 07:00)
+        return now >= start or now < end
+    else:
+        return start <= now < end
 # POST - update overall limit + bedtime
+
+
+
+
+    
+    
+        
+
 @api_view(['POST'])
 def update_screen_limits(request):
     child_id = request.data.get('child_id')
@@ -2084,63 +3175,163 @@ def update_screen_limits(request):
     if 'screen_time_limit' in request.data:
         child.screen_time_limit = request.data['screen_time_limit']
 
+    if 'bedtime_enabled' in request.data:
+        val = request.data['bedtime_enabled']
+        if isinstance(val, str):
+            child.bedtime_enabled = val.lower() == 'true'
+        else:
+            child.bedtime_enabled = bool(val)
+
+    # ── Parse bedtime times ──
+    def parse_time_field(val):
+        """Returns dt_time or None on failure."""
+        if isinstance(val, dt_time):
+            return val
+        if isinstance(val, str):
+            try:
+                parts = val.split(':')
+                return dt_time(int(parts[0]), int(parts[1]))
+            except (ValueError, IndexError):
+                return None
+        return None
+
+    new_start = None
+    new_end   = None
+
     if 'bedtime_start' in request.data:
-        child.bedtime_start = request.data['bedtime_start']
+        new_start = parse_time_field(request.data['bedtime_start'])
+        if new_start is None:
+            return Response({"error": "Invalid bedtime_start format. Use HH:MM"}, status=400)
 
     if 'bedtime_end' in request.data:
-        child.bedtime_end = request.data['bedtime_end']
+        new_end = parse_time_field(request.data['bedtime_end'])
+        if new_end is None:
+            return Response({"error": "Invalid bedtime_end format. Use HH:MM"}, status=400)
 
-    if 'bedtime_enabled' in request.data:
-        child.bedtime_enabled = request.data['bedtime_enabled']
+    # ── Validation: start aur end same nahi hone chahiye ──
+    effective_start = new_start if new_start is not None else child.bedtime_start
+    effective_end   = new_end   if new_end   is not None else child.bedtime_end
+
+    if effective_start is not None and effective_end is not None:
+        # Same time — koi bhi window nahi banti
+        is_valid, err_msg = validate_bedtime(effective_start, effective_end)
+        if not is_valid:
+            return Response({"error": err_msg}, status=400)
+        if effective_start == effective_end:
+            return Response(
+                {"error": "Bedtime start and end cannot be the same time."},
+                status=400
+            )
+
+    # ── Apply parsed values ──
+    if new_start is not None:
+        child.bedtime_start = new_start
+    if new_end is not None:
+        child.bedtime_end = new_end
 
     child.save()
 
-    # Auto-unlock check — agar naya limit set hone ke baad usage limit se kam hai
-    # aur bedtime active nahi hai, to lock hata do
-    if child.is_locked and not is_bedtime(child):
-        two_days_ago = timezone.now().date() - timedelta(days=1)
-        today = timezone.now().date()
-        existing_usage = models.appUsage.objects.filter(child=child, date=today)
-        merged_existing = {}
-        for u in existing_usage:
-            pkg = u.package_name
-            if pkg not in merged_existing or u.usage_time > merged_existing[pkg]:
-                merged_existing[pkg] = u.usage_time
-        total_usage_today = sum(merged_existing.values())
+    print(f"[UPDATE_LIMITS] bedtime_start={child.bedtime_start} | "
+          f"bedtime_end={child.bedtime_end} | "
+          f"bedtime_enabled={child.bedtime_enabled} | "
+          f"now={timezone.localtime().time()}")
 
-        screen_limit_seconds = child.screen_time_limit * 60
+    today = timezone.now().date()
+    existing_usage = models.appUsage.objects.filter(child=child, date=today)
+    merged_existing = {}
+    for u in existing_usage:
+        pkg = u.package_name
+        if pkg not in merged_existing or u.usage_time > merged_existing[pkg]:
+            merged_existing[pkg] = u.usage_time
+    total_usage_today = sum(merged_existing.values())
+    screen_limit_seconds = child.screen_time_limit * 60
 
-        if total_usage_today < screen_limit_seconds:
+    try:
+        bedtime_active = is_bedtime(child)
+    except Exception as e:
+        print(f"[UPDATE_LIMITS] is_bedtime ERROR: {e}")
+        bedtime_active = False
+
+    if bedtime_active:
+        child.is_locked = True
+        child.parent_unlocked = False
+        child.parent_unlocked_at = None
+        child.save()
+        return Response({
+            "status":        "updated",
+            "is_locked":     True,
+            "reason":        "bedtime",
+            "usage_seconds": total_usage_today,
+            "limit_seconds": screen_limit_seconds,
+        }, status=200)
+
+    if total_usage_today >= screen_limit_seconds:
+        if child.parent_unlocked and child.parent_unlocked_at:
+            elapsed = (timezone.now() - child.parent_unlocked_at).total_seconds()
+            if elapsed < 30 * 60:
+                return Response({
+                    "status":        "updated",
+                    "is_locked":     False,
+                    "reason":        "grace_period",
+                    "usage_seconds": total_usage_today,
+                    "limit_seconds": screen_limit_seconds,
+                }, status=200)
+        child.is_locked = True
+        child.save()
+        return Response({
+            "status":        "updated",
+            "is_locked":     True,
+            "reason":        "screen_limit",
+            "usage_seconds": total_usage_today,
+            "limit_seconds": screen_limit_seconds,
+        }, status=200)
+
+    else:
+        if child.is_locked:
             child.is_locked = False
             child.save()
+        return Response({
+            "status":        "updated",
+            "is_locked":     child.is_locked,
+            "reason":        "within_limit",
+            "usage_seconds": total_usage_today,
+            "limit_seconds": screen_limit_seconds,
+        }, status=200)
+    
+def validate_bedtime(start, end):
+    """
+    Returns (is_valid, error_message).
+    Bedtime must be:
+    - Not the same time
+    - If same-day window (start < end): must be at least 1 hour
+    - If overnight (start > end): always valid (e.g. 21:00 - 07:00)
+    - Bedtime end should not be after 12:00 PM (noon) to avoid nonsensical same-day windows like 09:20 - 07:00
+    """
+    if start == end:
+        return False, "Bedtime start and end cannot be the same time."
 
-    return Response({"status": "updated", "is_locked": child.is_locked}, status=200)
+    if start < end:
+        # Same-day window — e.g. 09:20 to 07:00 makes no sense
+        # A same-day bedtime like 09:20 AM to 10:00 PM could be intentional for nap time
+        # but 09:20 AM to 07:00 AM (next day) was INTENDED as overnight — user made a mistake
+        # Simple rule: if end time <= 12:00 noon and start > end is False,
+        # it's almost certainly a user error (they meant overnight)
+        if end <= dt_time(12, 0):
+            return False, (
+                f"Bedtime end ({end.strftime('%I:%M %p')}) is before noon and bedtime start "
+                f"({start.strftime('%I:%M %p')}) is after it — did you mean an overnight window? "
+                f"For overnight bedtime, set start to evening (e.g. 9:00 PM) and end to morning (e.g. 7:00 AM)."
+            )
+        # Same-day window must be at least 1 hour
+        from datetime import datetime, date
+        dummy_date = date.today()
+        start_dt = datetime.combine(dummy_date, start)
+        end_dt   = datetime.combine(dummy_date, end)
+        diff_mins = (end_dt - start_dt).total_seconds() / 60
+        if diff_mins < 60:
+            return False, "Bedtime window must be at least 1 hour."
 
-# Function to check bedtime status for a child. Agar current time bedtime range mein hai, toh True return karega, warna False. Bedtime range ko handle karte waqt overnight ranges (jaise 21:00 - 07:00) ko bhi consider kiya gaya hai.
-
-
-def is_bedtime(child):
-    if not child.bedtime_enabled or not child.bedtime_start or not child.bedtime_end:
-        return False
-    
-    now = timezone.localtime().time()
-    
-    # String ho sakti hai ya time object — dono handle karo
-    start = child.bedtime_start
-    end = child.bedtime_end
-    
-    if isinstance(start, str):
-        parts = start.split(':')
-        start = dt_time(int(parts[0]), int(parts[1]))
-    
-    if isinstance(end, str):
-        parts = end.split(':')
-        end = dt_time(int(parts[0]), int(parts[1]))
-    
-    if start <= end:
-        return start <= now <= end
-    else:  # overnight, e.g. 21:00 - 07:00
-        return now >= start or now <= end
+    return True, None
 
 
 # API to fetch chat messages

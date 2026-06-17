@@ -34,5 +34,6 @@ urlpatterns = [
     path('youtube-activity/', views.youtube_activity_api),
     path('getProfile/', views.get_profile_api),
     path('updateProfile/', views.update_profile_api),
+    
 
 ]

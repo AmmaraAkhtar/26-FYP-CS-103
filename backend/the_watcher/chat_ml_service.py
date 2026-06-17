@@ -367,6 +367,31 @@
 # chat_ml_service = ChatMLService()
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 import string
 import pickle
 import threading
@@ -783,6 +808,7 @@ Return ONLY the single category word, nothing else."""
             groq_category = self.classify_with_groq(message)
             if groq_category in ["hate", "bullying", "suicide"]:
                 print(f"GROQ ESCALATION: normal -> {groq_category}")
+                print(f"GROQ FINAL DECISION: {groq_category}")
                 return groq_category
 
             return "normal"

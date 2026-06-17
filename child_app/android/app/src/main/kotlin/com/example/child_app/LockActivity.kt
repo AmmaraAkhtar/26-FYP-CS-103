@@ -81,6 +81,7 @@ class LockActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
+        MyForegroundService.isLockActivityInForeground = true
         isReordering = false
         bringToFrontScheduled = false
         relaunchScheduled = false
@@ -92,26 +93,45 @@ class LockActivity : FlutterActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    // Agar relaunch aaya aur locked hai to kuch nahi karna — already front mein hai
+    if (!MyForegroundService.isDeviceLocked) {
+        isUnlocked = true
+        cancelLockNotification()
+        finish()
+    }
+}
+
     override fun onStop() {
         super.onStop()
+        MyForegroundService.isLockActivityInForeground = false
         if (MyForegroundService.isDeviceLocked && !isUnlocked) {
-            isReordering = true
-            scheduleRelaunch()
-            signalServiceToRelaunch()
+            //isReordering = true
+            //scheduleRelaunch()
+            //ignalServiceToRelaunch()
+            // Fire immediately AND after short delay as backup
+        //bringToFront()
+        handler.postDelayed({ bringToFront() }, 200)
+        handler.postDelayed({ bringToFront() }, 500)
+        signalServiceToRelaunch()
         }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (!hasFocus && MyForegroundService.isDeviceLocked && !isUnlocked) {
-            scheduleRelaunch()
+            //scheduleRelaunch()
+            //bringToFront()
         }
     }
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         if (MyForegroundService.isDeviceLocked && !isUnlocked) {
-            scheduleRelaunch()
+            //scheduleRelaunch()
+            // Immediate relaunch — no debounce, no delay
+        //bringToFront()
         }
     }
 
@@ -151,7 +171,8 @@ class LockActivity : FlutterActivity() {
     }
 
     private fun bringToFront() {
-        if (isUnlocked || !MyForegroundService.isDeviceLocked) return
+    if (isUnlocked || !MyForegroundService.isDeviceLocked) return
+    try {
         val intent = Intent(this, LockActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
@@ -159,7 +180,10 @@ class LockActivity : FlutterActivity() {
                     Intent.FLAG_ACTIVITY_NO_ANIMATION
         }
         startActivity(intent)
+    } catch (e: Exception) {
+        Log.e("LockActivity", "bringToFront failed: ${e.message}")
     }
+}
 
     private fun cancelLockNotification() {
         val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -177,6 +201,7 @@ class LockActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        MyForegroundService.isLockActivityInForeground = false
         handler.removeCallbacks(pollRunnable)
         try { unregisterReceiver(unlockReceiver) } catch (_: Exception) {}
         super.onDestroy()
