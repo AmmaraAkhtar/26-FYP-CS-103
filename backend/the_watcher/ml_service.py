@@ -158,7 +158,7 @@ class MLModelService:
                     model_path = os.path.normpath(
                         os.path.join(
                             settings.BASE_DIR,
-                            "..",
+                            #"..",
                             "models",
                             "App_Analysis_Data",
                             "AppAnalysisModel.pkl"
@@ -183,7 +183,7 @@ class MLModelService:
         if self._encoder is None:
             encoder_path = os.path.join(
                 settings.BASE_DIR,
-                "..",
+                #"..",
                 "models",
                 "App_Analysis_Data",
                 "app_label_encoder.pkl"

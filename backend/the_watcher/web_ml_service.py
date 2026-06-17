@@ -205,7 +205,9 @@ class WebMLService:
             with self._lock:
                 if self._model is None:
                     model_path = os.path.join(
-                        settings.BASE_DIR, "..", "models", "WebAnalysis", "webAnalysisModel.pkl"
+                        settings.BASE_DIR,
+                         #"..",
+                          "models", "WebAnalysis", "webAnalysisModel.pkl"
                     )
                     with open(model_path, "rb") as f:
                         self._model = pickle.load(f)
