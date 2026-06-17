@@ -203,7 +203,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 
-const String kBaseUrl = "http://192.168.18.163:8000";
+const String kBaseUrl = "http://10.13.45.141:8000";
 
 class ScreenTimeLimitScreen extends StatefulWidget {
   final int childId;

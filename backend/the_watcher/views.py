@@ -2176,6 +2176,192 @@ def lock_device(request):
 
  ###----------- phle ye wali api chal rhy thy--------------------
 # APi to collect chat messages from child app. Jab bhi child app mein koi naya chat message detect hota hai, chahe wo WhatsApp ho, Messenger ho, ya koi aur chat app, toh wo is API ko call karega message details ke saath, taki backend us message ko analyze kar sake risk ke liye, aur agar zarurat pade toh parent ko alert bhej sake. Is API mein hum kuch basic filters bhi laga sakte hain jaise ki chote messages ko ignore karna, ya system messages ko ignore karna, taki unnecessary processing na ho.
+# @api_view(['POST'])
+# def collect_chat(request):
+#     print("Chat API Called")
+
+#     serializer = ChatMessageSerializer(data=request.data)
+#     if not serializer.is_valid():
+#         return Response(serializer.errors, status=400)
+
+#     child_id      = request.data.get('child_id')
+#     app_name      = request.data.get('app_name', '')
+#     sender        = request.data.get('sender', 'unknown')
+#     message       = request.data.get('message', '')
+#     timestamp_str = request.data.get('timestamp')
+
+#     # ── FILTER 1: Too short ──
+#     if not message or len(message.strip()) < 5:
+#         return Response({"status": "ignored"}, status=200)
+
+#     # ── FILTER 2: UI Noise ──
+#     UI_NOISE = {
+#         "voice call", "video call", "missed voice call",
+#         "missed video call", "tap to call back", "no answer",
+#         "call back", "photo", "video", "document", "audio",
+#         "sticker", "gif", "location", "contact",
+#         "this message was deleted", "you deleted this message",
+#         "announcements", "explore", "missed call",
+#     }
+#     msg_lower = message.lower().strip()
+
+#     if msg_lower in UI_NOISE:
+#         return Response({"status": "ignored_noise"}, status=200)
+
+#     if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
+#         return Response({"status": "ignored_date"}, status=200)
+
+#     if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
+#         return Response({"status": "ignored_date"}, status=200)
+
+#     if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
+#         return Response({"status": "ignored_duration"}, status=200)
+
+#     if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
+#         return Response({"status": "ignored_phone"}, status=200)
+
+#     if "pinned a message" in msg_lower:
+#         return Response({"status": "ignored_system"}, status=200)
+
+#     # ── FILTER 3: Child exist ──
+#     try:
+#         child_obj = models.child.objects.get(id=child_id)
+#     except models.child.DoesNotExist:
+#         return Response({"error": "Child not found"}, status=404)
+
+#     print(f"Chat — Child: {child_id} | App: {app_name} | Msg: {message}")
+
+#     if is_bedtime(child_obj):
+#         child_obj.is_locked = True
+#         child_obj.save()
+#         return Response({"is_locked": True, "reason": "bedtime"}, status=200)
+
+#     # ── Timestamp parse ──
+#     try:
+#         msg_time = make_aware(datetime.fromisoformat(timestamp_str))
+#     except:
+#         msg_time = timezone.now()
+
+#     # ── FILTER 4: Historical ──
+#     time_diff = timezone.now() - msg_time
+#     is_historical = time_diff.total_seconds() > 300
+
+#     # ── FILTER 5: Duplicate ──
+#     existing = models.ChatMessage.objects.filter(
+#         child=child_obj,
+#         app_name=app_name,
+#         message=message,
+#         sender=sender,
+#     ).filter(
+#         timestamp__gte=timezone.now() - timedelta(minutes=10)
+#     ).exists()
+
+#     if existing:
+#         print("DUPLICATE — skipping")
+#         return Response({"status": "duplicate"}, status=200)
+
+#     # ── DB Save ──
+#     try:
+#         chat_obj = models.ChatMessage.objects.create(
+#             child     = child_obj,
+#             app_name  = app_name,
+#             sender    = sender,
+#             message   = message,
+#             timestamp = msg_time,
+#             category  = "historical" if is_historical else "Pending",
+#             risk      = "Low"        if is_historical else "Pending",
+#             action    = "Allow"      if is_historical else "Pending",
+#         )
+#         print(f"Chat saved ID: {chat_obj.id}")
+#     except Exception as e:
+#         print(f"DB Save Error: {e}")
+#         return Response({"status": "db_error"}, status=200)
+
+#     # ── Historical message — agent mat chalao ──
+#     if is_historical:
+#         return Response({
+#             "status":  "historical",
+#             "chat_id": chat_obj.id,
+#         }, status=200)
+
+#     # ── ML Prediction (ML + Groq verification for sensitive) ──
+#     try:
+#         ml_category = chat_ml_service.predict(message)
+#     except Exception as e:
+#         print(f"Chat ML Error: {e}")
+#         ml_category = "normal"
+
+#     print(f"FINAL ML CATEGORY: {ml_category}")
+
+#     # ── Fast-path: normal messages ──
+#     if ml_category == "normal":
+#         chat_obj.category = "normal"
+#         chat_obj.risk     = "Low"
+#         chat_obj.action   = "Allow"
+#         chat_obj.save()
+#         return Response({
+#             "status":   "processed",
+#             "chat_id":  chat_obj.id,
+#             "category": "normal",
+#             "action":   "Allow"
+#         }, status=200)
+
+#     # ── Sensitive (hate/bullying/suicide) → LLM agent for nuanced action ──
+#     try:
+#         result = chat_agent.invoke({
+#             "child_id":    int(child_id),
+#             "app_name":    app_name,
+#             "message":     message,
+#             "sender":      sender,
+#             "chat_obj_id": chat_obj.id,
+#             "ml_category": ml_category,
+
+#             "child_age":         None,
+#             "screen_limit_mins": None,
+#             "recent_alerts":     None,
+#             "chat_history":      None,
+#             "total_chats_today": None,
+#             "final_category":    None,
+#             "action":            None,
+#             "reasoning":         None,
+#             "risk_level":        None,
+#             "urgency":           None,
+#             "alert_message":     None,
+#             "should_send_alert": None,
+#         })
+
+#         print(f"AGENT DONE — category: {result.get('final_category')}, action: {result.get('action')}")
+#         if result.get("action", "").lower() in ["block", "escalate"]:
+#             child_obj.is_locked = True
+#             child_obj.save()
+
+#         return Response({
+#             "status":     "processed",
+#             "chat_id":    chat_obj.id,
+#             "category":   result.get("final_category", ml_category),
+#             "action":     result.get("action"),
+#             "risk_level": result.get("risk_level"),
+#         }, status=200)
+
+#     except Exception as e:
+#         print(f"Chat Agent Error: {traceback.format_exc()}")
+#         # Fallback agar agent fail ho jaye
+#         if ml_category == "suicide":
+#             chat_obj.risk, chat_obj.action = "High", "Escalate"
+#             child_obj.is_locked = True
+#             child_obj.save()
+#         else:
+#             chat_obj.risk, chat_obj.action = "Medium", "Warn"
+#         chat_obj.category = ml_category
+#         chat_obj.save()
+#         return Response({
+#             "status":   "saved",
+#             "chat_id":  chat_obj.id,
+#             "category": ml_category,
+#             "action":   chat_obj.action,
+#         }, status=200)
+
+
 @api_view(['POST'])
 def collect_chat(request):
     print("Chat API Called")
@@ -2190,38 +2376,72 @@ def collect_chat(request):
     message       = request.data.get('message', '')
     timestamp_str = request.data.get('timestamp')
 
+    is_content = (sender == "content")
+
     # ── FILTER 1: Too short ──
-    if not message or len(message.strip()) < 5:
+    min_len = 5 if not is_content else 4
+    if not message or len(message.strip()) < min_len:
         return Response({"status": "ignored"}, status=200)
 
-    # ── FILTER 2: UI Noise ──
-    UI_NOISE = {
-        "voice call", "video call", "missed voice call",
-        "missed video call", "tap to call back", "no answer",
-        "call back", "photo", "video", "document", "audio",
-        "sticker", "gif", "location", "contact",
-        "this message was deleted", "you deleted this message",
-        "announcements", "explore", "missed call",
-    }
     msg_lower = message.lower().strip()
 
-    if msg_lower in UI_NOISE:
-        return Response({"status": "ignored_noise"}, status=200)
+    # ── FILTER 2: Noise — alag rules chat vs content ke liye ──
+    if not is_content:
+        UI_NOISE = {
+            "voice call", "video call", "missed voice call",
+            "missed video call", "tap to call back", "no answer",
+            "call back", "photo", "video", "document", "audio",
+            "sticker", "gif", "location", "contact",
+            "this message was deleted", "you deleted this message",
+            "announcements", "explore", "missed call",
+        }
+        if msg_lower in UI_NOISE:
+            return Response({"status": "ignored_noise"}, status=200)
 
-    if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
-        return Response({"status": "ignored_date"}, status=200)
+        if re.match(r'^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$', msg_lower):
+            return Response({"status": "ignored_date"}, status=200)
+    
+        # Akela short alphabetic text jo sentence nahi lagta (likely sender name / contact name)
+        if re.match(r'^[A-Za-z]+(\s[A-Za-z]+){0,2}$', message.strip()) and len(message.strip().split()) <= 3:
+            words = message.strip().split()
+            # Agar har word capitalized hai aur total length chhoti hai, likely ek naam hai
+            if all(w[0].isupper() for w in words if w) and len(message.strip()) <= 25:
+                 return Response({"status": "ignored_name_like"}, status=200)
+            # Sirf number (jaise "5", "12", "100")
+        if re.match(r'^\d+$', message.strip()):
+            return Response({"status": "ignored_number"}, status=200)
 
-    if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
-        return Response({"status": "ignored_date"}, status=200)
+        # Sirf time format jo abhi tak cover nahi hua (e.g. "12:45", "3:30 PM")
+        if re.match(r'^\d{1,2}:\d{2}(\s?[APap][Mm])?$', message.strip()):
+            return Response({"status": "ignored_time"}, status=200)
 
-    if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
-        return Response({"status": "ignored_duration"}, status=200)
 
-    if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
-        return Response({"status": "ignored_phone"}, status=200)
+        if re.match(r'^\d{1,2}\s+(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}$', msg_lower):
+            return Response({"status": "ignored_date"}, status=200)
 
-    if "pinned a message" in msg_lower:
-        return Response({"status": "ignored_system"}, status=200)
+        if re.match(r'^\d+\s*(sec|secs|min|mins|second|seconds|minute|minutes)$', msg_lower):
+            return Response({"status": "ignored_duration"}, status=200)
+
+        if re.match(r'^\+?[\d\s\-]{10,15}$', msg_lower):
+            return Response({"status": "ignored_phone"}, status=200)
+
+        if "pinned a message" in msg_lower:
+            return Response({"status": "ignored_system"}, status=200)
+    else:
+        CONTENT_NOISE = {
+            "like", "save", "share", "comment", "subscribe", "follow",
+            "more", "less", "ad", "sponsored", "shorts", "summary",
+            "music", "play", "news", "gaming", "months", "learning",
+            "fashion", "beauty", "podcasts", "live", "explore",
+            "youtube playables", "instant games, no downloads",
+            "breaking news", "television series", "weather forecasting",
+            "pakistani dramas", "cricket highlights", "fitness workouts",
+            "cooking recipes", "travel vlogs", "unboxing videos",
+            "technology reviews", "educational content", "comedy sketches",
+            "music videos",
+        }
+        if msg_lower in CONTENT_NOISE:
+            return Response({"status": "ignored_noise"}, status=200)
 
     # ── FILTER 3: Child exist ──
     try:
@@ -2229,7 +2449,7 @@ def collect_chat(request):
     except models.child.DoesNotExist:
         return Response({"error": "Child not found"}, status=404)
 
-    print(f"Chat — Child: {child_id} | App: {app_name} | Msg: {message}")
+    print(f"Chat — Child: {child_id} | App: {app_name} | Sender: {sender} | Msg: {message}")
 
     if is_bedtime(child_obj):
         child_obj.is_locked = True
@@ -2242,24 +2462,39 @@ def collect_chat(request):
     except:
         msg_time = timezone.now()
 
-    # ── FILTER 4: Historical ──
+    # ── FILTER 4: Historical — content hamesha analyze karo, chat ke liye 5 min window ──
     time_diff = timezone.now() - msg_time
-    is_historical = time_diff.total_seconds() > 300
+    is_historical = False if is_content else time_diff.total_seconds() > 300
 
     # ── FILTER 5: Duplicate ──
-    existing = models.ChatMessage.objects.filter(
-        child=child_obj,
-        app_name=app_name,
-        message=message,
-        sender=sender,
-    ).filter(
-        timestamp__gte=timezone.now() - timedelta(minutes=10)
-    ).exists()
+    dup_window = timedelta(minutes=30) if is_content else timedelta(minutes=10)
+    dup_qs = models.ChatMessage.objects.filter(
+    child=child_obj,
+    app_name=app_name,
+    message=message,
+    #sender=sender,
+    created_at__gte=timezone.now() - dup_window   # ← yeh change karo
+    )
 
-    if existing:
-        print("DUPLICATE — skipping")
+    # if existing:
+    #     print("DUPLICATE — skipping")
+    #     print(f"[DEDUP] message='{message}' | sender={sender} | app={app_name}")
+    #     print(f"[DEDUP] dup_window={dup_window} | cutoff={timezone.now() - dup_window}")
+    #     print(f"[DEDUP] found {existing.count()} matching records")
+    #     for e in existing:
+    #         print(f"  → id={e.id} | created_at={e.created_at} | sender={e.sender} | message='{e.message}'")
+
+    #     if existing.exists():
+    #         print("[DEDUP] DUPLICATE — skipping")
+    #         return Response({"status": "duplicate"}, status=200)
+    #     return Response({"status": "duplicate"}, status=200)
+    print(f"[DEDUP] message='{message}' | sender={sender} | app={app_name}")
+    print(f"[DEDUP] dup_window={dup_window} | cutoff={timezone.now() - dup_window}")
+    print(f"[DEDUP] found {dup_qs.count()} matching records")
+
+    if dup_qs.exists():
+        print("[DEDUP] DUPLICATE — skipping")
         return Response({"status": "duplicate"}, status=200)
-
     # ── DB Save ──
     try:
         chat_obj = models.ChatMessage.objects.create(
@@ -2277,44 +2512,22 @@ def collect_chat(request):
         print(f"DB Save Error: {e}")
         return Response({"status": "db_error"}, status=200)
 
-    # ── Historical message — agent mat chalao ──
     if is_historical:
-        return Response({
-            "status":  "historical",
-            "chat_id": chat_obj.id,
-        }, status=200)
+        return Response({"status": "historical", "chat_id": chat_obj.id}, status=200)
 
-    # ── ML Prediction (ML + Groq verification for sensitive) ──
-    try:
-        ml_category = chat_ml_service.predict(message)
-    except Exception as e:
-        print(f"Chat ML Error: {e}")
-        ml_category = "normal"
+    # ── ML filter removed — content aur chat dono direct agent ke paas jate hain ──
+    ml_category = "content" if is_content else "chat"
 
-    print(f"FINAL ML CATEGORY: {ml_category}")
-
-    # ── Fast-path: normal messages ──
-    if ml_category == "normal":
-        chat_obj.category = "normal"
-        chat_obj.risk     = "Low"
-        chat_obj.action   = "Allow"
-        chat_obj.save()
-        return Response({
-            "status":   "processed",
-            "chat_id":  chat_obj.id,
-            "category": "normal",
-            "action":   "Allow"
-        }, status=200)
-
-    # ── Sensitive (hate/bullying/suicide) → LLM agent for nuanced action ──
+    # ── Agent invoke — content aur chat dono ke liye ──
     try:
         result = chat_agent.invoke({
-            "child_id":    int(child_id),
-            "app_name":    app_name,
-            "message":     message,
-            "sender":      sender,
-            "chat_obj_id": chat_obj.id,
-            "ml_category": ml_category,
+            "child_id":     int(child_id),
+            "app_name":     app_name,
+            "message":      message,
+            "sender":       sender,
+            "chat_obj_id":  chat_obj.id,
+            "ml_category":  ml_category,
+            "content_type": "content" if is_content else "chat",
 
             "child_age":         None,
             "screen_limit_mins": None,
@@ -2334,6 +2547,7 @@ def collect_chat(request):
         if result.get("action", "").lower() in ["block", "escalate"]:
             child_obj.is_locked = True
             child_obj.save()
+        child_obj 
 
         return Response({
             "status":     "processed",
@@ -2345,13 +2559,7 @@ def collect_chat(request):
 
     except Exception as e:
         print(f"Chat Agent Error: {traceback.format_exc()}")
-        # Fallback agar agent fail ho jaye
-        if ml_category == "suicide":
-            chat_obj.risk, chat_obj.action = "High", "Escalate"
-            child_obj.is_locked = True
-            child_obj.save()
-        else:
-            chat_obj.risk, chat_obj.action = "Medium", "Warn"
+        chat_obj.risk, chat_obj.action = "Medium", "Warn"
         chat_obj.category = ml_category
         chat_obj.save()
         return Response({
@@ -2360,6 +2568,9 @@ def collect_chat(request):
             "category": ml_category,
             "action":   chat_obj.action,
         }, status=200)
+
+
+
 
 # @api_view(['POST'])
 # def collect_chat(request):

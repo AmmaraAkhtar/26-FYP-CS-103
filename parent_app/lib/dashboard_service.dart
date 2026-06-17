@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dashborad_model.dart';
 
 class DashboardService {
-  static const String baseUrl = "http://192.168.18.163:8000";
+  static const String baseUrl = "http://10.13.45.141:8000";
 
   static Future<DashboardSummary?> getSummary(int childId) async {
     final response = await http.get(
