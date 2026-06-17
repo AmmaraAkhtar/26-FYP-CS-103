@@ -10,15 +10,15 @@ db.sqlite3
 data/
 *.csv
 *.xlsx
-*.pkl
+
 models/Chat Analysis/data/
 *.csv
 *.xlsx
-*.pkl
+
 models/WebAnalysis/data/
 *.csv
 *.xlsx
-*.pkl
+
 backend/.env
 backend/__pycache__/
 *.pyc
