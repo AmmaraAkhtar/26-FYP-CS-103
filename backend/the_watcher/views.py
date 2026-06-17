@@ -18,7 +18,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db import transaction
 import pickle
-#from .ml_service import ml_service
+from .ml_service import ml_service
 from .utils import preprocess_app_name
 from .web_ml_service import web_ml_service
 from urllib.parse import urlparse
