@@ -18,7 +18,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db import transaction
 import pickle
-from .ml_service import ml_service
+#from .ml_service import ml_service
 from .utils import preprocess_app_name
 from .web_ml_service import web_ml_service
 from urllib.parse import urlparse
@@ -27,8 +27,8 @@ from .web_agent.graph import web_graph
 import threading
 import traceback
 import uuid
-from .chat_ml_service import ChatMLService
-from .chat_ml_service import chat_ml_service
+#from .chat_ml_service import ChatMLService
+#from .chat_ml_service import chat_ml_service
 from django.utils.timezone import make_aware
 from datetime import datetime
 from .chat_agent.graph import chat_agent

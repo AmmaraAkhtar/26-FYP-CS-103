@@ -17,3 +17,7 @@ dj-database-url
 python-dotenv
 gunicorn
 langchain_openai
+gunicorn
+whitenoise
+dj-database-url
+psycopg2-binary
